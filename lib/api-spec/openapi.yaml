@@ -3,20 +3,43 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CMMS API — Beit Jala Pharmaceutical Co.
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: roles
+    description: Roles
+  - name: permissions
+    description: Permissions
+  - name: departments
+    description: Departments
+  - name: machines
+    description: Machines
+  - name: equipment
+    description: Equipment Information Records
+  - name: preventive-maintenance
+    description: Preventive Maintenance records and checklists
+  - name: maintenance-plans
+    description: Annual and monthly preventive maintenance plans
+  - name: maintenance-requests
+    description: Maintenance requests and corrective maintenance workflow
+  - name: corrective-maintenance
+    description: Corrective Maintenance records and history
+  - name: dashboard
+    description: Dashboard statistics
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +47,1159 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with username and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginCredentials"
+      responses:
+        "200":
+          description: Logged in successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users:
+    get:
+      operationId: getUsers
+      tags: [users]
+      summary: List all users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}/deactivate:
+    patch:
+      operationId: deactivateUser
+      tags: [users]
+      summary: Deactivate a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}/permissions:
+    put:
+      operationId: updateUserPermissions
+      tags: [users]
+      summary: Set permissions for a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserPermissionsUpdate"
+      responses:
+        "200":
+          description: Permissions updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /roles:
+    get:
+      operationId: getRoles
+      tags: [roles]
+      summary: List all roles
+      responses:
+        "200":
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Role"
+
+  /permissions:
+    get:
+      operationId: getPermissions
+      tags: [permissions]
+      summary: List all permissions
+      responses:
+        "200":
+          description: List of permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Permission"
+
+  /departments:
+    get:
+      operationId: getDepartments
+      tags: [departments]
+      summary: List all departments
+      responses:
+        "200":
+          description: List of departments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Department"
+
+  /machines:
+    get:
+      operationId: getMachines
+      tags: [machines]
+      summary: List all active machines
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search by machine name or machine number
+      responses:
+        "200":
+          description: List of machines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Machine"
+    post:
+      operationId: createMachine
+      tags: [machines]
+      summary: Create a new machine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MachineInput"
+      responses:
+        "201":
+          description: Machine created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Machine"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /machines/{id}:
+    get:
+      operationId: getMachine
+      tags: [machines]
+      summary: Get machine by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Machine found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Machine"
+        "404":
+          description: Machine not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateMachine
+      tags: [machines]
+      summary: Update a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MachineUpdate"
+      responses:
+        "200":
+          description: Machine updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Machine"
+        "404":
+          description: Machine not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /machines/{id}/soft-delete:
+    patch:
+      operationId: softDeleteMachine
+      tags: [machines]
+      summary: Soft delete a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Machine soft-deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Machine"
+        "404":
+          description: Machine not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /machines/{id}/equipment-information:
+    get:
+      operationId: getEquipmentInformation
+      tags: [equipment]
+      summary: Get equipment information record for a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Equipment information record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EquipmentInformation"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: upsertEquipmentInformation
+      tags: [equipment]
+      summary: Create or update equipment information record for a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EquipmentInformationInput"
+      responses:
+        "200":
+          description: Equipment information saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EquipmentInformation"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /machines/{id}/pm/header:
+    get:
+      operationId: getPmHeader
+      tags: [preventive-maintenance]
+      summary: Get PM form header for a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: PM header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PmHeader"
+    put:
+      operationId: updatePmHeader
+      tags: [preventive-maintenance]
+      summary: Update PM form header for a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PmHeaderInput"
+      responses:
+        "200":
+          description: PM header saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PmHeader"
+
+  /machines/{id}/pm/checklist:
+    get:
+      operationId: getPmChecklist
+      tags: [preventive-maintenance]
+      summary: List PM checklist points for a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Checklist points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PmChecklistPoint"
+    post:
+      operationId: createPmChecklistPoint
+      tags: [preventive-maintenance]
+      summary: Create PM checklist point
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PmChecklistPointInput"
+      responses:
+        "201":
+          description: Checklist point created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PmChecklistPoint"
+
+  /machines/{id}/pm/checklist/{pointId}:
+    put:
+      operationId: updatePmChecklistPoint
+      tags: [preventive-maintenance]
+      summary: Update PM checklist point
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: pointId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PmChecklistPointInput"
+      responses:
+        "200":
+          description: Checklist point updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PmChecklistPoint"
+    patch:
+      operationId: deactivatePmChecklistPoint
+      tags: [preventive-maintenance]
+      summary: Soft-remove PM checklist point
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: pointId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Checklist point deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PmChecklistPoint"
+
+  /machines/{id}/pm/current:
+    get:
+      operationId: getCurrentPmRecord
+      tags: [preventive-maintenance]
+      summary: Get current PM record for a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Current PM record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PmRecordDetail"
+
+  /machines/{id}/pm/inspections:
+    post:
+      operationId: createPmInspection
+      tags: [preventive-maintenance]
+      summary: Add a PM inspection column to the current record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PmInspectionInput"
+      responses:
+        "201":
+          description: Inspection saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PmRecordDetail"
+
+  /machines/{id}/pm/history:
+    get:
+      operationId: getPmHistory
+      tags: [preventive-maintenance]
+      summary: List PM record history for a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: PM record history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PmRecordSummary"
+
+  /maintenance-plans/annual/{year}:
+    get:
+      operationId: getAnnualPmPlan
+      tags: [maintenance-plans]
+      summary: Get or generate annual PM plan
+      parameters:
+        - name: year
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Annual PM plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnnualPmPlanDetail"
+    put:
+      operationId: updateAnnualPmPlan
+      tags: [maintenance-plans]
+      summary: Update annual PM plan approval fields and rows
+      parameters:
+        - name: year
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnnualPmPlanInput"
+      responses:
+        "200":
+          description: Annual PM plan updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnnualPmPlanDetail"
+
+  /maintenance-plans/monthly/{year}/{month}:
+    get:
+      operationId: getMonthlyPmPlan
+      tags: [maintenance-plans]
+      summary: Get or generate monthly PM plan
+      parameters:
+        - name: year
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+      responses:
+        "200":
+          description: Monthly PM plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonthlyPmPlanDetail"
+    put:
+      operationId: updateMonthlyPmPlan
+      tags: [maintenance-plans]
+      summary: Update monthly PM plan fields and rows
+      parameters:
+        - name: year
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MonthlyPmPlanInput"
+      responses:
+        "200":
+          description: Monthly PM plan updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonthlyPmPlanDetail"
+
+  /maintenance-requests:
+    get:
+      operationId: getMaintenanceRequests
+      tags: [maintenance-requests]
+      summary: List maintenance requests visible to the current user
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, own, qa, engineering, technician]
+      responses:
+        "200":
+          description: Maintenance requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MaintenanceRequestSummary"
+    post:
+      operationId: createMaintenanceRequest
+      tags: [maintenance-requests]
+      summary: Submit a maintenance request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaintenanceRequestInput"
+      responses:
+        "201":
+          description: Maintenance request submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+
+  /maintenance-requests/machines:
+    get:
+      operationId: getMaintenanceRequestMachineOptions
+      tags: [maintenance-requests]
+      summary: List machine options for request submission
+      responses:
+        "200":
+          description: Machine options
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MaintenanceRequestMachineOption"
+
+  /maintenance-requests/technicians:
+    get:
+      operationId: getMaintenanceRequestTechnicians
+      tags: [maintenance-requests]
+      summary: List Maintenance Technician users for assignment
+      responses:
+        "200":
+          description: Technician options
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MaintenanceRequestTechnicianOption"
+
+  /maintenance-requests/{id}:
+    get:
+      operationId: getMaintenanceRequest
+      tags: [maintenance-requests]
+      summary: Get maintenance request detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Maintenance request detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+
+  /maintenance-requests/by-number/{requestNumber}:
+    get:
+      operationId: getMaintenanceRequestByNumber
+      tags: [maintenance-requests]
+      summary: Open request by Request / Report Number
+      parameters:
+        - name: requestNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Maintenance request detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+
+  /maintenance-requests/{id}/qa-review:
+    post:
+      operationId: qaReviewMaintenanceRequest
+      tags: [maintenance-requests]
+      summary: QA approve or reject maintenance request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecisionInput"
+      responses:
+        "200":
+          description: Request reviewed by QA
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+    patch:
+      operationId: patchQaReviewMaintenanceRequest
+      tags: [maintenance-requests]
+      summary: QA approve or reject maintenance request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecisionInput"
+      responses:
+        "200":
+          description: Request reviewed by QA
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+
+  /maintenance-requests/{id}/engineering-review:
+    post:
+      operationId: engineeringReviewMaintenanceRequest
+      tags: [maintenance-requests]
+      summary: Engineering accept or reject QA-approved request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecisionInput"
+      responses:
+        "200":
+          description: Request reviewed by engineering
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+    patch:
+      operationId: patchEngineeringReviewMaintenanceRequest
+      tags: [maintenance-requests]
+      summary: Engineering accept or reject QA-approved request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecisionInput"
+      responses:
+        "200":
+          description: Request reviewed by engineering
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+
+  /maintenance-requests/{id}/assign-technician:
+    patch:
+      operationId: assignMaintenanceRequestTechnician
+      tags: [maintenance-requests]
+      summary: Assign or change technician for an accepted request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignTechnicianInput"
+      responses:
+        "200":
+          description: Technician assignment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+
+  /maintenance-requests/{id}/start-work:
+    patch:
+      operationId: startCorrectiveMaintenanceWork
+      tags: [maintenance-requests]
+      summary: Start corrective maintenance work
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Corrective maintenance started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+
+  /maintenance-requests/{id}/preliminary-findings:
+    put:
+      operationId: updatePreliminaryFindings
+      tags: [maintenance-requests]
+      summary: Fill preliminary findings section
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreliminaryFindingsInput"
+      responses:
+        "200":
+          description: Preliminary findings saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+    patch:
+      operationId: patchPreliminaryFindings
+      tags: [maintenance-requests]
+      summary: Fill preliminary findings section
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreliminaryFindingsInput"
+      responses:
+        "200":
+          description: Preliminary findings saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+
+  /maintenance-requests/{id}/actions-taken:
+    patch:
+      operationId: updateCorrectiveMaintenanceActions
+      tags: [maintenance-requests]
+      summary: Fill corrective maintenance actions taken
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionsTakenInput"
+      responses:
+        "200":
+          description: Corrective maintenance actions saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+
+  /maintenance-requests/{id}/handover:
+    patch:
+      operationId: updateCorrectiveMaintenanceHandover
+      tags: [maintenance-requests]
+      summary: Fill hand-over confirmation and close request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HandoverInput"
+      responses:
+        "200":
+          description: Corrective maintenance handed over
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+
+  /maintenance-requests/{id}/actions-handover:
+    put:
+      operationId: updateActionsHandover
+      tags: [maintenance-requests]
+      summary: Fill actions taken and hand-over section
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionsHandoverInput"
+      responses:
+        "200":
+          description: Corrective maintenance completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceRequestDetail"
+
+  /machines/{id}/corrective-maintenance:
+    get:
+      operationId: getMachineCorrectiveMaintenance
+      tags: [corrective-maintenance]
+      summary: Get active Corrective Maintenance log for a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Corrective Maintenance record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorrectiveMaintenanceRecordDetail"
+
+  /machines/{id}/corrective-maintenance/history:
+    get:
+      operationId: getMachineCorrectiveMaintenanceHistory
+      tags: [corrective-maintenance]
+      summary: List Corrective Maintenance logs for a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Corrective Maintenance history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CorrectiveMaintenanceRecordDetail"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +1210,1170 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    LoginCredentials:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    Role:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+
+    Permission:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+
+    AuthUser:
+      type: object
+      required: [id, username, roleId, roleName, permissions, isActive]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        fullName:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        roleId:
+          type: integer
+        roleName:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+
+    User:
+      type: object
+      required: [id, username, roleId, roleName, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        fullName:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        roleId:
+          type: integer
+        roleName:
+          type: string
+        departmentId:
+          type: ["integer", "null"]
+        departmentName:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        permissions:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+
+    UserInput:
+      type: object
+      required: [username, password, roleId]
+      properties:
+        username:
+          type: string
+          minLength: 2
+        password:
+          type: string
+          minLength: 4
+        fullName:
+          type: string
+        email:
+          type: string
+        roleId:
+          type: integer
+        departmentId:
+          type: ["integer", "null"]
+
+    UserUpdate:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+        roleId:
+          type: integer
+        departmentId:
+          type: ["integer", "null"]
+        password:
+          type: string
+
+    UserPermissionsUpdate:
+      type: object
+      required: [permissionNames]
+      properties:
+        permissionNames:
+          type: array
+          items:
+            type: string
+
+    Department:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    Machine:
+      type: object
+      required: [id, machineNumber, machineName, status, createdAt]
+      properties:
+        id:
+          type: integer
+        machineNumber:
+          type: string
+        machineName:
+          type: string
+        departmentId:
+          type: ["integer", "null"]
+        departmentName:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        status:
+          type: string
+        pmFrequencyMonths:
+          type: ["integer", "null"]
+        pmStartDate:
+          type: ["string", "null"]
+        deletedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    MachineInput:
+      type: object
+      required: [machineNumber, machineName]
+      properties:
+        machineNumber:
+          type: string
+          minLength: 1
+        machineName:
+          type: string
+          minLength: 1
+        departmentId:
+          type: ["integer", "null"]
+        location:
+          type: string
+        status:
+          type: string
+        pmFrequencyMonths:
+          type: ["integer", "null"]
+        pmStartDate:
+          type: ["string", "null"]
+
+    MachineUpdate:
+      type: object
+      properties:
+        machineNumber:
+          type: string
+        machineName:
+          type: string
+        departmentId:
+          type: ["integer", "null"]
+        location:
+          type: string
+        status:
+          type: string
+        pmFrequencyMonths:
+          type: ["integer", "null"]
+        pmStartDate:
+          type: ["string", "null"]
+
+    EquipmentInformation:
+      type: object
+      required: [id, machineId, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        machineId:
+          type: integer
+        nameOfEquipment:
+          type: ["string", "null"]
+        modelNumber:
+          type: ["string", "null"]
+        serialNumber:
+          type: ["string", "null"]
+        identificationNumber:
+          type: ["string", "null"]
+        datePurchased:
+          type: ["string", "null"]
+        purchasedFromName:
+          type: ["string", "null"]
+        purchasedFromAddress:
+          type: ["string", "null"]
+        manufacturingCompanyName:
+          type: ["string", "null"]
+        manufacturingCompanyAddress:
+          type: ["string", "null"]
+        dimensionWidthCm:
+          type: ["number", "null"]
+        dimensionHeightCm:
+          type: ["number", "null"]
+        dimensionDepthCm:
+          type: ["number", "null"]
+        weightKg:
+          type: ["number", "null"]
+        utilitiesPowerSupply:
+          type: ["string", "null"]
+        utilitiesAir:
+          type: ["string", "null"]
+        utilitiesWater:
+          type: ["string", "null"]
+        utilitiesOther:
+          type: ["string", "null"]
+        others:
+          type: ["string", "null"]
+        safetyIssues:
+          type: ["string", "null"]
+        preparedByName:
+          type: ["string", "null"]
+        preparedByDate:
+          type: ["string", "null"]
+        approvedByName:
+          type: ["string", "null"]
+        approvedByDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    EquipmentInformationInput:
+      type: object
+      properties:
+        nameOfEquipment:
+          type: string
+        modelNumber:
+          type: string
+        serialNumber:
+          type: string
+        identificationNumber:
+          type: string
+        datePurchased:
+          type: string
+        purchasedFromName:
+          type: string
+        purchasedFromAddress:
+          type: string
+        manufacturingCompanyName:
+          type: string
+        manufacturingCompanyAddress:
+          type: string
+        dimensionWidthCm:
+          type: ["number", "null"]
+        dimensionHeightCm:
+          type: ["number", "null"]
+        dimensionDepthCm:
+          type: ["number", "null"]
+        weightKg:
+          type: ["number", "null"]
+        utilitiesPowerSupply:
+          type: string
+        utilitiesAir:
+          type: string
+        utilitiesWater:
+          type: string
+        utilitiesOther:
+          type: string
+        others:
+          type: string
+        safetyIssues:
+          type: string
+        preparedByName:
+          type: string
+        preparedByDate:
+          type: string
+        approvedByName:
+          type: string
+        approvedByDate:
+          type: string
+
+    PmHeader:
+      type: object
+      required: [id, machineId, procedureFormNumber, columnsPerRecord, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        machineId:
+          type: integer
+        procedureFormNumber:
+          type: string
+        effectiveDate:
+          type: ["string", "null"]
+        department:
+          type: ["string", "null"]
+        columnsPerRecord:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PmHeaderInput:
+      type: object
+      properties:
+        procedureFormNumber:
+          type: string
+        effectiveDate:
+          type: ["string", "null"]
+        department:
+          type: ["string", "null"]
+        columnsPerRecord:
+          type: integer
+          minimum: 1
+          maximum: 10
+
+    PmChecklistPoint:
+      type: object
+      required: [id, machineId, pointText, resultType, sortOrder, isActive, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        machineId:
+          type: integer
+        pointText:
+          type: string
+        resultType:
+          type: string
+          enum: [yes_no, value, text]
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+        deactivatedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PmChecklistPointInput:
+      type: object
+      required: [pointText, resultType, sortOrder]
+      properties:
+        pointText:
+          type: string
+          minLength: 1
+        resultType:
+          type: string
+          enum: [yes_no, value, text]
+        sortOrder:
+          type: integer
+
+    PmInspectionResultInput:
+      type: object
+      required: [checklistPointId, value]
+      properties:
+        checklistPointId:
+          type: integer
+        value:
+          type: ["string", "null"]
+
+    PmInspectionInput:
+      type: object
+      required: [inspectionDate, inspectionTime, results]
+      properties:
+        inspectionDate:
+          type: string
+        inspectionTime:
+          type: string
+        actionTaken:
+          type: string
+        examinerName:
+          type: string
+        examinerSignature:
+          type: string
+        machineReceiverName:
+          type: string
+        machineReceiverSignature:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/PmInspectionResultInput"
+
+    PmInspectionResult:
+      type: object
+      required: [id, inspectionId, checklistPointId]
+      properties:
+        id:
+          type: integer
+        inspectionId:
+          type: integer
+        checklistPointId:
+          type: integer
+        value:
+          type: ["string", "null"]
+
+    PmInspection:
+      type: object
+      required: [id, recordId, machineId, columnNumber, inspectionDate, inspectionTime, completedAt, results]
+      properties:
+        id:
+          type: integer
+        recordId:
+          type: integer
+        machineId:
+          type: integer
+        columnNumber:
+          type: integer
+        inspectionDate:
+          type: string
+        inspectionTime:
+          type: string
+        actionTaken:
+          type: ["string", "null"]
+        examinerName:
+          type: ["string", "null"]
+        examinerSignature:
+          type: ["string", "null"]
+        machineReceiverName:
+          type: ["string", "null"]
+        machineReceiverSignature:
+          type: ["string", "null"]
+        completedAt:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/PmInspectionResult"
+
+    PmRecordDetail:
+      type: object
+      required: [record, header, checklistPoints, inspections, pageCount]
+      properties:
+        record:
+          $ref: "#/components/schemas/PmRecordSummary"
+        header:
+          $ref: "#/components/schemas/PmHeader"
+        checklistPoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/PmChecklistPoint"
+        inspections:
+          type: array
+          items:
+            $ref: "#/components/schemas/PmInspection"
+        pageCount:
+          type: integer
+
+    PmRecordSummary:
+      type: object
+      required: [id, machineId, sequenceNumber, status, inspectionCount, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        machineId:
+          type: integer
+        sequenceNumber:
+          type: integer
+        previousRecordId:
+          type: ["integer", "null"]
+        status:
+          type: string
+        inspectionCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    AnnualPmPlanRow:
+      type: object
+      required: [id, planId, machineId, machineName, scheduledMonths, isOverride]
+      properties:
+        id:
+          type: integer
+        planId:
+          type: integer
+        machineId:
+          type: integer
+        department:
+          type: ["string", "null"]
+        machineName:
+          type: string
+        machineLocation:
+          type: ["string", "null"]
+        machineCode:
+          type: ["string", "null"]
+        frequencyMonths:
+          type: ["integer", "null"]
+        duration:
+          type: ["string", "null"]
+        startDate:
+          type: ["string", "null"]
+        finishDate:
+          type: ["string", "null"]
+        scheduledMonths:
+          type: array
+          items:
+            type: integer
+        isOverride:
+          type: boolean
+
+    AnnualPmPlanDetail:
+      type: object
+      required: [id, year, rows, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        year:
+          type: integer
+        preparedByName:
+          type: ["string", "null"]
+        preparedByDate:
+          type: ["string", "null"]
+        approvedEngineeringName:
+          type: ["string", "null"]
+        approvedEngineeringDate:
+          type: ["string", "null"]
+        approvedProductionName:
+          type: ["string", "null"]
+        approvedProductionDate:
+          type: ["string", "null"]
+        approvedQcName:
+          type: ["string", "null"]
+        approvedQcDate:
+          type: ["string", "null"]
+        approvedRdName:
+          type: ["string", "null"]
+        approvedRdDate:
+          type: ["string", "null"]
+        approvedQaName:
+          type: ["string", "null"]
+        approvedQaDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/AnnualPmPlanRow"
+
+    AnnualPmPlanInput:
+      type: object
+      properties:
+        preparedByName:
+          type: string
+        preparedByDate:
+          type: string
+        approvedEngineeringName:
+          type: string
+        approvedEngineeringDate:
+          type: string
+        approvedProductionName:
+          type: string
+        approvedProductionDate:
+          type: string
+        approvedQcName:
+          type: string
+        approvedQcDate:
+          type: string
+        approvedRdName:
+          type: string
+        approvedRdDate:
+          type: string
+        approvedQaName:
+          type: string
+        approvedQaDate:
+          type: string
+        rows:
+          type: array
+          items:
+            type: object
+            required: [id]
+            properties:
+              id:
+                type: integer
+              duration:
+                type: string
+              startDate:
+                type: string
+              finishDate:
+                type: string
+              scheduledMonths:
+                type: array
+                items:
+                  type: integer
+
+    MonthlyPmPlanRow:
+      type: object
+      required: [id, planId, machineId, rowNumber, machineName, status]
+      properties:
+        id:
+          type: integer
+        planId:
+          type: integer
+        annualPlanRowId:
+          type: ["integer", "null"]
+        machineId:
+          type: integer
+        rowNumber:
+          type: integer
+        departmentName:
+          type: ["string", "null"]
+        sectionName:
+          type: ["string", "null"]
+        machineName:
+          type: string
+        identificationNumber:
+          type: ["string", "null"]
+        plannedDateFrom:
+          type: ["string", "null"]
+        plannedDateTo:
+          type: ["string", "null"]
+        actualDate:
+          type: ["string", "null"]
+        amendments:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    MonthlyPmPlanDetail:
+      type: object
+      required: [id, year, month, rows, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        year:
+          type: integer
+        month:
+          type: integer
+        preparedByName:
+          type: ["string", "null"]
+        preparedByDate:
+          type: ["string", "null"]
+        maintenanceSupervisorName:
+          type: ["string", "null"]
+        maintenanceSupervisorDate:
+          type: ["string", "null"]
+        departmentManagerName:
+          type: ["string", "null"]
+        departmentManagerDate:
+          type: ["string", "null"]
+        approvedByName:
+          type: ["string", "null"]
+        approvedByDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyPmPlanRow"
+
+    MonthlyPmPlanInput:
+      type: object
+      properties:
+        preparedByName:
+          type: string
+        preparedByDate:
+          type: string
+        maintenanceSupervisorName:
+          type: string
+        maintenanceSupervisorDate:
+          type: string
+        departmentManagerName:
+          type: string
+        departmentManagerDate:
+          type: string
+        approvedByName:
+          type: string
+        approvedByDate:
+          type: string
+        rows:
+          type: array
+          items:
+            type: object
+            required: [id]
+            properties:
+              id:
+                type: integer
+              plannedDateFrom:
+                type: string
+              plannedDateTo:
+                type: string
+              actualDate:
+                type: string
+              amendments:
+                type: string
+              status:
+                type: string
+
+    MaintenanceRequestStatus:
+      type: string
+      enum:
+        - Submitted
+        - Pending QA Approval
+        - QA Approved
+        - QA Rejected
+        - Accepted
+        - Rejected
+        - In Progress
+        - Completed
+        - Closed
+
+    MaintenanceRequestInput:
+      type: object
+      required: [machineId, departmentSection, priority, requestDate, failureDescription]
+      properties:
+        machineId:
+          type: integer
+        departmentSection:
+          type: string
+        priority:
+          type: string
+          enum: [normal, urgent]
+        requestDate:
+          type: string
+        failureDescription:
+          type: string
+        reportingPersonName:
+          type: string
+        reportingPersonSignature:
+          type: string
+        departmentSupervisorName:
+          type: string
+        departmentSupervisorSignature:
+          type: string
+
+    MaintenanceRequestMachineOption:
+      type: object
+      required: [id, machineName, machineNumber]
+      properties:
+        id:
+          type: integer
+        machineName:
+          type: string
+        machineNumber:
+          type: string
+        location:
+          type: ["string", "null"]
+        departmentName:
+          type: ["string", "null"]
+
+    MaintenanceRequestTechnicianOption:
+      type: object
+      required: [id, username]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        fullName:
+          type: ["string", "null"]
+
+    ReviewDecisionInput:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject, accept]
+        notes:
+          type: string
+        signature:
+          type: string
+        assignedTechnicianUserId:
+          type: ["integer", "null"]
+        expectedWorkTimeFrom:
+          type: string
+        expectedWorkTimeTo:
+          type: string
+
+    AssignTechnicianInput:
+      type: object
+      properties:
+        assignedTechnicianUserId:
+          type: ["integer", "null"]
+
+    PreliminaryFindingsInput:
+      type: object
+      properties:
+        preliminaryCheckResults:
+          type: string
+        technicianName:
+          type: string
+        maintenanceTechnicianSignature:
+          type: string
+        concernedSectionSupervisorSignature:
+          type: string
+
+    PerformingStaffInput:
+      type: object
+      properties:
+        no:
+          type: string
+        name:
+          type: string
+        signature:
+          type: string
+
+    ActionsHandoverInput:
+      type: object
+      properties:
+        actionsTaken:
+          type: string
+        remarksRecommendations:
+          type: string
+        performingStaff:
+          type: array
+          items:
+            $ref: "#/components/schemas/PerformingStaffInput"
+        receiverName:
+          type: string
+        receiverSignature:
+          type: string
+        handoverDate:
+          type: string
+        engineeringSignature:
+          type: string
+
+    ActionsTakenInput:
+      type: object
+      properties:
+        actionsTaken:
+          type: string
+        remarksRecommendations:
+          type: string
+        performingStaff:
+          type: array
+          items:
+            $ref: "#/components/schemas/PerformingStaffInput"
+
+    HandoverInput:
+      type: object
+      properties:
+        receiverName:
+          type: string
+        receiverSignature:
+          type: string
+        handoverDate:
+          type: string
+        engineeringSignature:
+          type: string
+
+    MaintenanceRequestSummary:
+      type: object
+      required: [id, requestReportNumber, machineId, machineName, machineNumber, requestDate, priority, status, createdAt]
+      properties:
+        id:
+          type: integer
+        requestReportNumber:
+          type: string
+        machineId:
+          type: integer
+        machineName:
+          type: string
+        machineNumber:
+          type: string
+        departmentSection:
+          type: ["string", "null"]
+        priority:
+          type: string
+        requestDate:
+          type: string
+        failureDescription:
+          type: string
+        status:
+          $ref: "#/components/schemas/MaintenanceRequestStatus"
+        assignedTechnicianUserId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    MaintenanceRequestDetail:
+      type: object
+      required: [request, statusHistory]
+      properties:
+        request:
+          $ref: "#/components/schemas/MaintenanceRequestSummary"
+        requestedByUserId:
+          type: integer
+        departmentId:
+          type: ["integer", "null"]
+        reportingPersonName:
+          type: ["string", "null"]
+        reportingPersonSignature:
+          type: ["string", "null"]
+        departmentSupervisorName:
+          type: ["string", "null"]
+        departmentSupervisorSignature:
+          type: ["string", "null"]
+        qaDecision:
+          type: ["string", "null"]
+        qaSupervisorSignature:
+          type: ["string", "null"]
+        qaReviewDate:
+          type: ["string", "null"]
+        qaReviewNotes:
+          type: ["string", "null"]
+        engineeringDecision:
+          type: ["string", "null"]
+        assignedTechnicianUserId:
+          type: ["integer", "null"]
+        engineeringSupervisorSignature:
+          type: ["string", "null"]
+        engineeringReviewNotes:
+          type: ["string", "null"]
+        expectedWorkTimeFrom:
+          type: ["string", "null"]
+        expectedWorkTimeTo:
+          type: ["string", "null"]
+        correctiveEvent:
+          anyOf:
+            - $ref: "#/components/schemas/CorrectiveMaintenanceEvent"
+            - type: "null"
+        statusHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/MaintenanceRequestStatusHistory"
+
+    MaintenanceRequestStatusHistory:
+      type: object
+      required: [id, requestId, toStatus, createdAt]
+      properties:
+        id:
+          type: integer
+        requestId:
+          type: integer
+        fromStatus:
+          type: ["string", "null"]
+        toStatus:
+          type: string
+        changedByUserId:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    CorrectiveMaintenanceEvent:
+      type: object
+      required: [id, recordId, requestId, machineId, requestReportNumber, rowNumber]
+      properties:
+        id:
+          type: integer
+        recordId:
+          type: integer
+        requestId:
+          type: integer
+        machineId:
+          type: integer
+        requestReportNumber:
+          type: string
+        rowNumber:
+          type: integer
+        preliminaryCheckResults:
+          type: ["string", "null"]
+        technicianName:
+          type: ["string", "null"]
+        maintenanceTechnicianSignature:
+          type: ["string", "null"]
+        concernedSectionSupervisorSignature:
+          type: ["string", "null"]
+        actionsTaken:
+          type: ["string", "null"]
+        remarksRecommendations:
+          type: ["string", "null"]
+        performingStaff:
+          type: array
+          items:
+            $ref: "#/components/schemas/PerformingStaffInput"
+        receiverName:
+          type: ["string", "null"]
+        receiverSignature:
+          type: ["string", "null"]
+        handoverDate:
+          type: ["string", "null"]
+        engineeringSignature:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+
+    CorrectiveMaintenanceRecordDetail:
+      type: object
+      required: [id, machineId, sequenceNumber, documentNumber, pageCount, machineName, machineNumber, status, events]
+      properties:
+        id:
+          type: integer
+        machineId:
+          type: integer
+        sequenceNumber:
+          type: integer
+        documentNumber:
+          type: string
+        executionDate:
+          type: ["string", "null"]
+        pageCount:
+          type: string
+        machineName:
+          type: string
+        machineNumber:
+          type: string
+        machineLocation:
+          type: ["string", "null"]
+        startupDate:
+          type: ["string", "null"]
+        maxRows:
+          type: integer
+        status:
+          type: string
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/CorrectiveMaintenanceEvent"
+
+    DashboardPmItem:
+      type: object
+      required: [id, machineId, machineName, machineNumber, plannedDateFrom, plannedDateTo, status]
+      properties:
+        id:
+          type: integer
+        machineId:
+          type: integer
+        machineName:
+          type: string
+        machineNumber:
+          type: string
+        plannedDateFrom:
+          type: ["string", "null"]
+        plannedDateTo:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    DashboardMaintenanceRequestSummary:
+      type: object
+      required: [total, completed, pendingQa, pendingEngineering, acceptedOrInProgress, own]
+      properties:
+        total:
+          type: integer
+        completed:
+          type: integer
+        pendingQa:
+          type: integer
+        pendingEngineering:
+          type: integer
+        acceptedOrInProgress:
+          type: integer
+        own:
+          type: integer
+
+    DashboardRecentMaintenanceRequest:
+      type: object
+      required: [id, requestReportNumber, machineName, machineNumber, status, requestDate]
+      properties:
+        id:
+          type: integer
+        requestReportNumber:
+          type: string
+        machineName:
+          type: string
+        machineNumber:
+          type: string
+        status:
+          type: string
+        requestDate:
+          type: string
+
+    DashboardStats:
+      type: object
+      required: [totalMachines, activeMachines, totalUsers, activeUsers, totalDepartments, machinesByDepartment, machinesByStatus]
+      properties:
+        totalMachines:
+          type: integer
+        activeMachines:
+          type: integer
+        totalUsers:
+          type: integer
+        activeUsers:
+          type: integer
+        totalDepartments:
+          type: integer
+        machinesByDepartment:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountByLabel"
+        machinesByStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountByLabel"
+        thisWeekPm:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardPmItem"
+        monthlyPmCompletion:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountByLabel"
+        maintenanceRequests:
+          $ref: "#/components/schemas/DashboardMaintenanceRequestSummary"
+        recentMaintenanceRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardRecentMaintenanceRequest"
+
+    CountByLabel:
+      type: object
+      required: [label, count]
+      properties:
+        label:
+          type: string
+        count:
+          type: integer

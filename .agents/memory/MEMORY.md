@@ -1,0 +1,4 @@
+- [CMMS Phase 1 architecture](cmms-architecture.md) — OpenAPI-first monorepo for Beit Jala Pharma CMMS; all three critical patterns documented.
+- [bcrypt native build](bcrypt-build.md) — bcrypt must be listed in pnpm-workspace.yaml onlyBuiltDependencies or its native .node module won't build.
+- [connect-pg-simple sessions table](sessions-table.md) — sessions table must be created manually before starting API; remove createTableIfMissing:true or it looks for table.sql in dist/.
+- [CMMS test accounts](cmms-test-accounts.md) — seed credentials and permission assignments for Phase 1 demo.
