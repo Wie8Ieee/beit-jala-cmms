@@ -131,6 +131,7 @@ pnpm --filter @workspace/api-spec run codegen
 
 ---
 
+<<<<<<< HEAD
 ## Phase 2 — Preventive Maintenance
 
 - [x] Preventive Maintenance schema foundation
@@ -179,6 +180,21 @@ Phase 3 intentionally does not include Spare Parts, real printing, or real elect
 - QA Supervisor approval with signature placeholder — implemented
 - Corrective Maintenance Record (work performed, fixed log rows) — implemented
 - Machine handover workflow — implemented
+=======
+## Next Phases Roadmap
+
+### Phase 2 — Preventive Maintenance
+- PM checklists per machine (configurable checklist points)
+- PM record creation and filling
+- Multi-column PM record layout with auto-pagination
+- Annual and Monthly Maintenance Plans
+
+### Phase 3 — Corrective Maintenance
+- Maintenance Request form (Department → QA → Engineering workflow)
+- QA Supervisor approval with signature
+- Corrective Maintenance Record (work performed, parts used)
+- Machine handover workflow
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
 
 ### Phase 4 — Spare Parts Module
 - Spare parts catalogue
@@ -230,6 +246,7 @@ scripts/            — Utility scripts
 | PATCH | /api/machines/:id/soft-delete | Soft delete machine |
 | GET | /api/machines/:id/equipment-information | Get EIR |
 | PUT | /api/machines/:id/equipment-information | Save EIR |
+<<<<<<< HEAD
 | GET | /api/machines/:id/pm/header | Get PM header |
 | PUT | /api/machines/:id/pm/header | Update PM header |
 | GET | /api/machines/:id/pm/checklist | List PM checklist points |
@@ -258,4 +275,6 @@ scripts/            — Utility scripts
 | PATCH | /api/maintenance-requests/:id/handover | Save hand-over confirmation and close request |
 | GET | /api/machines/:id/corrective-maintenance | Get active CM log |
 | GET | /api/machines/:id/corrective-maintenance/history | Get CM log history |
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
 | GET | /api/dashboard/stats | Dashboard statistics |

@@ -24,6 +24,7 @@ tags:
     description: Machines
   - name: equipment
     description: Equipment Information Records
+<<<<<<< HEAD
   - name: preventive-maintenance
     description: Preventive Maintenance records and checklists
   - name: maintenance-plans
@@ -32,6 +33,8 @@ tags:
     description: Maintenance requests and corrective maintenance workflow
   - name: corrective-maintenance
     description: Corrective Maintenance records and history
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
   - name: dashboard
     description: Dashboard statistics
 paths:
@@ -476,6 +479,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+<<<<<<< HEAD
   /machines/{id}/pm/header:
     get:
       operationId: getPmHeader
@@ -1187,6 +1191,8 @@ paths:
                 items:
                   $ref: "#/components/schemas/CorrectiveMaintenanceRecordDetail"
 
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
   /dashboard/stats:
     get:
       operationId: getDashboardStats
@@ -1537,6 +1543,7 @@ components:
         approvedByDate:
           type: string
 
+<<<<<<< HEAD
     PmHeader:
       type: object
       required: [id, machineId, procedureFormNumber, columnsPerRecord, createdAt, updatedAt]
@@ -2045,6 +2052,10 @@ components:
       properties:
         preliminaryCheckResults:
           type: string
+        expectedWorkTimeFrom:
+          type: string
+        expectedWorkTimeTo:
+          type: string
         technicianName:
           type: string
         maintenanceTechnicianSignature:
@@ -2221,6 +2232,10 @@ components:
           type: integer
         preliminaryCheckResults:
           type: ["string", "null"]
+        expectedWorkTimeFrom:
+          type: ["string", "null"]
+        expectedWorkTimeTo:
+          type: ["string", "null"]
         technicianName:
           type: ["string", "null"]
         maintenanceTechnicianSignature:
@@ -2332,6 +2347,8 @@ components:
         requestDate:
           type: string
 
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
     DashboardStats:
       type: object
       required: [totalMachines, activeMachines, totalUsers, activeUsers, totalDepartments, machinesByDepartment, machinesByStatus]
@@ -2354,6 +2371,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CountByLabel"
+<<<<<<< HEAD
         thisWeekPm:
           type: array
           items:
@@ -2368,6 +2386,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DashboardRecentMaintenanceRequest"
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
 
     CountByLabel:
       type: object

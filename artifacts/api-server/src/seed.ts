@@ -54,6 +54,7 @@ async function seed() {
     { name: "edit_header_placeholder", description: "[Phase 2] Edit form headers" },
     { name: "print_forms_placeholder", description: "[Phase 2] Print forms" },
     { name: "manage_signatures_placeholder", description: "[Phase 2] Manage electronic signatures" },
+<<<<<<< HEAD
     { name: "manage_pm_checklist", description: "Manage PM checklist points" },
     { name: "fill_pm_record", description: "Fill preventive maintenance records" },
     { name: "view_maintenance_plans", description: "View annual and monthly maintenance plans" },
@@ -65,6 +66,8 @@ async function seed() {
     { name: "review_engineering_requests", description: "Engineering review QA-approved maintenance requests" },
     { name: "fill_corrective_maintenance", description: "Fill corrective maintenance preliminary findings and actions" },
     { name: "manage_maintenance_requests", description: "View and manage all maintenance requests" },
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
   ];
 
   const permIds: Record<string, number> = {};
@@ -107,13 +110,17 @@ async function seed() {
     "view_equipment_information", "edit_equipment_information",
     "manage_pm_checklist_placeholder", "fill_pm_record_placeholder",
     "view_maintenance_plans_placeholder", "edit_header_placeholder", "print_forms_placeholder",
+<<<<<<< HEAD
     "manage_pm_checklist", "fill_pm_record", "view_maintenance_plans", "edit_maintenance_plans", "edit_header",
     "submit_maintenance_request", "view_own_requests", "review_qa_requests", "review_engineering_requests",
     "fill_corrective_maintenance", "manage_maintenance_requests",
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
   ];
   const techPerms = [
     "view_dashboard", "view_machines", "view_equipment_information",
     "fill_pm_record_placeholder", "view_maintenance_plans_placeholder", "print_forms_placeholder",
+<<<<<<< HEAD
     "fill_pm_record", "view_maintenance_plans", "fill_corrective_maintenance",
   ];
   const empPerms = [
@@ -123,6 +130,14 @@ async function seed() {
   const qaPerms = [
     "view_dashboard", "approve_qa_request_placeholder",
     "review_qa_requests", "manage_maintenance_requests",
+=======
+  ];
+  const empPerms = [
+    "submit_maintenance_request_placeholder", "view_own_requests_placeholder",
+  ];
+  const qaPerms = [
+    "view_dashboard", "approve_qa_request_placeholder",
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
   ];
 
   const userData = [

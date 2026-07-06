@@ -22,7 +22,7 @@ type TechnicianOption = {
 export default function MaintenanceRequestDetailPage({ params }: { params: { id: string } }) {
   const requestId = Number(params.id);
   const queryClient = useQueryClient();
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [qaNotes, setQaNotes] = useState("");
   const [qaSignature, setQaSignature] = useState("");
   const [engineeringNotes, setEngineeringNotes] = useState("");
@@ -61,8 +61,8 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
     setEngineeringNotes(data.engineeringReviewNotes ?? "");
     setEngineeringReviewSignature(data.engineeringSupervisorSignature ?? "");
     setAssignedTechnicianId(data.assignedTechnicianUserId ? String(data.assignedTechnicianUserId) : "");
-    setWorkFrom(data.expectedWorkTimeFrom ?? "");
-    setWorkTo(data.expectedWorkTimeTo ?? "");
+    setWorkFrom(event?.expectedWorkTimeFrom ?? data.expectedWorkTimeFrom ?? "");
+    setWorkTo(event?.expectedWorkTimeTo ?? data.expectedWorkTimeTo ?? "");
     setPreliminary(event?.preliminaryCheckResults ?? "");
     setTechnicianName(event?.technicianName ?? "");
     setTechSignature(event?.maintenanceTechnicianSignature ?? "");
@@ -120,6 +120,8 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
         method: "PATCH",
         body: JSON.stringify({
           preliminaryCheckResults: preliminary,
+          expectedWorkTimeFrom: workFrom,
+          expectedWorkTimeTo: workTo,
           technicianName,
           maintenanceTechnicianSignature: techSignature,
           concernedSectionSupervisorSignature: sectionSupervisorSignature,
@@ -158,11 +160,12 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
   if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading request...</div>;
 
   const request = data.request;
+  const isAssignedTechnician = data.assignedTechnicianUserId === user?.id;
   const canQaReview = hasPermission("review_qa_requests") && request.status === "Pending QA Approval";
   const canEngineeringReview = hasPermission("review_engineering_requests") && request.status === "QA Approved";
-  const canStartWork = hasPermission("fill_corrective_maintenance") && request.status === "Accepted";
-  const canTechnicianWork = hasPermission("fill_corrective_maintenance") && (request.status === "Accepted" || request.status === "In Progress");
-  const canHandover = hasPermission("fill_corrective_maintenance") && (request.status === "In Progress" || request.status === "Completed");
+  const canStartWork = hasPermission("fill_corrective_maintenance") && isAssignedTechnician && request.status === "Accepted";
+  const canTechnicianWork = hasPermission("fill_corrective_maintenance") && isAssignedTechnician && (request.status === "Accepted" || request.status === "In Progress");
+  const canHandover = hasPermission("fill_corrective_maintenance") && isAssignedTechnician && (request.status === "In Progress" || request.status === "Completed");
 
   function submitPreliminary(event: FormEvent) {
     event.preventDefault();
@@ -288,6 +291,8 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
           <CardHeader><CardTitle>Section 3 - Preliminary Findings</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2"><Label>Preliminary check results</Label><Textarea value={preliminary} readOnly={!canTechnicianWork} onChange={(event) => setPreliminary(event.target.value)} /></div>
+            <div><Label>Expected work time From</Label><Input value={workFrom} readOnly={!canTechnicianWork} onChange={(event) => setWorkFrom(event.target.value)} /></div>
+            <div><Label>Expected work time To</Label><Input value={workTo} readOnly={!canTechnicianWork} onChange={(event) => setWorkTo(event.target.value)} /></div>
             <div><Label>Maintenance technician name</Label><Input value={technicianName} readOnly={!canTechnicianWork} onChange={(event) => setTechnicianName(event.target.value)} /></div>
             <div><Label>Maintenance technician signature placeholder</Label><Input value={techSignature} readOnly={!canTechnicianWork} onChange={(event) => setTechSignature(event.target.value)} /></div>
             <div><Label>Concerned section supervisor signature placeholder</Label><Input value={sectionSupervisorSignature} readOnly={!canTechnicianWork} onChange={(event) => setSectionSupervisorSignature(event.target.value)} /></div>

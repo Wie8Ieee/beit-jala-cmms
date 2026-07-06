@@ -14,6 +14,7 @@ import MachinesList from './pages/machines/list';
 import MachineForm from './pages/machines/form';
 import MachineProfile from './pages/machines/profile';
 import EquipmentInformationForm from './pages/machines/equipment-info';
+<<<<<<< HEAD
 import PmRecordPage from './pages/machines/pm-record';
 import PmChecklistPage from './pages/machines/pm-checklist';
 import PmHeaderPage from './pages/machines/pm-header';
@@ -26,6 +27,8 @@ import MonthlyPlanPage from './pages/maintenance-plans/monthly';
 import MaintenanceRequestsListPage from './pages/maintenance-requests/list';
 import NewMaintenanceRequestPage from './pages/maintenance-requests/new';
 import MaintenanceRequestDetailPage from './pages/maintenance-requests/detail';
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
 import UsersList from './pages/admin/users/list';
 import UserForm from './pages/admin/users/form';
 
@@ -58,6 +61,17 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
+<<<<<<< HEAD
+=======
+      <Route path="/machines/:id">
+        {(params) => (
+          <ProtectedRoute permission="view_machines">
+            <MachineProfile params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
       <Route path="/machines/:id/edit">
         {(params) => (
           <ProtectedRoute permission="edit_machine">
@@ -74,6 +88,7 @@ function Router() {
         )}
       </Route>
 
+<<<<<<< HEAD
       <Route path="/machines/:id/pm/checklist">
         {(params) => (
           <ProtectedRoute permission="manage_pm_checklist">
@@ -196,6 +211,8 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
       <Route path="/admin/users">
         <ProtectedRoute permission="manage_users">
           <UsersList />

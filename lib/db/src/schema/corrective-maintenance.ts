@@ -88,6 +88,8 @@ export const correctiveMaintenanceEventsTable = pgTable(
     requestReportNumber: text("request_report_number").notNull(),
     rowNumber: integer("row_number").notNull(),
     preliminaryCheckResults: text("preliminary_check_results"),
+    expectedWorkTimeFrom: text("expected_work_time_from"),
+    expectedWorkTimeTo: text("expected_work_time_to"),
     technicianName: text("technician_name"),
     maintenanceTechnicianSignature: text("maintenance_technician_signature"),
     concernedSectionSupervisorSignature: text("concerned_section_supervisor_signature"),

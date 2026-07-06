@@ -21,7 +21,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+<<<<<<< HEAD
 import { Activity, CalendarDays, ClipboardList, LayoutDashboard, Settings, LogOut, TestTube } from "lucide-react";
+=======
+import { Activity, LayoutDashboard, Settings, LogOut, TestTube } from "lucide-react";
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -81,6 +85,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </SidebarMenuItem>
               )}
 
+<<<<<<< HEAD
               {hasPermission("view_maintenance_plans") && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location.startsWith("/maintenance-plans")}>
@@ -108,6 +113,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </SidebarMenuItem>
               )}
 
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
               {hasPermission("manage_users") && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location.startsWith("/admin/users")}>

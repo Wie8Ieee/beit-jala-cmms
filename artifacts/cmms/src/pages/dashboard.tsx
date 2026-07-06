@@ -1,7 +1,10 @@
 import { useAuth } from "../contexts/AuthContext";
 import { useGetDashboardStats } from "@workspace/api-client-react";
+<<<<<<< HEAD
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
 import {
   Card,
   CardContent,
@@ -36,12 +39,21 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: stats, isLoading } = useGetDashboardStats({
     query: {
+<<<<<<< HEAD
       enabled: !!user && (user.permissions.includes("view_dashboard") || user.roleName === "Admin" || user.roleName === "Maintenance Supervisor" || user.roleName === "Maintenance Technician" || user.roleName === "QA Supervisor"),
     }
   });
 
   const isAdminOrSupervisor = user?.roleName === "Admin" || user?.roleName === "Maintenance Supervisor";
   const isTechnician = user?.roleName === "Maintenance Technician";
+=======
+      enabled: !!user && (user.permissions.includes("view_dashboard") || user.roleName === "Admin" || user.roleName === "Supervisor" || user.roleName === "QA Supervisor"),
+    }
+  });
+
+  const isAdminOrSupervisor = user?.roleName === "Admin" || user?.roleName === "Supervisor";
+  const isTechnician = user?.roleName === "Technician";
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
   const isEmployee = user?.roleName === "Department Employee";
   const isQA = user?.roleName === "QA Supervisor";
 
@@ -73,6 +85,7 @@ export default function DashboardPage() {
     'Maintenance': 'hsl(var(--chart-4))', // yellow-ish
     'Inactive': 'hsl(var(--chart-2))' // gray-ish
   };
+<<<<<<< HEAD
   const pmStats = stats as typeof stats & {
     thisWeekPm?: Array<{
       id: number;
@@ -101,6 +114,8 @@ export default function DashboardPage() {
       requestDate: string;
     }>;
   };
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -160,7 +175,11 @@ export default function DashboardPage() {
                 <Wrench className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
+<<<<<<< HEAD
                 <div className="text-3xl font-bold">{pmStats?.thisWeekPm?.length ?? 0}</div>
+=======
+                <div className="text-3xl font-bold">12</div>
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
                 <p className="text-xs text-amber-500 font-medium mt-1">
                   Scheduled for this week
                 </p>
@@ -266,6 +285,7 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+<<<<<<< HEAD
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="rounded-md border p-3"><div className="text-2xl font-bold">{pmStats?.maintenanceRequests?.pendingQa ?? 0}</div><div className="text-muted-foreground">Pending QA</div></div>
@@ -274,6 +294,13 @@ export default function DashboardPage() {
                   <Button asChild variant="outline" size="sm">
                     <Link href="/maintenance-requests">Open Requests</Link>
                   </Button>
+=======
+                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                    <Wrench className="h-6 w-6" />
+                  </div>
+                  <p>Module coming in phase 2</p>
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
                 </div>
               </CardContent>
             </Card>
@@ -285,6 +312,7 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+<<<<<<< HEAD
                 {pmStats?.thisWeekPm?.length ? (
                   <div className="space-y-3">
                     {pmStats.thisWeekPm.map((item) => (
@@ -303,12 +331,21 @@ export default function DashboardPage() {
                     <p>No PM activities scheduled this week.</p>
                   </div>
                 )}
+=======
+                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                    <Activity className="h-6 w-6" />
+                  </div>
+                  <p>Module coming in phase 2</p>
+                </div>
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+<<<<<<< HEAD
                   Monthly PM Completion
                 </CardTitle>
               </CardHeader>
@@ -324,6 +361,17 @@ export default function DashboardPage() {
                       <RechartsTooltip />
                     </PieChart>
                   </ResponsiveContainer>
+=======
+                  Pending Approvals
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                    <CheckCircle2 className="h-6 w-6" />
+                  </div>
+                  <p>Module coming in phase 2</p>
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
                 </div>
               </CardContent>
             </Card>
@@ -338,6 +386,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Wrench className="h-4 w-4 text-primary" />
+<<<<<<< HEAD
                   Accepted CM Work
                 </CardTitle>
               </CardHeader>
@@ -348,6 +397,16 @@ export default function DashboardPage() {
                   <Button asChild size="sm">
                     <Link href="/maintenance-requests/technician">Open CM Work</Link>
                   </Button>
+=======
+                  Assigned Work Orders
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg border-muted">
+                  <AlertTriangle className="h-8 w-8 mb-3 text-muted-foreground/50" />
+                  <p>Work order assignment coming in phase 2.</p>
+                  <p className="text-sm mt-1">Please refer to paper assignments for now.</p>
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
                 </div>
               </CardContent>
             </Card>
@@ -361,7 +420,11 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg border-muted">
                   <Activity className="h-8 w-8 mb-3 text-muted-foreground/50" />
+<<<<<<< HEAD
                   <p>{pmStats?.thisWeekPm?.length ?? 0} PM activities scheduled this week.</p>
+=======
+                  <p>PM Scheduling coming in phase 2.</p>
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
                 </div>
               </CardContent>
             </Card>
@@ -383,9 +446,15 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground">
                   Submit a new corrective maintenance request if you notice equipment malfunction.
                 </p>
+<<<<<<< HEAD
                 <Button asChild className="w-full">
                   <Link href="/maintenance-requests/new">Submit Maintenance Request</Link>
                 </Button>
+=======
+                <div className="w-full p-4 border rounded bg-background text-sm text-center text-muted-foreground">
+                  Form module coming in phase 2
+                </div>
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
               </div>
             </CardContent>
           </Card>
@@ -398,11 +467,16 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+<<<<<<< HEAD
               <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg border-muted gap-3">
                 <p>{pmStats?.maintenanceRequests?.own ?? 0} submitted requests.</p>
                 <Button asChild variant="outline" size="sm">
                   <Link href="/maintenance-requests/my">View My Requests</Link>
                 </Button>
+=======
+              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg border-muted">
+                <p>Request tracking coming in phase 2</p>
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
               </div>
             </CardContent>
           </Card>

@@ -4,15 +4,21 @@ import {
   machinesTable,
   usersTable,
   departmentsTable,
+<<<<<<< HEAD
   monthlyPmPlanRowsTable,
   monthlyPmPlansTable,
   maintenanceRequestsTable,
 } from "@workspace/db";
 import { and, eq, isNull, count, sql } from "drizzle-orm";
+=======
+} from "@workspace/db";
+import { eq, isNull, count, sql } from "drizzle-orm";
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
 import { requireAuth } from "../lib/auth.js";
 
 const router = Router();
 
+<<<<<<< HEAD
 function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
@@ -35,6 +41,10 @@ function currentWeekRange() {
 
 // GET /api/dashboard/stats
 router.get("/stats", requireAuth, async (req, res) => {
+=======
+// GET /api/dashboard/stats
+router.get("/stats", requireAuth, async (_req, res) => {
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
   const [machineStats] = await db
     .select({
       total: count(),
@@ -74,6 +84,7 @@ router.get("/stats", requireAuth, async (req, res) => {
     .where(isNull(machinesTable.deletedAt))
     .groupBy(machinesTable.status);
 
+<<<<<<< HEAD
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
@@ -142,6 +153,8 @@ router.get("/stats", requireAuth, async (req, res) => {
       requestDate: row.requestDate,
     }));
 
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
   res.json({
     totalMachines: Number(machineStats?.total ?? 0),
     activeMachines: Number(machineStats?.active ?? 0),
@@ -156,6 +169,7 @@ router.get("/stats", requireAuth, async (req, res) => {
       label: s.label ?? "unknown",
       count: Number(s.count),
     })),
+<<<<<<< HEAD
     thisWeekPm,
     monthlyPmCompletion: [
       { label: "Completed", count: completedCount },
@@ -164,6 +178,8 @@ router.get("/stats", requireAuth, async (req, res) => {
     maintenanceRequests: requestSummary,
     maintenanceRequestNotifications: requestNotifications,
     recentMaintenanceRequests: recentRequests,
+=======
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
   });
 });
 

@@ -205,6 +205,7 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
 
           <TabsContent value="pm" className="m-0 focus-visible:outline-none focus-visible:ring-0">
             <Card>
+<<<<<<< HEAD
               <CardHeader>
                 <CardTitle>Preventive Maintenance</CardTitle>
                 <CardDescription>Machine PM record, checklist points, and preserved record history.</CardDescription>
@@ -224,12 +225,19 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
                 <Button asChild variant="outline">
                   <Link href={`/machines/${machine.id}/pm/history`}>View PM History</Link>
                 </Button>
+=======
+              <CardContent className="flex flex-col items-center justify-center h-64 text-center">
+                <Settings2 className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-medium">Preventive Maintenance</h3>
+                <p className="text-muted-foreground mt-1">PM scheduling and checklists coming in a later phase.</p>
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="cm" className="m-0 focus-visible:outline-none focus-visible:ring-0">
             <Card>
+<<<<<<< HEAD
               <CardHeader>
                 <CardTitle>Corrective Maintenance</CardTitle>
                 <CardDescription>Linked Maintenance Requests and LOG-00-0102-3 corrective maintenance history.</CardDescription>
@@ -244,6 +252,12 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
                 <Button asChild variant="outline">
                   <Link href="/maintenance-requests">Maintenance Requests</Link>
                 </Button>
+=======
+              <CardContent className="flex flex-col items-center justify-center h-64 text-center">
+                <Wrench className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-medium">Corrective Maintenance</h3>
+                <p className="text-muted-foreground mt-1">Work orders and break-fix tracking coming in a later phase.</p>
+>>>>>>> e104d08dacfdefa360f88cd205b4f478d084c939
               </CardContent>
             </Card>
           </TabsContent>
