@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Activity, CalendarDays, ClipboardList, LayoutDashboard, Settings, LogOut, TestTube } from "lucide-react";
+import { Activity, CalendarDays, ClipboardList, LayoutDashboard, Package, Settings, LogOut, TestTube } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -103,6 +103,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     <Link href={hasPermission("view_own_requests") && !hasPermission("manage_maintenance_requests") ? "/maintenance-requests/my" : "/maintenance-requests"}>
                       <ClipboardList className="size-4" />
                       <span>Maintenance Requests</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {hasPermission("view_spare_parts") && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location.startsWith("/spare-parts")}>
+                    <Link href="/spare-parts">
+                      <Package className="size-4" />
+                      <span>Spare Parts</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

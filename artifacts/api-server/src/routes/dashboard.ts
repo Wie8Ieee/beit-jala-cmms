@@ -7,6 +7,7 @@ import {
   monthlyPmPlanRowsTable,
   monthlyPmPlansTable,
   maintenanceRequestsTable,
+  sparePartsTable,
 } from "@workspace/db";
 import { and, eq, isNull, count, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/auth.js";
@@ -142,6 +143,13 @@ router.get("/stats", requireAuth, async (req, res) => {
       requestDate: row.requestDate,
     }));
 
+  const lowStockParts = await db
+    .select()
+    .from(sparePartsTable)
+    .where(and(isNull(sparePartsTable.deletedAt), sql`${sparePartsTable.currentQuantity} <= ${sparePartsTable.minimumQuantity}`))
+    .orderBy(sparePartsTable.currentQuantity, sparePartsTable.partName)
+    .limit(5);
+
   res.json({
     totalMachines: Number(machineStats?.total ?? 0),
     activeMachines: Number(machineStats?.active ?? 0),
@@ -164,6 +172,14 @@ router.get("/stats", requireAuth, async (req, res) => {
     maintenanceRequests: requestSummary,
     maintenanceRequestNotifications: requestNotifications,
     recentMaintenanceRequests: recentRequests,
+    lowStockSpareParts: lowStockParts.map((part) => ({
+      id: part.id,
+      partName: part.partName,
+      partCode: part.partCode,
+      currentQuantity: part.currentQuantity,
+      minimumQuantity: part.minimumQuantity,
+      unit: part.unit,
+    })),
   });
 });
 

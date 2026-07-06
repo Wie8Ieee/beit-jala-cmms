@@ -166,6 +166,20 @@ Phase 3 intentionally does not include Spare Parts, real printing, or real elect
 
 ---
 
+## Phase 4 — Spare Parts Module
+
+- [x] Spare parts catalogue with soft-delete support
+- [x] Append-only stock movement history
+- [x] Stock-in, stock-out, and supervisor/admin adjustment movements
+- [x] Automatic current quantity updates from movement records
+- [x] Low-stock indicators and dashboard widget
+- [x] Optional PM/CM/manual reference fields on stock movements
+- [x] Phase 4 permissions for viewing, managing, and recording spare part usage
+
+Phase 4 intentionally does not include real printing or real electronic signatures.
+
+---
+
 ## Next Phases Roadmap
 
 ### Phase 2 — Preventive Maintenance
@@ -181,9 +195,9 @@ Phase 3 intentionally does not include Spare Parts, real printing, or real elect
 - Machine handover workflow — implemented
 
 ### Phase 4 — Spare Parts Module
-- Spare parts catalogue
-- Stock in/out tracking per machine
-- Low-stock alerts
+- Spare parts catalogue — implemented
+- Stock in/out tracking with append-only movement history — implemented
+- Low-stock alerts — implemented
 
 ### Phase 5 — Printing & Signatures
 - Electronic signatures (Examiner + Machine Receiver)
@@ -258,4 +272,13 @@ scripts/            — Utility scripts
 | PATCH | /api/maintenance-requests/:id/handover | Save hand-over confirmation and close request |
 | GET | /api/machines/:id/corrective-maintenance | Get active CM log |
 | GET | /api/machines/:id/corrective-maintenance/history | Get CM log history |
+| GET | /api/spare-parts | List active spare parts |
+| POST | /api/spare-parts | Create spare part |
+| GET | /api/spare-parts/search | Search spare parts |
+| GET | /api/spare-parts/low-stock | List low-stock spare parts |
+| GET | /api/spare-parts/:id | Get spare part |
+| PUT | /api/spare-parts/:id | Update spare part |
+| PATCH | /api/spare-parts/:id/soft-delete | Soft-delete spare part |
+| GET | /api/spare-parts/:id/movements | List spare part movements |
+| POST | /api/spare-parts/:id/movements | Record stock movement |
 | GET | /api/dashboard/stats | Dashboard statistics |

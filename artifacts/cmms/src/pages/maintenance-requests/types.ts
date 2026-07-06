@@ -28,6 +28,8 @@ export type CorrectiveMaintenanceEvent = {
   requestReportNumber: string;
   rowNumber: number;
   preliminaryCheckResults: string | null;
+  expectedWorkTimeFrom: string | null;
+  expectedWorkTimeTo: string | null;
   technicianName: string | null;
   maintenanceTechnicianSignature: string | null;
   concernedSectionSupervisorSignature: string | null;

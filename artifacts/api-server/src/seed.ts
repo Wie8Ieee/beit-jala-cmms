@@ -65,6 +65,9 @@ async function seed() {
     { name: "review_engineering_requests", description: "Engineering review QA-approved maintenance requests" },
     { name: "fill_corrective_maintenance", description: "Fill corrective maintenance preliminary findings and actions" },
     { name: "manage_maintenance_requests", description: "View and manage all maintenance requests" },
+    { name: "view_spare_parts", description: "View spare parts catalogue and stock history" },
+    { name: "manage_spare_parts", description: "Create, edit, adjust, and soft-delete spare parts" },
+    { name: "record_spare_part_usage", description: "Record spare part stock-out usage during maintenance" },
   ];
 
   const permIds: Record<string, number> = {};
@@ -110,6 +113,7 @@ async function seed() {
     "manage_pm_checklist", "fill_pm_record", "view_maintenance_plans", "edit_maintenance_plans", "edit_header",
     "submit_maintenance_request", "view_own_requests", "review_qa_requests", "review_engineering_requests",
     "fill_corrective_maintenance", "manage_maintenance_requests",
+    "view_spare_parts", "manage_spare_parts", "record_spare_part_usage",
   ];
   const techPerms = [
     "view_dashboard", "view_machines", "view_equipment_information",

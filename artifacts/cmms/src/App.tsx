@@ -26,6 +26,10 @@ import MonthlyPlanPage from './pages/maintenance-plans/monthly';
 import MaintenanceRequestsListPage from './pages/maintenance-requests/list';
 import NewMaintenanceRequestPage from './pages/maintenance-requests/new';
 import MaintenanceRequestDetailPage from './pages/maintenance-requests/detail';
+import SparePartsListPage from './pages/spare-parts/list';
+import SparePartDetailPage from './pages/spare-parts/detail';
+import SparePartFormPage from './pages/spare-parts/form';
+import SparePartMovementFormPage from './pages/spare-parts/movement-form';
 import UsersList from './pages/admin/users/list';
 import UserForm from './pages/admin/users/form';
 
@@ -193,6 +197,42 @@ function Router() {
       <Route path="/maintenance-requests">
         <ProtectedRoute>
           <MaintenanceRequestsListPage />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/spare-parts/new">
+        <ProtectedRoute permission="manage_spare_parts">
+          <SparePartFormPage />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/spare-parts/:id/edit">
+        {(params) => (
+          <ProtectedRoute permission="manage_spare_parts">
+            <SparePartFormPage params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/spare-parts/:id/movements/new">
+        {(params) => (
+          <ProtectedRoute permission="view_spare_parts">
+            <SparePartMovementFormPage params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/spare-parts/:id">
+        {(params) => (
+          <ProtectedRoute permission="view_spare_parts">
+            <SparePartDetailPage params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/spare-parts">
+        <ProtectedRoute permission="view_spare_parts">
+          <SparePartsListPage />
         </ProtectedRoute>
       </Route>
 

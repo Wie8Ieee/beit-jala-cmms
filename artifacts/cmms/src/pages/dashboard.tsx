@@ -17,7 +17,8 @@ import {
   Wrench,
   AlertTriangle,
   CheckCircle2,
-  Clock
+  Clock,
+  Package
 } from "lucide-react";
 import {
   Bar,
@@ -100,7 +101,16 @@ export default function DashboardPage() {
       status: string;
       requestDate: string;
     }>;
+    lowStockSpareParts?: Array<{
+      id: number;
+      partName: string;
+      partCode: string;
+      currentQuantity: number;
+      minimumQuantity: number;
+      unit: string;
+    }>;
   };
+  const canViewSpareParts = !!user?.permissions.includes("view_spare_parts");
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -258,6 +268,37 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {canViewSpareParts && isAdminOrSupervisor && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Package className="h-4 w-4 text-primary" />
+                    Low-stock Spare Parts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {pmStats?.lowStockSpareParts?.length ? (
+                    <div className="space-y-3">
+                      {pmStats.lowStockSpareParts.map((part) => (
+                        <div key={part.id} className="rounded-md border p-3">
+                          <div className="font-medium">{part.partName}</div>
+                          <div className="text-xs text-muted-foreground">{part.partCode}</div>
+                          <div className="text-sm mt-1">{part.currentQuantity}/{part.minimumQuantity} {part.unit}</div>
+                        </div>
+                      ))}
+                      <Button asChild variant="outline" size="sm">
+                        <Link href="/spare-parts">Open Spare Parts</Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+                      <Package className="h-8 w-8 mb-3 text-muted-foreground/50" />
+                      <p>No low-stock spare parts.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">

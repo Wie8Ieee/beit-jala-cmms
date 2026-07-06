@@ -32,6 +32,8 @@ tags:
     description: Maintenance requests and corrective maintenance workflow
   - name: corrective-maintenance
     description: Corrective Maintenance records and history
+  - name: spare-parts
+    description: Spare parts catalogue and stock movements
   - name: dashboard
     description: Dashboard statistics
 paths:
@@ -1187,6 +1189,200 @@ paths:
                 items:
                   $ref: "#/components/schemas/CorrectiveMaintenanceRecordDetail"
 
+  /spare-parts:
+    get:
+      operationId: getSpareParts
+      tags: [spare-parts]
+      summary: List active spare parts
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: includeDeleted
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Spare parts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SparePart"
+    post:
+      operationId: createSparePart
+      tags: [spare-parts]
+      summary: Create spare part
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SparePartInput"
+      responses:
+        "201":
+          description: Spare part created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SparePart"
+
+  /spare-parts/search:
+    get:
+      operationId: searchSpareParts
+      tags: [spare-parts]
+      summary: Search spare parts by name or code
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Spare parts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SparePart"
+
+  /spare-parts/low-stock:
+    get:
+      operationId: getLowStockSpareParts
+      tags: [spare-parts]
+      summary: List low-stock spare parts
+      responses:
+        "200":
+          description: Low-stock spare parts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SparePart"
+
+  /spare-parts/{id}:
+    get:
+      operationId: getSparePart
+      tags: [spare-parts]
+      summary: Get spare part detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Spare part
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SparePart"
+    put:
+      operationId: updateSparePart
+      tags: [spare-parts]
+      summary: Update spare part
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SparePartInput"
+      responses:
+        "200":
+          description: Spare part updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SparePart"
+
+  /spare-parts/{id}/soft-delete:
+    patch:
+      operationId: softDeleteSparePart
+      tags: [spare-parts]
+      summary: Soft-delete spare part
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Spare part soft-deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SparePart"
+
+  /spare-parts/{id}/movements:
+    get:
+      operationId: getSparePartMovements
+      tags: [spare-parts]
+      summary: List spare part movement history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Spare part movements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SparePartMovement"
+    post:
+      operationId: createSparePartMovement
+      tags: [spare-parts]
+      summary: Record spare part stock movement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SparePartMovementInput"
+      responses:
+        "201":
+          description: Spare part movement recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SparePartMovement"
+
   /dashboard/stats:
     get:
       operationId: getDashboardStats
@@ -2045,6 +2241,10 @@ components:
       properties:
         preliminaryCheckResults:
           type: string
+        expectedWorkTimeFrom:
+          type: string
+        expectedWorkTimeTo:
+          type: string
         technicianName:
           type: string
         maintenanceTechnicianSignature:
@@ -2221,6 +2421,10 @@ components:
           type: integer
         preliminaryCheckResults:
           type: ["string", "null"]
+        expectedWorkTimeFrom:
+          type: ["string", "null"]
+        expectedWorkTimeTo:
+          type: ["string", "null"]
         technicianName:
           type: ["string", "null"]
         maintenanceTechnicianSignature:
@@ -2278,6 +2482,131 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CorrectiveMaintenanceEvent"
+
+    SparePart:
+      type: object
+      required: [id, partName, partCode, unit, minimumQuantity, currentQuantity, status, isLowStock, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        partName:
+          type: string
+        partCode:
+          type: string
+        description:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        unit:
+          type: string
+        minimumQuantity:
+          type: integer
+        currentQuantity:
+          type: integer
+        location:
+          type: ["string", "null"]
+        status:
+          type: string
+        isLowStock:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        deletedAt:
+          type: ["string", "null"]
+
+    SparePartInput:
+      type: object
+      required: [partName, partCode]
+      properties:
+        partName:
+          type: string
+        partCode:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        unit:
+          type: string
+        minimumQuantity:
+          type: integer
+        location:
+          type: string
+        status:
+          type: string
+
+    SparePartMovement:
+      type: object
+      required: [id, sparePartId, movementType, quantity, quantityBefore, quantityAfter, movementDate, referenceType, createdAt]
+      properties:
+        id:
+          type: integer
+        sparePartId:
+          type: integer
+        movementType:
+          type: string
+          enum: [IN, OUT, ADJUSTMENT]
+        quantity:
+          type: integer
+        quantityBefore:
+          type: integer
+        quantityAfter:
+          type: integer
+        movementDate:
+          type: string
+        reason:
+          type: ["string", "null"]
+        referenceType:
+          type: string
+          enum: [PM_RECORD, CM_REQUEST, MANUAL, OTHER]
+        referenceId:
+          type: ["integer", "null"]
+        recordedByUserId:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    SparePartMovementInput:
+      type: object
+      required: [movementType, quantity]
+      properties:
+        movementType:
+          type: string
+          enum: [IN, OUT, ADJUSTMENT]
+        quantity:
+          type: integer
+        movementDate:
+          type: string
+        reason:
+          type: string
+        referenceType:
+          type: string
+          enum: [PM_RECORD, CM_REQUEST, MANUAL, OTHER]
+        referenceId:
+          type: ["integer", "null"]
+        notes:
+          type: string
+
+    DashboardLowStockSparePart:
+      type: object
+      required: [id, partName, partCode, currentQuantity, minimumQuantity, unit]
+      properties:
+        id:
+          type: integer
+        partName:
+          type: string
+        partCode:
+          type: string
+        currentQuantity:
+          type: integer
+        minimumQuantity:
+          type: integer
+        unit:
+          type: string
 
     DashboardPmItem:
       type: object
@@ -2368,6 +2697,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DashboardRecentMaintenanceRequest"
+        lowStockSpareParts:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardLowStockSparePart"
 
     CountByLabel:
       type: object

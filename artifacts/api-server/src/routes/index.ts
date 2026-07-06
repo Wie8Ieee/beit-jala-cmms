@@ -10,6 +10,7 @@ import preventiveMaintenanceRouter from "./preventive-maintenance.js";
 import maintenancePlansRouter from "./maintenance-plans.js";
 import maintenanceRequestsRouter from "./maintenance-requests.js";
 import correctiveMaintenanceRouter from "./corrective-maintenance.js";
+import sparePartsRouter from "./spare-parts.js";
 import dashboardRouter from "./dashboard.js";
 
 const router = Router();
@@ -25,6 +26,7 @@ router.use("/machines/:id/corrective-maintenance", correctiveMaintenanceRouter);
 router.use("/machines", machinesRouter);
 router.use("/maintenance-plans", maintenancePlansRouter);
 router.use("/maintenance-requests", maintenanceRequestsRouter);
+router.use("/spare-parts", sparePartsRouter);
 router.use("/dashboard", dashboardRouter);
 
 export default router;

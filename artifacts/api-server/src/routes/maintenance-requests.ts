@@ -515,6 +515,8 @@ async function preliminaryFindingsHandler(req: Request, res: Response, next: Nex
       .update(correctiveMaintenanceEventsTable)
       .set({
         preliminaryCheckResults: body.preliminaryCheckResults ?? null,
+        expectedWorkTimeFrom: body.expectedWorkTimeFrom ?? null,
+        expectedWorkTimeTo: body.expectedWorkTimeTo ?? null,
         technicianName: body.technicianName ?? null,
         maintenanceTechnicianSignature: body.maintenanceTechnicianSignature ?? null,
         concernedSectionSupervisorSignature: body.concernedSectionSupervisorSignature ?? null,
