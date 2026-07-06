@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "CMMS — Beit Jala Pharmaceutical"
+version = "1.0.0"
+id = "artifacts/cmms"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23697
+
+[services.development]
+run = "pnpm --filter @workspace/cmms run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cmms", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/cmms/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23697"
+BASE_PATH = "/"

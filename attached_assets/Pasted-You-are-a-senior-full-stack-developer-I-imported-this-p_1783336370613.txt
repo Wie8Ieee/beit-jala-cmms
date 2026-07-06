@@ -1,0 +1,361 @@
+You are a senior full-stack developer.
+
+I imported this project from GitHub and uploaded the SRS file:
+CMMS_SRS_v1_4.docx
+
+Your job is to build PHASE 1 of the CMMS system foundation only, then prepare the repository so it can be continued later in Codex.
+
+IMPORTANT:
+- Do NOT build the full system yet.
+- Do NOT implement Preventive Maintenance details yet.
+- Do NOT implement Corrective Maintenance workflow yet.
+- Do NOT implement Maintenance Plans yet.
+- Do NOT implement Spare Parts yet.
+- Do NOT implement Printing yet.
+- Do NOT implement Electronic Signatures yet.
+- Only build the clean foundation and push-ready repository structure.
+
+Read the uploaded SRS carefully before coding.
+
+Core rules:
+- Do NOT build a generic maintenance app.
+- Do NOT change the maintenance workflow described in the SRS.
+- Do NOT remove, rename, or simplify official form fields.
+- Do NOT overwrite or delete historical records.
+- Use scalable architecture so future phases can continue safely.
+- Keep the project clean for GitHub and Codex.
+
+Tech stack:
+- Frontend: React
+- Styling: Tailwind CSS
+- Backend: Node.js + Express
+- Database: PostgreSQL
+- Authentication: username/password login
+- Password hashing
+- REST API
+- Responsive desktop/mobile UI
+
+PHASE 1 GOAL:
+Build the project foundation:
+1. Project setup
+2. PostgreSQL database setup
+3. Authentication
+4. Roles and permissions foundation
+5. Admin users management
+6. Responsive ERP-style layout
+7. Role-based dashboard shell
+8. Basic Machines module
+9. Basic Equipment Information Record page
+10. Demo seed data
+11. GitHub/Codex-ready documentation
+
+Repository requirements:
+Create or update these files:
+- README.md
+- .gitignore
+- .env.example
+- package.json scripts
+- database schema or migrations
+- seed script
+- AGENTS.md for Codex instructions
+
+The .gitignore must exclude:
+- node_modules
+- .env
+- dist
+- build
+- .replit temporary/cache files if needed
+- logs
+- local database dumps
+
+Never commit:
+- real passwords except demo seed credentials
+- database connection secrets
+- API keys
+- .env file
+- node_modules
+
+Create README.md with:
+- Project name
+- Short description
+- Tech stack
+- How to install dependencies
+- How to set environment variables
+- How to run database migrations/schema
+- How to seed demo data
+- How to start backend/frontend
+- Test login accounts
+- Phase 1 completed features
+- Next phases roadmap
+
+Create .env.example with:
+- DATABASE_URL=
+- SESSION_SECRET=
+- NODE_ENV=development
+- PORT=3000
+
+Create AGENTS.md for Codex with these instructions:
+- This is a CMMS graduation project for Beit Jala Pharmaceutical Co.
+- Always follow the SRS requirements.
+- Do not rebuild the project.
+- Do not change existing architecture unless necessary.
+- Do not remove official form fields.
+- Do not overwrite historical PM/CM records.
+- Work in phases.
+- Prefer small focused changes.
+- Keep role-based permissions enforced in backend and frontend.
+- Keep database migrations backwards-compatible where possible.
+- Update README when adding a module.
+
+UI requirements:
+- Professional ERP/Odoo-like layout
+- Left sidebar navigation
+- Top bar with logged-in user name and role
+- Clean cards, tables, forms, and buttons
+- Responsive on mobile and desktop
+- English labels now, but structure should support Arabic labels later
+
+Database tables for Phase 1:
+Create:
+- users
+- roles
+- permissions
+- user_permissions
+- departments
+- machines
+- equipment_information_records
+- audit_logs
+
+Roles:
+- Admin
+- Maintenance Supervisor
+- Maintenance Technician
+- Department Employee
+- QA Supervisor
+
+Permissions:
+Create permission records for:
+- view_dashboard
+- manage_users
+- view_machines
+- create_machine
+- edit_machine
+- soft_delete_machine
+- view_equipment_information
+- edit_equipment_information
+- submit_maintenance_request_placeholder
+- view_own_requests_placeholder
+- manage_pm_checklist_placeholder
+- fill_pm_record_placeholder
+- approve_qa_request_placeholder
+- manage_spare_parts_placeholder
+- view_maintenance_plans_placeholder
+- edit_header_placeholder
+- print_forms_placeholder
+- manage_signatures_placeholder
+
+Authentication:
+- Login page
+- Logout
+- Protected routes
+- Redirect unauthenticated users to login
+- After login, redirect to dashboard
+- Show/hide menu items and buttons based on role and permissions
+
+Admin module:
+- Admin can view users
+- Admin can create users
+- Admin can edit users
+- Admin can deactivate users
+- Admin can assign role
+- Admin can grant/revoke individual permissions per user
+- Users with the same role may have different permissions
+
+Dashboard:
+Create role-based dashboard shell.
+
+Admin / Maintenance Supervisor sees:
+- Machines
+- Maintenance Requests placeholder
+- Maintenance Plans placeholder
+- Spare Parts placeholder
+- This Week’s Preventive Maintenance placeholder
+- Total Maintenance Requests placeholder
+- Completed Requests placeholder
+- Notifications placeholder
+- Monthly PM Completion Chart placeholder
+
+Maintenance Technician sees:
+- Machines
+- Maintenance Requests placeholder
+- This Week’s PM placeholder
+- Assigned work notifications placeholder
+
+Department Employee sees only:
+- Submit Maintenance Request placeholder
+- My Submitted Requests placeholder
+Do NOT show machines, PM widgets, cross-department counters, or engineering notifications to Department Employee.
+
+Machines Module:
+Implement:
+- Machines list page
+- Sort alphabetically by machine name by default
+- Search by machine name or machine number while typing
+- Show machine number and department
+- Add machine
+- Edit machine
+- View machine profile
+- Soft delete machine, not hard delete
+- Machine profile buttons/tabs:
+  - Equipment Information Record
+  - Preventive Maintenance placeholder
+  - Corrective Maintenance placeholder
+  - Maintenance History placeholder
+
+Machine fields:
+- machine_id
+- machine_number
+- machine_name
+- department_id
+- location
+- status
+- pm_frequency_months
+- pm_start_date
+- created_at
+- updated_at
+- deleted_at
+
+Equipment Information Record:
+Create the form/page structure for FORM-10-0118.
+
+Fields:
+- Name of equipment
+- Model number
+- Serial number
+- Identification number
+- Date equipment purchased
+- Company purchased from - name
+- Company purchased from - address
+- Manufacturing company - name
+- Manufacturing company - address
+- Equipment dimensions - width cm
+- Equipment dimensions - height cm
+- Equipment dimensions - depth cm
+- Weight kg
+- Utilities - power supply
+- Utilities - air
+- Utilities - water
+- Utilities - other utilities
+- Others
+- Safety issues
+- Prepared by name
+- Prepared by date
+- Approved by name
+- Approved by date
+
+Rules:
+- Equipment Information Record belongs to one machine.
+- It is opened from the machine profile.
+- Authorized users can edit it.
+- Unauthorized users see read-only view.
+- Do not implement real electronic signatures yet.
+- Add disabled Print button with label: Coming in later phase.
+
+Seed demo data:
+Create test users:
+1. username: admin
+   password: admin123
+   role: Admin
+
+2. username: supervisor
+   password: supervisor123
+   role: Maintenance Supervisor
+
+3. username: technician
+   password: technician123
+   role: Maintenance Technician
+
+4. username: employee
+   password: employee123
+   role: Department Employee
+
+5. username: qa
+   password: qa123
+   role: QA Supervisor
+
+Create sample departments:
+- Engineering & Maintenance
+- Production
+- QA
+- QC
+- R&D
+
+Create sample machines:
+- Tablet Compression Machine / MCH-001 / Production
+- Coating Machine / MCH-002 / Production
+- Water Purification Unit / MCH-003 / Engineering & Maintenance
+- Packaging Line / MCH-004 / Production
+
+Required API routes:
+- POST /api/auth/login
+- POST /api/auth/logout
+- GET /api/auth/me
+- GET /api/users
+- POST /api/users
+- PUT /api/users/:id
+- PATCH /api/users/:id/deactivate
+- GET /api/roles
+- GET /api/permissions
+- PUT /api/users/:id/permissions
+- GET /api/departments
+- GET /api/machines
+- POST /api/machines
+- GET /api/machines/:id
+- PUT /api/machines/:id
+- PATCH /api/machines/:id/soft-delete
+- GET /api/machines/:id/equipment-information
+- POST or PUT /api/machines/:id/equipment-information
+
+Before coding, first show:
+1. Phase 1 implementation plan
+2. Database schema summary
+3. Pages/modules that will be created
+4. Test accounts
+5. GitHub repository preparation plan
+
+Then implement the code.
+
+After implementation:
+1. Run the app and fix errors.
+2. Test login for all demo users.
+3. Test role-based dashboard visibility.
+4. Test admin user management.
+5. Test machines list/search/add/edit/soft delete.
+6. Test Equipment Information Record edit/read-only behavior.
+7. Confirm database persistence after refresh.
+8. Update README.md.
+9. Prepare a clean git commit.
+
+Git instructions:
+- Check git status.
+- Stage all project files except ignored files.
+- Commit with message:
+  "Phase 1: CMMS foundation with auth, roles, machines, and equipment records"
+- Push to GitHub main branch if GitHub remote is already connected.
+- If you cannot push automatically, tell me exactly what button or command I should use in Replit Git pane.
+بعد ما يخلص، اكتبي له هذا للتأكيد
+Now verify the repository is ready for Codex.
+
+Check:
+- README is clear
+- .env.example exists
+- .gitignore is correct
+- AGENTS.md exists
+- No secrets are committed
+- No node_modules are committed
+- Project runs after fresh install
+- Database setup instructions are complete
+- All Phase 1 code is committed and pushed to GitHub
+
+Fix anything missing.
+Do not add Phase 2 features.
