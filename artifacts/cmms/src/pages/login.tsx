@@ -45,7 +45,7 @@ export default function LoginPage() {
         toast({
           variant: "destructive",
           title: "Authentication Failed",
-          description: error.error || "Invalid username or password.",
+          description: (error.data as { error?: string })?.error || "Invalid username or password.",
         });
       }
     });

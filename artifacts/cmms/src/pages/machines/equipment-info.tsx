@@ -152,7 +152,7 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
           toast({
             variant: "destructive",
             title: "Save Failed",
-            description: error.error || "An unexpected error occurred while saving.",
+            description: (error.data as { error?: string })?.error || "An unexpected error occurred while saving.",
           });
         }
       }

@@ -118,7 +118,7 @@ export default function MachineForm({ params }: { params?: { id: string } }) {
             toast({
               variant: "destructive",
               title: "Failed to update machine",
-              description: error.error || "An unexpected error occurred.",
+              description: (error.data as { error?: string })?.error || "An unexpected error occurred.",
             });
           }
         }
@@ -139,7 +139,7 @@ export default function MachineForm({ params }: { params?: { id: string } }) {
             toast({
               variant: "destructive",
               title: "Failed to create machine",
-              description: error.error || "An unexpected error occurred.",
+              description: (error.data as { error?: string })?.error || "An unexpected error occurred.",
             });
           }
         }

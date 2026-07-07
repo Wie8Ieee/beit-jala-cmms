@@ -8,7 +8,7 @@ import {
   userPermissionsTable,
 } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
-import { hashPassword, requireAuth, requirePermission, parseIdParam } from "../lib/auth.js";
+import { hashPassword, requireActiveAuth, requirePermission, parseIdParam } from "../lib/auth.js";
 
 const router = Router();
 
@@ -55,7 +55,7 @@ async function getUserWithPermissions(userId: number) {
 }
 
 // GET /api/users
-router.get("/", requireAuth, requirePermission("manage_users"), async (req, res, next) => {
+router.get("/", requireActiveAuth, requirePermission("manage_users"), async (req, res, next) => {
   try {
     const users = await db
       .select({
@@ -108,7 +108,7 @@ router.get("/", requireAuth, requirePermission("manage_users"), async (req, res,
 });
 
 // POST /api/users
-router.post("/", requireAuth, requirePermission("manage_users"), async (req, res, next) => {
+router.post("/", requireActiveAuth, requirePermission("manage_users"), async (req, res, next) => {
   try {
     const { username, password, fullName, email, roleId, departmentId } =
       req.body as {
@@ -155,7 +155,7 @@ router.post("/", requireAuth, requirePermission("manage_users"), async (req, res
 });
 
 // GET /api/users/:id
-router.get("/:id", requireAuth, requirePermission("manage_users"), async (req, res, next) => {
+router.get("/:id", requireActiveAuth, requirePermission("manage_users"), async (req, res, next) => {
   try {
     const id = parseIdParam(req.params.id);
     if (isNaN(id)) {
@@ -172,7 +172,7 @@ router.get("/:id", requireAuth, requirePermission("manage_users"), async (req, r
 });
 
 // PUT /api/users/:id
-router.put("/:id", requireAuth, requirePermission("manage_users"), async (req, res, next) => {
+router.put("/:id", requireActiveAuth, requirePermission("manage_users"), async (req, res, next) => {
   try {
     const id = parseIdParam(req.params.id);
     if (isNaN(id)) {
@@ -220,7 +220,7 @@ router.put("/:id", requireAuth, requirePermission("manage_users"), async (req, r
 });
 
 // PATCH /api/users/:id/deactivate
-router.patch("/:id/deactivate", requireAuth, requirePermission("manage_users"), async (req, res, next) => {
+router.patch("/:id/deactivate", requireActiveAuth, requirePermission("manage_users"), async (req, res, next) => {
   try {
     const id = parseIdParam(req.params.id);
     if (isNaN(id)) {
@@ -244,8 +244,33 @@ router.patch("/:id/deactivate", requireAuth, requirePermission("manage_users"), 
   } catch (err) { next(err); }
 });
 
+// PATCH /api/users/:id/reactivate
+router.patch("/:id/reactivate", requireActiveAuth, requirePermission("manage_users"), async (req, res, next) => {
+  try {
+    const id = parseIdParam(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid ID" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(usersTable)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(eq(usersTable.id, id))
+      .returning({ id: usersTable.id });
+
+    if (!updated) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const user = await getUserWithPermissions(id);
+    res.json(user);
+  } catch (err) { next(err); }
+});
+
 // PUT /api/users/:id/permissions
-router.put("/:id/permissions", requireAuth, requirePermission("manage_users"), async (req, res, next) => {
+router.put("/:id/permissions", requireActiveAuth, requirePermission("manage_users"), async (req, res, next) => {
   try {
     const id = parseIdParam(req.params.id);
     if (isNaN(id)) {

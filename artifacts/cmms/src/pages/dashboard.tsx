@@ -34,12 +34,13 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: stats, isLoading } = useGetDashboardStats({
     query: {
-      enabled: !!user && (user.permissions.includes("view_dashboard") || user.roleName === "Admin" || user.roleName === "Supervisor" || user.roleName === "QA Supervisor"),
+      queryKey: ["dashboard-stats"],
+      enabled: !!user && user.permissions.includes("view_dashboard"),
     }
   });
 
-  const isAdminOrSupervisor = user?.roleName === "Admin" || user?.roleName === "Supervisor";
-  const isTechnician = user?.roleName === "Technician";
+  const isAdminOrSupervisor = user?.roleName === "Admin" || user?.roleName === "Maintenance Supervisor";
+  const isTechnician = user?.roleName === "Maintenance Technician";
   const isEmployee = user?.roleName === "Department Employee";
   const isQA = user?.roleName === "QA Supervisor";
 

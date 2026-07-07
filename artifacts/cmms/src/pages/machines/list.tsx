@@ -22,15 +22,15 @@ export default function MachinesList() {
   const debouncedSearch = useDebounce(searchTerm, 300);
   const { hasPermission } = useAuth();
   
-  const { data: machines, isLoading, isError } = useGetMachines({
-    query: {
-      queryKey: ["machines", debouncedSearch],
-      enabled: true
-    },
-    request: {
-      url: `/api/machines${debouncedSearch ? `?search=${encodeURIComponent(debouncedSearch)}` : ''}`
-    } as any // Quick override for missing typed params if not strictly aligned
-  });
+  const { data: machines, isLoading, isError } = useGetMachines(
+    { search: debouncedSearch || undefined },
+    {
+      query: {
+        queryKey: ["machines", debouncedSearch],
+        enabled: true,
+      },
+    }
+  );
 
   const getStatusBadge = (status: string) => {
     switch (status) {

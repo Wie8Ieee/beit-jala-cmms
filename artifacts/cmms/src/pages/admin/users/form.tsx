@@ -11,6 +11,7 @@ import {
   useDeactivateUser,
   getGetUserQueryKey 
 } from "@workspace/api-client-react";
+import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -95,6 +96,13 @@ export default function UserForm({ params }: { params?: { id: string } }) {
   const updateMutation = useUpdateUser();
   const permissionsMutation = useUpdateUserPermissions();
   const deactivateMutation = useDeactivateUser();
+  const reactivateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/users/${id}/reactivate`, { method: "PATCH", credentials: "include" });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Request failed"); }
+      return res.json();
+    },
+  });
 
   // Selected permissions state for the edit form
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
@@ -157,7 +165,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
             toast({
               variant: "destructive",
               title: "Failed to update user",
-              description: error.error || "An unexpected error occurred.",
+              description: (error.data as { error?: string })?.error || "An unexpected error occurred.",
             });
           }
         }
@@ -178,7 +186,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
             toast({
               variant: "destructive",
               title: "Failed to create user",
-              description: error.error || "An unexpected error occurred.",
+              description: (error.data as { error?: string })?.error || "An unexpected error occurred.",
             });
           }
         }
@@ -202,7 +210,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
           toast({
             variant: "destructive",
             title: "Failed to update permissions",
-            description: error.error || "An unexpected error occurred.",
+            description: (error.data as { error?: string })?.error || "An unexpected error occurred.",
           });
         }
       }
@@ -211,19 +219,20 @@ export default function UserForm({ params }: { params?: { id: string } }) {
 
   const handleDeactivate = () => {
     if (!userId) return;
-    deactivateMutation.mutate(
-      { id: userId },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["users"] });
-          queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(userId) });
-          toast({
-            title: userData?.isActive ? "User deactivated" : "User reactivated",
-            description: `User status has been toggled.`,
-          });
-        }
-      }
-    );
+    const isCurrentlyActive = userData?.isActive ?? true;
+    const onSuccess = () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(userId) });
+      toast({
+        title: isCurrentlyActive ? "User deactivated" : "User reactivated",
+        description: `User access has been ${isCurrentlyActive ? "revoked" : "restored"}.`,
+      });
+    };
+    if (isCurrentlyActive) {
+      deactivateMutation.mutate({ id: userId }, { onSuccess });
+    } else {
+      reactivateMutation.mutate(userId, { onSuccess });
+    }
   };
 
   const togglePermission = (permissionName: string) => {

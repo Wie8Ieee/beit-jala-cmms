@@ -6,12 +6,12 @@ import {
   departmentsTable,
 } from "@workspace/db";
 import { eq, isNull, count, sql } from "drizzle-orm";
-import { requireAuth } from "../lib/auth.js";
+import { requireActiveAuth, requirePermission } from "../lib/auth.js";
 
 const router = Router();
 
 // GET /api/dashboard/stats
-router.get("/stats", requireAuth, async (_req, res) => {
+router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), async (_req, res) => {
   const [machineStats] = await db
     .select({
       total: count(),

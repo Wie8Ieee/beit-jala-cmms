@@ -6,7 +6,7 @@ import {
   equipmentInformationTable,
 } from "@workspace/db";
 import { eq, isNull } from "drizzle-orm";
-import { requireAuth, requirePermission, parseIdParam } from "../lib/auth.js";
+import { requireActiveAuth, requirePermission, parseIdParam } from "../lib/auth.js";
 
 const router = Router();
 
@@ -57,7 +57,7 @@ async function getMachineWithDept(id: number) {
 }
 
 // GET /api/machines
-router.get("/", requireAuth, requirePermission("view_machines"), async (req, res, next) => {
+router.get("/", requireActiveAuth, requirePermission("view_machines"), async (req, res, next) => {
   try {
     const search = req.query.search as string | undefined;
 
@@ -97,7 +97,7 @@ router.get("/", requireAuth, requirePermission("view_machines"), async (req, res
 });
 
 // POST /api/machines
-router.post("/", requireAuth, requirePermission("create_machine"), async (req, res, next) => {
+router.post("/", requireActiveAuth, requirePermission("create_machine"), async (req, res, next) => {
   try {
     const {
       machineNumber, machineName, departmentId, location,
@@ -145,7 +145,7 @@ router.post("/", requireAuth, requirePermission("create_machine"), async (req, r
 });
 
 // GET /api/machines/:id
-router.get("/:id", requireAuth, requirePermission("view_machines"), async (req, res, next) => {
+router.get("/:id", requireActiveAuth, requirePermission("view_machines"), async (req, res, next) => {
   try {
     const id = parseIdParam(req.params.id);
     if (isNaN(id)) {
@@ -164,7 +164,7 @@ router.get("/:id", requireAuth, requirePermission("view_machines"), async (req, 
 });
 
 // PUT /api/machines/:id
-router.put("/:id", requireAuth, requirePermission("edit_machine"), async (req, res, next) => {
+router.put("/:id", requireActiveAuth, requirePermission("edit_machine"), async (req, res, next) => {
   try {
     const id = parseIdParam(req.params.id);
     if (isNaN(id)) {
@@ -211,7 +211,7 @@ router.put("/:id", requireAuth, requirePermission("edit_machine"), async (req, r
 });
 
 // PATCH /api/machines/:id/soft-delete
-router.patch("/:id/soft-delete", requireAuth, requirePermission("soft_delete_machine"), async (req, res, next) => {
+router.patch("/:id/soft-delete", requireActiveAuth, requirePermission("soft_delete_machine"), async (req, res, next) => {
   try {
     const id = parseIdParam(req.params.id);
     if (isNaN(id)) {
@@ -236,7 +236,7 @@ router.patch("/:id/soft-delete", requireAuth, requirePermission("soft_delete_mac
 });
 
 // GET /api/machines/:id/equipment-information
-router.get("/:id/equipment-information", requireAuth, requirePermission("view_equipment_information"), async (req, res, next) => {
+router.get("/:id/equipment-information", requireActiveAuth, requirePermission("view_equipment_information"), async (req, res, next) => {
   try {
     const id = parseIdParam(req.params.id);
     if (isNaN(id)) {
@@ -267,7 +267,7 @@ router.get("/:id/equipment-information", requireAuth, requirePermission("view_eq
 });
 
 // PUT /api/machines/:id/equipment-information
-router.put("/:id/equipment-information", requireAuth, requirePermission("edit_equipment_information"), async (req, res, next) => {
+router.put("/:id/equipment-information", requireActiveAuth, requirePermission("edit_equipment_information"), async (req, res, next) => {
   try {
     const id = parseIdParam(req.params.id);
     if (isNaN(id)) {

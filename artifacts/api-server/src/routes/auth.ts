@@ -7,8 +7,7 @@ import {
   userPermissionsTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { comparePassword } from "../lib/auth.js";
-import { requireAuth } from "../lib/auth.js";
+import { comparePassword, requireActiveAuth } from "../lib/auth.js";
 
 const router = Router();
 
@@ -95,7 +94,7 @@ router.post("/logout", (req, res) => {
 });
 
 // GET /api/auth/me
-router.get("/me", requireAuth, async (req, res) => {
+router.get("/me", requireActiveAuth, async (req, res) => {
   const userId = req.session.userId!;
 
   const [user] = await db
