@@ -10,7 +10,7 @@ import {
   sparePartsTable,
 } from "@workspace/db";
 import { and, eq, isNull, count, sql } from "drizzle-orm";
-import { requireAuth } from "../lib/auth.js";
+import { requireActiveAuth, requirePermission } from "../lib/auth.js";
 
 const router = Router();
 
@@ -35,7 +35,7 @@ function currentWeekRange() {
 }
 
 // GET /api/dashboard/stats
-router.get("/stats", requireAuth, async (req, res) => {
+router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), async (req, res) => {
   const [machineStats] = await db
     .select({
       total: count(),

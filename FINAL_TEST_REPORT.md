@@ -6,33 +6,13 @@ Date: 2026-07-07
 
 | Check | Result | Notes |
 | --- | --- | --- |
-| Fresh dependency install | Passed with Windows-compatible settings | `pnpm install --frozen-lockfile --config.node-linker=hoisted --ignore-scripts --config.verify-deps-before-run=false` completed. The repo preinstall was made cross-platform. |
-| OpenAPI codegen | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/api-spec run codegen` completed and regenerated React Query/Zod clients. |
-| Database push | Blocked by environment | `pnpm --config.verify-deps-before-run=false --filter @workspace/db run push` reached Drizzle, then stopped because `DATABASE_URL` was not set. |
-| Typecheck | Passed | `pnpm --config.verify-deps-before-run=false run typecheck` completed for libraries, API server, CMMS frontend, mockup sandbox, and scripts. |
-| Full build | Passed | `PORT=5000 BASE_PATH=/ pnpm --config.verify-deps-before-run=false run build` completed. |
-| Conflict markers | Passed | No `<<<<<<<`, `=======`, or `>>>>>>>` merge conflict markers found. |
-| `.env.example` | Passed | File exists. |
-| Secrets committed | Passed | `.env` is not tracked. No obvious secret file names were found in tracked files. |
-| GitHub push | Passed | `main` pushed successfully to `origin`. |
-
-## Final Blocker Check
-
-| Check | Result | Notes |
-| --- | --- | --- |
-| Replit PostgreSQL module | Present in `.replit` | `.replit` includes `postgresql-16`, so the project is configured for Replit PostgreSQL. |
-| `DATABASE_URL` in current shell | Missing | `$env:DATABASE_URL` is empty and no local `.env` file exists. |
-| Database push after final blocker request | Blocked | Cannot run successfully until `DATABASE_URL` is available. |
-| Seed/demo data command | Found | `pnpm --filter @workspace/api-server run seed` exists. README also documents `pnpm dlx tsx artifacts/api-server/src/seed.ts`. |
-| App start | Blocked | API startup requires `DATABASE_URL`. |
-| Browser demo-user testing | Blocked | Requires schema push, seed data, and running app. |
-| Persistence after refresh/restart | Blocked | Requires a running database-backed app. |
-| Phase 5 real electronic signatures | Not implemented | Current signature fields are editable placeholder text fields. |
-| Phase 5 eligible signers | Not implemented | No eligible-signer enforcement found. |
-| Phase 5 immutable signatures | Not implemented | No immutable signature table/workflow found. |
-| Phase 5 real print views / PDF | Not implemented | No validated print/PDF workflow found. |
-| Phase 5 official form headers | Partially implemented | Some form numbers/headers exist; final official print/header polish remains Phase 5 work. |
-| SRS traceability matrix | Added | See `SRS_TRACEABILITY_MATRIX.md`. |
+| Fresh dependency install | Passed with Windows-compatible settings | `pnpm install --frozen-lockfile --config.node-linker=hoisted --ignore-scripts --config.verify-deps-before-run=false` completed previously. |
+| OpenAPI codegen | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/api-spec run codegen` completed. |
+| Typecheck | Passed | `pnpm --config.verify-deps-before-run=false run typecheck` completed after database-prep changes. |
+| CMMS/API build | Previously passed | Full build passed with `PORT=5000 BASE_PATH=/`; rerun is still required after final merge cleanup. |
+| Conflict markers | Pending | Merge conflicts are being resolved locally before another full check. |
+| `.env.example` | Passed | File exists and uses blank secret placeholders. |
+| Secrets committed | Passed | `.env` is not tracked. |
 
 ## Database Preparation Pass
 
@@ -43,60 +23,50 @@ Date: 2026-07-07
 | Expanded seed data | Prepared | Seed script now covers 10 roles/users, permissions, departments, 5 machines, equipment information, PM checklist points, spare parts/movements, plans, requests, form headers, notifications, eligible signers, and sample signature. |
 | DB seed command | Prepared | `pnpm --config.verify-deps-before-run=false --filter @workspace/db run seed`. |
 | DB verify command | Prepared | `pnpm --config.verify-deps-before-run=false --filter @workspace/db run verify`. |
-| OpenAPI codegen | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/api-spec run codegen`. |
-| Typecheck | Passed | `pnpm --config.verify-deps-before-run=false run typecheck`. |
-| Database push | Blocked | Retried and failed because `DATABASE_URL` is still missing. |
-| Seed run | Not run | Stopped because database push is blocked by missing `DATABASE_URL`. |
-| Browser testing | Not run | Stopped because database push/seed did not run. |
+| Drizzle schema config | Fixed | `lib/db/drizzle.config.ts` points to concrete schema files instead of the schema barrel. |
 
-## Database Push Attempt With Provided Replit URL
+## Database Connectivity
 
 | Check | Result | Notes |
 | --- | --- | --- |
-| Provided `DATABASE_URL` loaded for command process | Passed | The value was used only as a process environment variable and was not written to `.env`. |
-| Direct PostgreSQL connectivity from this Windows workspace | Failed | `pg` returned `getaddrinfo ENOTFOUND` for host `helium`. This Replit database hostname appears to be internal to Replit and not resolvable from this local Windows workspace. |
-| Drizzle schema config | Fixed | `lib/db/drizzle.config.ts` now points to concrete schema files instead of the schema barrel, so Drizzle can discover the split schema files. |
-| Drizzle push from this workspace | Blocked | Drizzle starts schema pull but cannot complete because the database host is not reachable from this environment. |
-| Typecheck after DB prep | Passed | `pnpm --config.verify-deps-before-run=false run typecheck`. |
+| `DATABASE_URL` in this Windows/Codex shell | Missing | Environment check still reports `DATABASE_URL=missing`. |
+| Provided Replit URL from this Windows workspace | Failed | Direct `pg` test returned `getaddrinfo ENOTFOUND helium`; the host appears to be Replit-internal. |
+| Database push from this workspace | Blocked | Cannot complete until running inside Replit where the database host resolves, or until an externally reachable database URL is provided. |
+| Seed run | Not run here | Requires successful database push. |
+| Browser demo-user testing | Not run here | Requires schema push, seed data, and a running app. |
+| Persistence after refresh/restart | Not run here | Requires database-backed app startup. |
 
-Run the DB commands from inside the Replit shell where host `helium` resolves.
+## Security And Merge Fixes From Remote
 
-## How To Add `DATABASE_URL` In Replit
+| Area | Status | Notes |
+| --- | --- | --- |
+| Active-user auth middleware | Integrated | Remote added `requireActiveAuth`; dashboard route uses it with `requirePermission("view_dashboard")`. |
+| Frontend generated hook typing | Integrated | Local generated query keys and API call shapes are preserved. |
+| Frontend error handling | Integrated | Local `getErrorMessage` helper is preserved. |
+| Role-name alignment | Integrated | Frontend checks use actual seeded role names such as `Maintenance Supervisor` and `Maintenance Technician`. |
 
-1. Open the Replit project.
-2. Open **Tools**.
-3. Open **Database** or **PostgreSQL** and create/connect the PostgreSQL database if it is not already connected.
-4. Open **Secrets** or **Environment Variables**.
-5. Add a secret named exactly `DATABASE_URL`.
-6. Paste the PostgreSQL connection string as the value. It should look like:
+## Phase 5 Status
 
-```text
-postgresql://USER:PASSWORD@HOST:PORT/DATABASE
-```
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| Real electronic signatures | Not implemented | Current signature fields are plain placeholders or seed-ready records only. |
+| Eligible signer enforcement | Not implemented in API/UI | DB schema and seed assignments are prepared, but workflow enforcement remains Phase 5. |
+| Immutable signature workflow | Not implemented in API/UI | DB schema exists; signing endpoints/UI remain Phase 5. |
+| Real print/PDF views | Not implemented | Print-ready official forms remain Phase 5. |
+| Official form headers polish | Partial | Header schema is prepared; final print/header integration remains Phase 5. |
 
-7. Also confirm `SESSION_SECRET` exists and is at least 32 characters.
-8. Restart the Replit workspace or shell so the new secret is available.
-9. Confirm it is loaded without printing the secret:
+## Replit Commands Still Required
+
+Run these inside the Replit shell where the managed database host resolves:
 
 ```bash
 node -e "console.log(process.env.DATABASE_URL ? 'DATABASE_URL=set' : 'DATABASE_URL=missing')"
-```
-
-10. Then run:
-
-```bash
+node -e "console.log(process.env.SESSION_SECRET ? 'SESSION_SECRET=set' : 'SESSION_SECRET=missing')"
 pnpm --config.verify-deps-before-run=false --filter @workspace/db run push
-pnpm --config.verify-deps-before-run=false --filter @workspace/api-server run seed
+pnpm --config.verify-deps-before-run=false --filter @workspace/db run seed
+pnpm --config.verify-deps-before-run=false --filter @workspace/db run verify
+pnpm --config.verify-deps-before-run=false run typecheck
+PORT=5000 BASE_PATH=/ pnpm --config.verify-deps-before-run=false run build
 ```
 
-## Build Warnings
-
-- CMMS frontend build reports sourcemap warnings for several UI components.
-- CMMS frontend build reports a large JavaScript chunk warning.
-- These are warnings only; the build exits successfully.
-
-## Remaining Bugs / Blockers
-
-- Database schema push still requires a valid `DATABASE_URL` in the environment.
-- Browser-level demo user testing was not completed in this shell because the database connection was not available.
-- Do not claim the project is complete until database push and browser demo-user testing both pass.
+Do not claim the project is complete until database push, seed, verify, browser demo-user testing, and persistence checks pass.
