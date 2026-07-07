@@ -21,6 +21,7 @@ if (!isBuild && (Number.isNaN(port) || port <= 0)) {
 }
 
 const basePath = process.env.BASE_PATH ?? '/';
+const apiPort = Number(process.env.API_PORT ?? 5001);
 
 export default defineConfig({
   base: basePath,
@@ -64,6 +65,12 @@ export default defineConfig({
     strictPort: true,
     host: '0.0.0.0',
     allowedHosts: true,
+    proxy: {
+      '/api': {
+        target: `http://localhost:${apiPort}`,
+        changeOrigin: true,
+      },
+    },
     fs: {
       strict: true,
     },
