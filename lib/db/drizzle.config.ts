@@ -13,6 +13,7 @@ export default defineConfig({
     "./src/schema/notifications.ts",
     "./src/schema/preventive-maintenance.ts",
     "./src/schema/signatures.ts",
+    "./src/schema/sessions.ts",
     "./src/schema/spare-parts.ts",
     "./src/schema/users.ts",
   ],
