@@ -13,12 +13,16 @@ import { requireAuth, requirePermission } from "../lib/auth.js";
 
 const router = Router();
 
-function parseYear(value: string | undefined) {
-  return Number.parseInt(value ?? "", 10);
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
-function parseMonth(value: string | undefined) {
-  return Number.parseInt(value ?? "", 10);
+function parseYear(value: string | string[] | undefined) {
+  return Number.parseInt(firstParam(value) ?? "", 10);
+}
+
+function parseMonth(value: string | string[] | undefined) {
+  return Number.parseInt(firstParam(value) ?? "", 10);
 }
 
 function toIsoDate(date: Date) {

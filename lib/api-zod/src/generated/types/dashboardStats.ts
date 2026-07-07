@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CountByLabel } from './countByLabel';
+import type { DashboardLowStockSparePart } from './dashboardLowStockSparePart';
+import type { DashboardMaintenanceRequestSummary } from './dashboardMaintenanceRequestSummary';
+import type { DashboardPmItem } from './dashboardPmItem';
+import type { DashboardRecentMaintenanceRequest } from './dashboardRecentMaintenanceRequest';
 
 export interface DashboardStats {
   totalMachines: number;
@@ -15,4 +19,9 @@ export interface DashboardStats {
   totalDepartments: number;
   machinesByDepartment: CountByLabel[];
   machinesByStatus: CountByLabel[];
+  thisWeekPm?: DashboardPmItem[];
+  monthlyPmCompletion?: CountByLabel[];
+  maintenanceRequests?: DashboardMaintenanceRequestSummary;
+  recentMaintenanceRequests?: DashboardRecentMaintenanceRequest[];
+  lowStockSpareParts?: DashboardLowStockSparePart[];
 }

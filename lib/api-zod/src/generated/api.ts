@@ -482,6 +482,2108 @@ export const UpsertEquipmentInformationResponse = zod.object({
 
 
 /**
+ * @summary Get PM form header for a machine
+ */
+export const GetPmHeaderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPmHeaderResponse = zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "procedureFormNumber": zod.string(),
+  "effectiveDate": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "columnsPerRecord": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update PM form header for a machine
+ */
+export const UpdatePmHeaderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updatePmHeaderBodyColumnsPerRecordMax = 10;
+
+
+
+export const UpdatePmHeaderBody = zod.object({
+  "procedureFormNumber": zod.string().optional(),
+  "effectiveDate": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "columnsPerRecord": zod.number().min(1).max(updatePmHeaderBodyColumnsPerRecordMax).optional()
+})
+
+export const UpdatePmHeaderResponse = zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "procedureFormNumber": zod.string(),
+  "effectiveDate": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "columnsPerRecord": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary List PM checklist points for a machine
+ */
+export const GetPmChecklistParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPmChecklistResponseItem = zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "pointText": zod.string(),
+  "resultType": zod.enum(['yes_no', 'value', 'text']),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "deactivatedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const GetPmChecklistResponse = zod.array(GetPmChecklistResponseItem)
+
+
+/**
+ * @summary Create PM checklist point
+ */
+export const CreatePmChecklistPointParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const CreatePmChecklistPointBody = zod.object({
+  "pointText": zod.string().min(1),
+  "resultType": zod.enum(['yes_no', 'value', 'text']),
+  "sortOrder": zod.number()
+})
+
+export const CreatePmChecklistPointResponse = zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "pointText": zod.string(),
+  "resultType": zod.enum(['yes_no', 'value', 'text']),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "deactivatedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update PM checklist point
+ */
+export const UpdatePmChecklistPointParams = zod.object({
+  "id": zod.coerce.number(),
+  "pointId": zod.coerce.number()
+})
+
+
+
+
+export const UpdatePmChecklistPointBody = zod.object({
+  "pointText": zod.string().min(1),
+  "resultType": zod.enum(['yes_no', 'value', 'text']),
+  "sortOrder": zod.number()
+})
+
+export const UpdatePmChecklistPointResponse = zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "pointText": zod.string(),
+  "resultType": zod.enum(['yes_no', 'value', 'text']),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "deactivatedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Soft-remove PM checklist point
+ */
+export const DeactivatePmChecklistPointParams = zod.object({
+  "id": zod.coerce.number(),
+  "pointId": zod.coerce.number()
+})
+
+export const DeactivatePmChecklistPointResponse = zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "pointText": zod.string(),
+  "resultType": zod.enum(['yes_no', 'value', 'text']),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "deactivatedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Get current PM record for a machine
+ */
+export const GetCurrentPmRecordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetCurrentPmRecordResponse = zod.object({
+  "record": zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "sequenceNumber": zod.number(),
+  "previousRecordId": zod.number().nullish(),
+  "status": zod.string(),
+  "inspectionCount": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "header": zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "procedureFormNumber": zod.string(),
+  "effectiveDate": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "columnsPerRecord": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "checklistPoints": zod.array(zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "pointText": zod.string(),
+  "resultType": zod.enum(['yes_no', 'value', 'text']),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "deactivatedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "inspections": zod.array(zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "machineId": zod.number(),
+  "columnNumber": zod.number(),
+  "inspectionDate": zod.string(),
+  "inspectionTime": zod.string(),
+  "actionTaken": zod.string().nullish(),
+  "examinerName": zod.string().nullish(),
+  "examinerSignature": zod.string().nullish(),
+  "machineReceiverName": zod.string().nullish(),
+  "machineReceiverSignature": zod.string().nullish(),
+  "completedAt": zod.string(),
+  "results": zod.array(zod.object({
+  "id": zod.number(),
+  "inspectionId": zod.number(),
+  "checklistPointId": zod.number(),
+  "value": zod.string().nullish()
+}))
+})),
+  "pageCount": zod.number()
+})
+
+
+/**
+ * @summary Add a PM inspection column to the current record
+ */
+export const CreatePmInspectionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreatePmInspectionBody = zod.object({
+  "inspectionDate": zod.string(),
+  "inspectionTime": zod.string(),
+  "actionTaken": zod.string().optional(),
+  "examinerName": zod.string().optional(),
+  "examinerSignature": zod.string().optional(),
+  "machineReceiverName": zod.string().optional(),
+  "machineReceiverSignature": zod.string().optional(),
+  "results": zod.array(zod.object({
+  "checklistPointId": zod.number(),
+  "value": zod.string().nullable()
+}))
+})
+
+export const CreatePmInspectionResponse = zod.object({
+  "record": zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "sequenceNumber": zod.number(),
+  "previousRecordId": zod.number().nullish(),
+  "status": zod.string(),
+  "inspectionCount": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "header": zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "procedureFormNumber": zod.string(),
+  "effectiveDate": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "columnsPerRecord": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "checklistPoints": zod.array(zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "pointText": zod.string(),
+  "resultType": zod.enum(['yes_no', 'value', 'text']),
+  "sortOrder": zod.number(),
+  "isActive": zod.boolean(),
+  "deactivatedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "inspections": zod.array(zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "machineId": zod.number(),
+  "columnNumber": zod.number(),
+  "inspectionDate": zod.string(),
+  "inspectionTime": zod.string(),
+  "actionTaken": zod.string().nullish(),
+  "examinerName": zod.string().nullish(),
+  "examinerSignature": zod.string().nullish(),
+  "machineReceiverName": zod.string().nullish(),
+  "machineReceiverSignature": zod.string().nullish(),
+  "completedAt": zod.string(),
+  "results": zod.array(zod.object({
+  "id": zod.number(),
+  "inspectionId": zod.number(),
+  "checklistPointId": zod.number(),
+  "value": zod.string().nullish()
+}))
+})),
+  "pageCount": zod.number()
+})
+
+
+/**
+ * @summary List PM record history for a machine
+ */
+export const GetPmHistoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPmHistoryResponseItem = zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "sequenceNumber": zod.number(),
+  "previousRecordId": zod.number().nullish(),
+  "status": zod.string(),
+  "inspectionCount": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const GetPmHistoryResponse = zod.array(GetPmHistoryResponseItem)
+
+
+/**
+ * @summary Get or generate annual PM plan
+ */
+export const GetAnnualPmPlanParams = zod.object({
+  "year": zod.coerce.number()
+})
+
+export const GetAnnualPmPlanResponse = zod.object({
+  "id": zod.number(),
+  "year": zod.number(),
+  "preparedByName": zod.string().nullish(),
+  "preparedByDate": zod.string().nullish(),
+  "approvedEngineeringName": zod.string().nullish(),
+  "approvedEngineeringDate": zod.string().nullish(),
+  "approvedProductionName": zod.string().nullish(),
+  "approvedProductionDate": zod.string().nullish(),
+  "approvedQcName": zod.string().nullish(),
+  "approvedQcDate": zod.string().nullish(),
+  "approvedRdName": zod.string().nullish(),
+  "approvedRdDate": zod.string().nullish(),
+  "approvedQaName": zod.string().nullish(),
+  "approvedQaDate": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "rows": zod.array(zod.object({
+  "id": zod.number(),
+  "planId": zod.number(),
+  "machineId": zod.number(),
+  "department": zod.string().nullish(),
+  "machineName": zod.string(),
+  "machineLocation": zod.string().nullish(),
+  "machineCode": zod.string().nullish(),
+  "frequencyMonths": zod.number().nullish(),
+  "duration": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
+  "finishDate": zod.string().nullish(),
+  "scheduledMonths": zod.array(zod.number()),
+  "isOverride": zod.boolean()
+}))
+})
+
+
+/**
+ * @summary Update annual PM plan approval fields and rows
+ */
+export const UpdateAnnualPmPlanParams = zod.object({
+  "year": zod.coerce.number()
+})
+
+export const UpdateAnnualPmPlanBody = zod.object({
+  "preparedByName": zod.string().optional(),
+  "preparedByDate": zod.string().optional(),
+  "approvedEngineeringName": zod.string().optional(),
+  "approvedEngineeringDate": zod.string().optional(),
+  "approvedProductionName": zod.string().optional(),
+  "approvedProductionDate": zod.string().optional(),
+  "approvedQcName": zod.string().optional(),
+  "approvedQcDate": zod.string().optional(),
+  "approvedRdName": zod.string().optional(),
+  "approvedRdDate": zod.string().optional(),
+  "approvedQaName": zod.string().optional(),
+  "approvedQaDate": zod.string().optional(),
+  "rows": zod.array(zod.object({
+  "id": zod.number(),
+  "duration": zod.string().optional(),
+  "startDate": zod.string().optional(),
+  "finishDate": zod.string().optional(),
+  "scheduledMonths": zod.array(zod.number()).optional()
+})).optional()
+})
+
+export const UpdateAnnualPmPlanResponse = zod.object({
+  "id": zod.number(),
+  "year": zod.number(),
+  "preparedByName": zod.string().nullish(),
+  "preparedByDate": zod.string().nullish(),
+  "approvedEngineeringName": zod.string().nullish(),
+  "approvedEngineeringDate": zod.string().nullish(),
+  "approvedProductionName": zod.string().nullish(),
+  "approvedProductionDate": zod.string().nullish(),
+  "approvedQcName": zod.string().nullish(),
+  "approvedQcDate": zod.string().nullish(),
+  "approvedRdName": zod.string().nullish(),
+  "approvedRdDate": zod.string().nullish(),
+  "approvedQaName": zod.string().nullish(),
+  "approvedQaDate": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "rows": zod.array(zod.object({
+  "id": zod.number(),
+  "planId": zod.number(),
+  "machineId": zod.number(),
+  "department": zod.string().nullish(),
+  "machineName": zod.string(),
+  "machineLocation": zod.string().nullish(),
+  "machineCode": zod.string().nullish(),
+  "frequencyMonths": zod.number().nullish(),
+  "duration": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
+  "finishDate": zod.string().nullish(),
+  "scheduledMonths": zod.array(zod.number()),
+  "isOverride": zod.boolean()
+}))
+})
+
+
+/**
+ * @summary Get or generate monthly PM plan
+ */
+export const getMonthlyPmPlanPathMonthMax = 12;
+
+
+
+export const GetMonthlyPmPlanParams = zod.object({
+  "year": zod.coerce.number(),
+  "month": zod.coerce.number().min(1).max(getMonthlyPmPlanPathMonthMax)
+})
+
+export const GetMonthlyPmPlanResponse = zod.object({
+  "id": zod.number(),
+  "year": zod.number(),
+  "month": zod.number(),
+  "preparedByName": zod.string().nullish(),
+  "preparedByDate": zod.string().nullish(),
+  "maintenanceSupervisorName": zod.string().nullish(),
+  "maintenanceSupervisorDate": zod.string().nullish(),
+  "departmentManagerName": zod.string().nullish(),
+  "departmentManagerDate": zod.string().nullish(),
+  "approvedByName": zod.string().nullish(),
+  "approvedByDate": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "rows": zod.array(zod.object({
+  "id": zod.number(),
+  "planId": zod.number(),
+  "annualPlanRowId": zod.number().nullish(),
+  "machineId": zod.number(),
+  "rowNumber": zod.number(),
+  "departmentName": zod.string().nullish(),
+  "sectionName": zod.string().nullish(),
+  "machineName": zod.string(),
+  "identificationNumber": zod.string().nullish(),
+  "plannedDateFrom": zod.string().nullish(),
+  "plannedDateTo": zod.string().nullish(),
+  "actualDate": zod.string().nullish(),
+  "amendments": zod.string().nullish(),
+  "status": zod.string()
+}))
+})
+
+
+/**
+ * @summary Update monthly PM plan fields and rows
+ */
+export const updateMonthlyPmPlanPathMonthMax = 12;
+
+
+
+export const UpdateMonthlyPmPlanParams = zod.object({
+  "year": zod.coerce.number(),
+  "month": zod.coerce.number().min(1).max(updateMonthlyPmPlanPathMonthMax)
+})
+
+export const UpdateMonthlyPmPlanBody = zod.object({
+  "preparedByName": zod.string().optional(),
+  "preparedByDate": zod.string().optional(),
+  "maintenanceSupervisorName": zod.string().optional(),
+  "maintenanceSupervisorDate": zod.string().optional(),
+  "departmentManagerName": zod.string().optional(),
+  "departmentManagerDate": zod.string().optional(),
+  "approvedByName": zod.string().optional(),
+  "approvedByDate": zod.string().optional(),
+  "rows": zod.array(zod.object({
+  "id": zod.number(),
+  "plannedDateFrom": zod.string().optional(),
+  "plannedDateTo": zod.string().optional(),
+  "actualDate": zod.string().optional(),
+  "amendments": zod.string().optional(),
+  "status": zod.string().optional()
+})).optional()
+})
+
+export const UpdateMonthlyPmPlanResponse = zod.object({
+  "id": zod.number(),
+  "year": zod.number(),
+  "month": zod.number(),
+  "preparedByName": zod.string().nullish(),
+  "preparedByDate": zod.string().nullish(),
+  "maintenanceSupervisorName": zod.string().nullish(),
+  "maintenanceSupervisorDate": zod.string().nullish(),
+  "departmentManagerName": zod.string().nullish(),
+  "departmentManagerDate": zod.string().nullish(),
+  "approvedByName": zod.string().nullish(),
+  "approvedByDate": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "rows": zod.array(zod.object({
+  "id": zod.number(),
+  "planId": zod.number(),
+  "annualPlanRowId": zod.number().nullish(),
+  "machineId": zod.number(),
+  "rowNumber": zod.number(),
+  "departmentName": zod.string().nullish(),
+  "sectionName": zod.string().nullish(),
+  "machineName": zod.string(),
+  "identificationNumber": zod.string().nullish(),
+  "plannedDateFrom": zod.string().nullish(),
+  "plannedDateTo": zod.string().nullish(),
+  "actualDate": zod.string().nullish(),
+  "amendments": zod.string().nullish(),
+  "status": zod.string()
+}))
+})
+
+
+/**
+ * @summary List maintenance requests visible to the current user
+ */
+export const GetMaintenanceRequestsQueryParams = zod.object({
+  "scope": zod.enum(['all', 'own', 'qa', 'engineering', 'technician']).optional()
+})
+
+export const GetMaintenanceRequestsResponseItem = zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+})
+export const GetMaintenanceRequestsResponse = zod.array(GetMaintenanceRequestsResponseItem)
+
+
+/**
+ * @summary Submit a maintenance request
+ */
+export const CreateMaintenanceRequestBody = zod.object({
+  "machineId": zod.number(),
+  "departmentSection": zod.string(),
+  "priority": zod.enum(['normal', 'urgent']),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string(),
+  "reportingPersonName": zod.string().optional(),
+  "reportingPersonSignature": zod.string().optional(),
+  "departmentSupervisorName": zod.string().optional(),
+  "departmentSupervisorSignature": zod.string().optional()
+})
+
+export const CreateMaintenanceRequestResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary List machine options for request submission
+ */
+export const GetMaintenanceRequestMachineOptionsResponseItem = zod.object({
+  "id": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "location": zod.string().nullish(),
+  "departmentName": zod.string().nullish()
+})
+export const GetMaintenanceRequestMachineOptionsResponse = zod.array(GetMaintenanceRequestMachineOptionsResponseItem)
+
+
+/**
+ * @summary List Maintenance Technician users for assignment
+ */
+export const GetMaintenanceRequestTechniciansResponseItem = zod.object({
+  "id": zod.number(),
+  "username": zod.string(),
+  "fullName": zod.string().nullish()
+})
+export const GetMaintenanceRequestTechniciansResponse = zod.array(GetMaintenanceRequestTechniciansResponseItem)
+
+
+/**
+ * @summary Get maintenance request detail
+ */
+export const GetMaintenanceRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMaintenanceRequestResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Open request by Request / Report Number
+ */
+export const GetMaintenanceRequestByNumberParams = zod.object({
+  "requestNumber": zod.coerce.string()
+})
+
+export const GetMaintenanceRequestByNumberResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary QA approve or reject maintenance request
+ */
+export const QaReviewMaintenanceRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const QaReviewMaintenanceRequestBody = zod.object({
+  "decision": zod.enum(['approve', 'reject', 'accept']),
+  "notes": zod.string().optional(),
+  "signature": zod.string().optional(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "expectedWorkTimeFrom": zod.string().optional(),
+  "expectedWorkTimeTo": zod.string().optional()
+})
+
+export const QaReviewMaintenanceRequestResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary QA approve or reject maintenance request
+ */
+export const PatchQaReviewMaintenanceRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchQaReviewMaintenanceRequestBody = zod.object({
+  "decision": zod.enum(['approve', 'reject', 'accept']),
+  "notes": zod.string().optional(),
+  "signature": zod.string().optional(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "expectedWorkTimeFrom": zod.string().optional(),
+  "expectedWorkTimeTo": zod.string().optional()
+})
+
+export const PatchQaReviewMaintenanceRequestResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Engineering accept or reject QA-approved request
+ */
+export const EngineeringReviewMaintenanceRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const EngineeringReviewMaintenanceRequestBody = zod.object({
+  "decision": zod.enum(['approve', 'reject', 'accept']),
+  "notes": zod.string().optional(),
+  "signature": zod.string().optional(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "expectedWorkTimeFrom": zod.string().optional(),
+  "expectedWorkTimeTo": zod.string().optional()
+})
+
+export const EngineeringReviewMaintenanceRequestResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Engineering accept or reject QA-approved request
+ */
+export const PatchEngineeringReviewMaintenanceRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchEngineeringReviewMaintenanceRequestBody = zod.object({
+  "decision": zod.enum(['approve', 'reject', 'accept']),
+  "notes": zod.string().optional(),
+  "signature": zod.string().optional(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "expectedWorkTimeFrom": zod.string().optional(),
+  "expectedWorkTimeTo": zod.string().optional()
+})
+
+export const PatchEngineeringReviewMaintenanceRequestResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Assign or change technician for an accepted request
+ */
+export const AssignMaintenanceRequestTechnicianParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AssignMaintenanceRequestTechnicianBody = zod.object({
+  "assignedTechnicianUserId": zod.number().nullish()
+})
+
+export const AssignMaintenanceRequestTechnicianResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Start corrective maintenance work
+ */
+export const StartCorrectiveMaintenanceWorkParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const StartCorrectiveMaintenanceWorkResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Fill preliminary findings section
+ */
+export const UpdatePreliminaryFindingsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePreliminaryFindingsBody = zod.object({
+  "preliminaryCheckResults": zod.string().optional(),
+  "expectedWorkTimeFrom": zod.string().optional(),
+  "expectedWorkTimeTo": zod.string().optional(),
+  "technicianName": zod.string().optional(),
+  "maintenanceTechnicianSignature": zod.string().optional(),
+  "concernedSectionSupervisorSignature": zod.string().optional()
+})
+
+export const UpdatePreliminaryFindingsResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Fill preliminary findings section
+ */
+export const PatchPreliminaryFindingsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchPreliminaryFindingsBody = zod.object({
+  "preliminaryCheckResults": zod.string().optional(),
+  "expectedWorkTimeFrom": zod.string().optional(),
+  "expectedWorkTimeTo": zod.string().optional(),
+  "technicianName": zod.string().optional(),
+  "maintenanceTechnicianSignature": zod.string().optional(),
+  "concernedSectionSupervisorSignature": zod.string().optional()
+})
+
+export const PatchPreliminaryFindingsResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Fill corrective maintenance actions taken
+ */
+export const UpdateCorrectiveMaintenanceActionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCorrectiveMaintenanceActionsBody = zod.object({
+  "actionsTaken": zod.string().optional(),
+  "remarksRecommendations": zod.string().optional(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional()
+})
+
+export const UpdateCorrectiveMaintenanceActionsResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Fill hand-over confirmation and close request
+ */
+export const UpdateCorrectiveMaintenanceHandoverParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCorrectiveMaintenanceHandoverBody = zod.object({
+  "receiverName": zod.string().optional(),
+  "receiverSignature": zod.string().optional(),
+  "handoverDate": zod.string().optional(),
+  "engineeringSignature": zod.string().optional()
+})
+
+export const UpdateCorrectiveMaintenanceHandoverResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Fill actions taken and hand-over section
+ */
+export const UpdateActionsHandoverParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateActionsHandoverBody = zod.object({
+  "actionsTaken": zod.string().optional(),
+  "remarksRecommendations": zod.string().optional(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().optional(),
+  "receiverSignature": zod.string().optional(),
+  "handoverDate": zod.string().optional(),
+  "engineeringSignature": zod.string().optional()
+})
+
+export const UpdateActionsHandoverResponse = zod.object({
+  "request": zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "departmentSection": zod.string().nullish(),
+  "priority": zod.string(),
+  "requestDate": zod.string(),
+  "failureDescription": zod.string().optional(),
+  "status": zod.enum(['Submitted', 'Pending QA Approval', 'QA Approved', 'QA Rejected', 'Accepted', 'Rejected', 'In Progress', 'Completed', 'Closed']),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string().optional()
+}),
+  "requestedByUserId": zod.number().optional(),
+  "departmentId": zod.number().nullish(),
+  "reportingPersonName": zod.string().nullish(),
+  "reportingPersonSignature": zod.string().nullish(),
+  "departmentSupervisorName": zod.string().nullish(),
+  "departmentSupervisorSignature": zod.string().nullish(),
+  "qaDecision": zod.string().nullish(),
+  "qaSupervisorSignature": zod.string().nullish(),
+  "qaReviewDate": zod.string().nullish(),
+  "qaReviewNotes": zod.string().nullish(),
+  "engineeringDecision": zod.string().nullish(),
+  "assignedTechnicianUserId": zod.number().nullish(),
+  "engineeringSupervisorSignature": zod.string().nullish(),
+  "engineeringReviewNotes": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "correctiveEvent": zod.union([zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "changedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Get active Corrective Maintenance log for a machine
+ */
+export const GetMachineCorrectiveMaintenanceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMachineCorrectiveMaintenanceResponse = zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "sequenceNumber": zod.number(),
+  "documentNumber": zod.string(),
+  "executionDate": zod.string().nullish(),
+  "pageCount": zod.string(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "machineLocation": zod.string().nullish(),
+  "startupDate": zod.string().nullish(),
+  "maxRows": zod.number().optional(),
+  "status": zod.string(),
+  "events": zod.array(zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary List Corrective Maintenance logs for a machine
+ */
+export const GetMachineCorrectiveMaintenanceHistoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMachineCorrectiveMaintenanceHistoryResponseItem = zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "sequenceNumber": zod.number(),
+  "documentNumber": zod.string(),
+  "executionDate": zod.string().nullish(),
+  "pageCount": zod.string(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "machineLocation": zod.string().nullish(),
+  "startupDate": zod.string().nullish(),
+  "maxRows": zod.number().optional(),
+  "status": zod.string(),
+  "events": zod.array(zod.object({
+  "id": zod.number(),
+  "recordId": zod.number(),
+  "requestId": zod.number(),
+  "machineId": zod.number(),
+  "requestReportNumber": zod.string(),
+  "rowNumber": zod.number(),
+  "preliminaryCheckResults": zod.string().nullish(),
+  "expectedWorkTimeFrom": zod.string().nullish(),
+  "expectedWorkTimeTo": zod.string().nullish(),
+  "technicianName": zod.string().nullish(),
+  "maintenanceTechnicianSignature": zod.string().nullish(),
+  "concernedSectionSupervisorSignature": zod.string().nullish(),
+  "actionsTaken": zod.string().nullish(),
+  "remarksRecommendations": zod.string().nullish(),
+  "performingStaff": zod.array(zod.object({
+  "no": zod.string().optional(),
+  "name": zod.string().optional(),
+  "signature": zod.string().optional()
+})).optional(),
+  "receiverName": zod.string().nullish(),
+  "receiverSignature": zod.string().nullish(),
+  "handoverDate": zod.string().nullish(),
+  "engineeringSignature": zod.string().nullish(),
+  "completedAt": zod.string().nullish()
+}))
+})
+export const GetMachineCorrectiveMaintenanceHistoryResponse = zod.array(GetMachineCorrectiveMaintenanceHistoryResponseItem)
+
+
+/**
+ * @summary List active spare parts
+ */
+export const GetSparePartsQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "category": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional(),
+  "includeDeleted": zod.coerce.boolean().optional()
+})
+
+export const GetSparePartsResponseItem = zod.object({
+  "id": zod.number(),
+  "partName": zod.string(),
+  "partCode": zod.string(),
+  "description": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "unit": zod.string(),
+  "minimumQuantity": zod.number(),
+  "currentQuantity": zod.number(),
+  "location": zod.string().nullish(),
+  "status": zod.string(),
+  "isLowStock": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "deletedAt": zod.string().nullish()
+})
+export const GetSparePartsResponse = zod.array(GetSparePartsResponseItem)
+
+
+/**
+ * @summary Create spare part
+ */
+export const CreateSparePartBody = zod.object({
+  "partName": zod.string(),
+  "partCode": zod.string(),
+  "description": zod.string().optional(),
+  "category": zod.string().optional(),
+  "unit": zod.string().optional(),
+  "minimumQuantity": zod.number().optional(),
+  "location": zod.string().optional(),
+  "status": zod.string().optional()
+})
+
+export const CreateSparePartResponse = zod.object({
+  "id": zod.number(),
+  "partName": zod.string(),
+  "partCode": zod.string(),
+  "description": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "unit": zod.string(),
+  "minimumQuantity": zod.number(),
+  "currentQuantity": zod.number(),
+  "location": zod.string().nullish(),
+  "status": zod.string(),
+  "isLowStock": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "deletedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Search spare parts by name or code
+ */
+export const SearchSparePartsQueryParams = zod.object({
+  "q": zod.coerce.string().optional()
+})
+
+export const SearchSparePartsResponseItem = zod.object({
+  "id": zod.number(),
+  "partName": zod.string(),
+  "partCode": zod.string(),
+  "description": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "unit": zod.string(),
+  "minimumQuantity": zod.number(),
+  "currentQuantity": zod.number(),
+  "location": zod.string().nullish(),
+  "status": zod.string(),
+  "isLowStock": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "deletedAt": zod.string().nullish()
+})
+export const SearchSparePartsResponse = zod.array(SearchSparePartsResponseItem)
+
+
+/**
+ * @summary List low-stock spare parts
+ */
+export const GetLowStockSparePartsResponseItem = zod.object({
+  "id": zod.number(),
+  "partName": zod.string(),
+  "partCode": zod.string(),
+  "description": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "unit": zod.string(),
+  "minimumQuantity": zod.number(),
+  "currentQuantity": zod.number(),
+  "location": zod.string().nullish(),
+  "status": zod.string(),
+  "isLowStock": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "deletedAt": zod.string().nullish()
+})
+export const GetLowStockSparePartsResponse = zod.array(GetLowStockSparePartsResponseItem)
+
+
+/**
+ * @summary Get spare part detail
+ */
+export const GetSparePartParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSparePartResponse = zod.object({
+  "id": zod.number(),
+  "partName": zod.string(),
+  "partCode": zod.string(),
+  "description": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "unit": zod.string(),
+  "minimumQuantity": zod.number(),
+  "currentQuantity": zod.number(),
+  "location": zod.string().nullish(),
+  "status": zod.string(),
+  "isLowStock": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "deletedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update spare part
+ */
+export const UpdateSparePartParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSparePartBody = zod.object({
+  "partName": zod.string(),
+  "partCode": zod.string(),
+  "description": zod.string().optional(),
+  "category": zod.string().optional(),
+  "unit": zod.string().optional(),
+  "minimumQuantity": zod.number().optional(),
+  "location": zod.string().optional(),
+  "status": zod.string().optional()
+})
+
+export const UpdateSparePartResponse = zod.object({
+  "id": zod.number(),
+  "partName": zod.string(),
+  "partCode": zod.string(),
+  "description": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "unit": zod.string(),
+  "minimumQuantity": zod.number(),
+  "currentQuantity": zod.number(),
+  "location": zod.string().nullish(),
+  "status": zod.string(),
+  "isLowStock": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "deletedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Soft-delete spare part
+ */
+export const SoftDeleteSparePartParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SoftDeleteSparePartResponse = zod.object({
+  "id": zod.number(),
+  "partName": zod.string(),
+  "partCode": zod.string(),
+  "description": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "unit": zod.string(),
+  "minimumQuantity": zod.number(),
+  "currentQuantity": zod.number(),
+  "location": zod.string().nullish(),
+  "status": zod.string(),
+  "isLowStock": zod.boolean(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "deletedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary List spare part movement history
+ */
+export const GetSparePartMovementsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSparePartMovementsResponseItem = zod.object({
+  "id": zod.number(),
+  "sparePartId": zod.number(),
+  "movementType": zod.enum(['IN', 'OUT', 'ADJUSTMENT']),
+  "quantity": zod.number(),
+  "quantityBefore": zod.number(),
+  "quantityAfter": zod.number(),
+  "movementDate": zod.string(),
+  "reason": zod.string().nullish(),
+  "referenceType": zod.enum(['PM_RECORD', 'CM_REQUEST', 'MANUAL', 'OTHER']),
+  "referenceId": zod.number().nullish(),
+  "recordedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const GetSparePartMovementsResponse = zod.array(GetSparePartMovementsResponseItem)
+
+
+/**
+ * @summary Record spare part stock movement
+ */
+export const CreateSparePartMovementParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateSparePartMovementBody = zod.object({
+  "movementType": zod.enum(['IN', 'OUT', 'ADJUSTMENT']),
+  "quantity": zod.number(),
+  "movementDate": zod.string().optional(),
+  "reason": zod.string().optional(),
+  "referenceType": zod.enum(['PM_RECORD', 'CM_REQUEST', 'MANUAL', 'OTHER']).optional(),
+  "referenceId": zod.number().nullish(),
+  "notes": zod.string().optional()
+})
+
+export const CreateSparePartMovementResponse = zod.object({
+  "id": zod.number(),
+  "sparePartId": zod.number(),
+  "movementType": zod.enum(['IN', 'OUT', 'ADJUSTMENT']),
+  "quantity": zod.number(),
+  "quantityBefore": zod.number(),
+  "quantityAfter": zod.number(),
+  "movementDate": zod.string(),
+  "reason": zod.string().nullish(),
+  "referenceType": zod.enum(['PM_RECORD', 'CM_REQUEST', 'MANUAL', 'OTHER']),
+  "referenceId": zod.number().nullish(),
+  "recordedByUserId": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary Get dashboard statistics
  */
 export const GetDashboardStatsResponse = zod.object({
@@ -497,7 +2599,44 @@ export const GetDashboardStatsResponse = zod.object({
   "machinesByStatus": zod.array(zod.object({
   "label": zod.string(),
   "count": zod.number()
-}))
+})),
+  "thisWeekPm": zod.array(zod.object({
+  "id": zod.number(),
+  "machineId": zod.number(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "plannedDateFrom": zod.string().nullable(),
+  "plannedDateTo": zod.string().nullable(),
+  "status": zod.string()
+})).optional(),
+  "monthlyPmCompletion": zod.array(zod.object({
+  "label": zod.string(),
+  "count": zod.number()
+})).optional(),
+  "maintenanceRequests": zod.object({
+  "total": zod.number(),
+  "completed": zod.number(),
+  "pendingQa": zod.number(),
+  "pendingEngineering": zod.number(),
+  "acceptedOrInProgress": zod.number(),
+  "own": zod.number()
+}).optional(),
+  "recentMaintenanceRequests": zod.array(zod.object({
+  "id": zod.number(),
+  "requestReportNumber": zod.string(),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "status": zod.string(),
+  "requestDate": zod.string()
+})).optional(),
+  "lowStockSpareParts": zod.array(zod.object({
+  "id": zod.number(),
+  "partName": zod.string(),
+  "partCode": zod.string(),
+  "currentQuantity": zod.number(),
+  "minimumQuantity": zod.number(),
+  "unit": zod.string()
+})).optional()
 })
 
 

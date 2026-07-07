@@ -32,6 +32,10 @@ function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 function parseStaff(value: string) {
   try {
     const parsed = JSON.parse(value) as unknown;
@@ -365,10 +369,11 @@ router.post("/", requireAuth, requirePermission("submit_maintenance_request"), a
 
 router.get("/by-number/:requestNumber", requireAuth, async (req, res, next) => {
   try {
+    const requestNumber = firstParam(req.params.requestNumber) ?? "";
     const [request] = await db
       .select()
       .from(maintenanceRequestsTable)
-      .where(eq(maintenanceRequestsTable.requestReportNumber, req.params.requestNumber ?? ""));
+      .where(eq(maintenanceRequestsTable.requestReportNumber, requestNumber));
     if (!request || !ensureCanView(req, request)) {
       res.status(404).json({ error: "Maintenance request not found" });
       return;

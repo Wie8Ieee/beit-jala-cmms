@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/error-message";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -152,7 +153,7 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
           toast({
             variant: "destructive",
             title: "Save Failed",
-            description: error.error || "An unexpected error occurred while saving.",
+            description: getErrorMessage(error, "An unexpected error occurred while saving."),
           });
         }
       }

@@ -15,6 +15,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/error-message";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -157,7 +158,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
             toast({
               variant: "destructive",
               title: "Failed to update user",
-              description: error.error || "An unexpected error occurred.",
+              description: getErrorMessage(error, "An unexpected error occurred."),
             });
           }
         }
@@ -178,7 +179,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
             toast({
               variant: "destructive",
               title: "Failed to create user",
-              description: error.error || "An unexpected error occurred.",
+              description: getErrorMessage(error, "An unexpected error occurred."),
             });
           }
         }
@@ -202,7 +203,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
           toast({
             variant: "destructive",
             title: "Failed to update permissions",
-            description: error.error || "An unexpected error occurred.",
+            description: getErrorMessage(error, "An unexpected error occurred."),
           });
         }
       }

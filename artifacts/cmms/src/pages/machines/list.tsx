@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useGetMachines } from "@workspace/api-client-react";
-import { useAuth } from "../../contexts/AuthContext";
+import { getGetMachinesQueryKey, useGetMachines } from "@workspace/api-client-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,14 +22,12 @@ export default function MachinesList() {
   const debouncedSearch = useDebounce(searchTerm, 300);
   const { hasPermission } = useAuth();
   
-  const { data: machines, isLoading, isError } = useGetMachines({
+  const machineParams = debouncedSearch ? { search: debouncedSearch } : undefined;
+  const { data: machines, isLoading, isError } = useGetMachines(machineParams, {
     query: {
-      queryKey: ["machines", debouncedSearch],
+      queryKey: getGetMachinesQueryKey(machineParams),
       enabled: true
     },
-    request: {
-      url: `/api/machines${debouncedSearch ? `?search=${encodeURIComponent(debouncedSearch)}` : ''}`
-    } as any // Quick override for missing typed params if not strictly aligned
   });
 
   const getStatusBadge = (status: string) => {

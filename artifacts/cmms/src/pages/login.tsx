@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/error-message";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -45,7 +46,7 @@ export default function LoginPage() {
         toast({
           variant: "destructive",
           title: "Authentication Failed",
-          description: error.error || "Invalid username or password.",
+          description: getErrorMessage(error, "Invalid username or password."),
         });
       }
     });

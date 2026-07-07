@@ -1,5 +1,5 @@
 import { useAuth } from "../contexts/AuthContext";
-import { useGetDashboardStats } from "@workspace/api-client-react";
+import { getGetDashboardStatsQueryKey, useGetDashboardStats } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { data: stats, isLoading } = useGetDashboardStats({
     query: {
+      queryKey: getGetDashboardStatsQueryKey(),
       enabled: !!user && (user.permissions.includes("view_dashboard") || user.roleName === "Admin" || user.roleName === "Maintenance Supervisor" || user.roleName === "Maintenance Technician" || user.roleName === "QA Supervisor"),
     }
   });

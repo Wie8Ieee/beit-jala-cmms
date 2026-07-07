@@ -229,6 +229,663 @@ export interface EquipmentInformationInput {
   approvedByDate?: string;
 }
 
+export interface PmHeader {
+  id: number;
+  machineId: number;
+  procedureFormNumber: string;
+  /** @nullable */
+  effectiveDate?: string | null;
+  /** @nullable */
+  department?: string | null;
+  columnsPerRecord: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PmHeaderInput {
+  procedureFormNumber?: string;
+  /** @nullable */
+  effectiveDate?: string | null;
+  /** @nullable */
+  department?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 10
+     */
+  columnsPerRecord?: number;
+}
+
+export type PmChecklistPointResultType = typeof PmChecklistPointResultType[keyof typeof PmChecklistPointResultType];
+
+
+export const PmChecklistPointResultType = {
+  yes_no: 'yes_no',
+  value: 'value',
+  text: 'text',
+} as const;
+
+export interface PmChecklistPoint {
+  id: number;
+  machineId: number;
+  pointText: string;
+  resultType: PmChecklistPointResultType;
+  sortOrder: number;
+  isActive: boolean;
+  /** @nullable */
+  deactivatedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PmChecklistPointInputResultType = typeof PmChecklistPointInputResultType[keyof typeof PmChecklistPointInputResultType];
+
+
+export const PmChecklistPointInputResultType = {
+  yes_no: 'yes_no',
+  value: 'value',
+  text: 'text',
+} as const;
+
+export interface PmChecklistPointInput {
+  /** @minLength 1 */
+  pointText: string;
+  resultType: PmChecklistPointInputResultType;
+  sortOrder: number;
+}
+
+export interface PmInspectionResultInput {
+  checklistPointId: number;
+  /** @nullable */
+  value: string | null;
+}
+
+export interface PmInspectionInput {
+  inspectionDate: string;
+  inspectionTime: string;
+  actionTaken?: string;
+  examinerName?: string;
+  examinerSignature?: string;
+  machineReceiverName?: string;
+  machineReceiverSignature?: string;
+  results: PmInspectionResultInput[];
+}
+
+export interface PmInspectionResult {
+  id: number;
+  inspectionId: number;
+  checklistPointId: number;
+  /** @nullable */
+  value?: string | null;
+}
+
+export interface PmInspection {
+  id: number;
+  recordId: number;
+  machineId: number;
+  columnNumber: number;
+  inspectionDate: string;
+  inspectionTime: string;
+  /** @nullable */
+  actionTaken?: string | null;
+  /** @nullable */
+  examinerName?: string | null;
+  /** @nullable */
+  examinerSignature?: string | null;
+  /** @nullable */
+  machineReceiverName?: string | null;
+  /** @nullable */
+  machineReceiverSignature?: string | null;
+  completedAt: string;
+  results: PmInspectionResult[];
+}
+
+export interface PmRecordSummary {
+  id: number;
+  machineId: number;
+  sequenceNumber: number;
+  /** @nullable */
+  previousRecordId?: number | null;
+  status: string;
+  inspectionCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PmRecordDetail {
+  record: PmRecordSummary;
+  header: PmHeader;
+  checklistPoints: PmChecklistPoint[];
+  inspections: PmInspection[];
+  pageCount: number;
+}
+
+export interface AnnualPmPlanRow {
+  id: number;
+  planId: number;
+  machineId: number;
+  /** @nullable */
+  department?: string | null;
+  machineName: string;
+  /** @nullable */
+  machineLocation?: string | null;
+  /** @nullable */
+  machineCode?: string | null;
+  /** @nullable */
+  frequencyMonths?: number | null;
+  /** @nullable */
+  duration?: string | null;
+  /** @nullable */
+  startDate?: string | null;
+  /** @nullable */
+  finishDate?: string | null;
+  scheduledMonths: number[];
+  isOverride: boolean;
+}
+
+export interface AnnualPmPlanDetail {
+  id: number;
+  year: number;
+  /** @nullable */
+  preparedByName?: string | null;
+  /** @nullable */
+  preparedByDate?: string | null;
+  /** @nullable */
+  approvedEngineeringName?: string | null;
+  /** @nullable */
+  approvedEngineeringDate?: string | null;
+  /** @nullable */
+  approvedProductionName?: string | null;
+  /** @nullable */
+  approvedProductionDate?: string | null;
+  /** @nullable */
+  approvedQcName?: string | null;
+  /** @nullable */
+  approvedQcDate?: string | null;
+  /** @nullable */
+  approvedRdName?: string | null;
+  /** @nullable */
+  approvedRdDate?: string | null;
+  /** @nullable */
+  approvedQaName?: string | null;
+  /** @nullable */
+  approvedQaDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  rows: AnnualPmPlanRow[];
+}
+
+export type AnnualPmPlanInputRowsItem = {
+  id: number;
+  duration?: string;
+  startDate?: string;
+  finishDate?: string;
+  scheduledMonths?: number[];
+};
+
+export interface AnnualPmPlanInput {
+  preparedByName?: string;
+  preparedByDate?: string;
+  approvedEngineeringName?: string;
+  approvedEngineeringDate?: string;
+  approvedProductionName?: string;
+  approvedProductionDate?: string;
+  approvedQcName?: string;
+  approvedQcDate?: string;
+  approvedRdName?: string;
+  approvedRdDate?: string;
+  approvedQaName?: string;
+  approvedQaDate?: string;
+  rows?: AnnualPmPlanInputRowsItem[];
+}
+
+export interface MonthlyPmPlanRow {
+  id: number;
+  planId: number;
+  /** @nullable */
+  annualPlanRowId?: number | null;
+  machineId: number;
+  rowNumber: number;
+  /** @nullable */
+  departmentName?: string | null;
+  /** @nullable */
+  sectionName?: string | null;
+  machineName: string;
+  /** @nullable */
+  identificationNumber?: string | null;
+  /** @nullable */
+  plannedDateFrom?: string | null;
+  /** @nullable */
+  plannedDateTo?: string | null;
+  /** @nullable */
+  actualDate?: string | null;
+  /** @nullable */
+  amendments?: string | null;
+  status: string;
+}
+
+export interface MonthlyPmPlanDetail {
+  id: number;
+  year: number;
+  month: number;
+  /** @nullable */
+  preparedByName?: string | null;
+  /** @nullable */
+  preparedByDate?: string | null;
+  /** @nullable */
+  maintenanceSupervisorName?: string | null;
+  /** @nullable */
+  maintenanceSupervisorDate?: string | null;
+  /** @nullable */
+  departmentManagerName?: string | null;
+  /** @nullable */
+  departmentManagerDate?: string | null;
+  /** @nullable */
+  approvedByName?: string | null;
+  /** @nullable */
+  approvedByDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  rows: MonthlyPmPlanRow[];
+}
+
+export type MonthlyPmPlanInputRowsItem = {
+  id: number;
+  plannedDateFrom?: string;
+  plannedDateTo?: string;
+  actualDate?: string;
+  amendments?: string;
+  status?: string;
+};
+
+export interface MonthlyPmPlanInput {
+  preparedByName?: string;
+  preparedByDate?: string;
+  maintenanceSupervisorName?: string;
+  maintenanceSupervisorDate?: string;
+  departmentManagerName?: string;
+  departmentManagerDate?: string;
+  approvedByName?: string;
+  approvedByDate?: string;
+  rows?: MonthlyPmPlanInputRowsItem[];
+}
+
+export type MaintenanceRequestStatus = typeof MaintenanceRequestStatus[keyof typeof MaintenanceRequestStatus];
+
+
+export const MaintenanceRequestStatus = {
+  Submitted: 'Submitted',
+  Pending_QA_Approval: 'Pending QA Approval',
+  QA_Approved: 'QA Approved',
+  QA_Rejected: 'QA Rejected',
+  Accepted: 'Accepted',
+  Rejected: 'Rejected',
+  In_Progress: 'In Progress',
+  Completed: 'Completed',
+  Closed: 'Closed',
+} as const;
+
+export type MaintenanceRequestInputPriority = typeof MaintenanceRequestInputPriority[keyof typeof MaintenanceRequestInputPriority];
+
+
+export const MaintenanceRequestInputPriority = {
+  normal: 'normal',
+  urgent: 'urgent',
+} as const;
+
+export interface MaintenanceRequestInput {
+  machineId: number;
+  departmentSection: string;
+  priority: MaintenanceRequestInputPriority;
+  requestDate: string;
+  failureDescription: string;
+  reportingPersonName?: string;
+  reportingPersonSignature?: string;
+  departmentSupervisorName?: string;
+  departmentSupervisorSignature?: string;
+}
+
+export interface MaintenanceRequestMachineOption {
+  id: number;
+  machineName: string;
+  machineNumber: string;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  departmentName?: string | null;
+}
+
+export interface MaintenanceRequestTechnicianOption {
+  id: number;
+  username: string;
+  /** @nullable */
+  fullName?: string | null;
+}
+
+export type ReviewDecisionInputDecision = typeof ReviewDecisionInputDecision[keyof typeof ReviewDecisionInputDecision];
+
+
+export const ReviewDecisionInputDecision = {
+  approve: 'approve',
+  reject: 'reject',
+  accept: 'accept',
+} as const;
+
+export interface ReviewDecisionInput {
+  decision: ReviewDecisionInputDecision;
+  notes?: string;
+  signature?: string;
+  /** @nullable */
+  assignedTechnicianUserId?: number | null;
+  expectedWorkTimeFrom?: string;
+  expectedWorkTimeTo?: string;
+}
+
+export interface AssignTechnicianInput {
+  /** @nullable */
+  assignedTechnicianUserId?: number | null;
+}
+
+export interface PreliminaryFindingsInput {
+  preliminaryCheckResults?: string;
+  expectedWorkTimeFrom?: string;
+  expectedWorkTimeTo?: string;
+  technicianName?: string;
+  maintenanceTechnicianSignature?: string;
+  concernedSectionSupervisorSignature?: string;
+}
+
+export interface PerformingStaffInput {
+  no?: string;
+  name?: string;
+  signature?: string;
+}
+
+export interface ActionsHandoverInput {
+  actionsTaken?: string;
+  remarksRecommendations?: string;
+  performingStaff?: PerformingStaffInput[];
+  receiverName?: string;
+  receiverSignature?: string;
+  handoverDate?: string;
+  engineeringSignature?: string;
+}
+
+export interface ActionsTakenInput {
+  actionsTaken?: string;
+  remarksRecommendations?: string;
+  performingStaff?: PerformingStaffInput[];
+}
+
+export interface HandoverInput {
+  receiverName?: string;
+  receiverSignature?: string;
+  handoverDate?: string;
+  engineeringSignature?: string;
+}
+
+export interface MaintenanceRequestSummary {
+  id: number;
+  requestReportNumber: string;
+  machineId: number;
+  machineName: string;
+  machineNumber: string;
+  /** @nullable */
+  departmentSection?: string | null;
+  priority: string;
+  requestDate: string;
+  failureDescription?: string;
+  status: MaintenanceRequestStatus;
+  /** @nullable */
+  assignedTechnicianUserId?: number | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CorrectiveMaintenanceEvent {
+  id: number;
+  recordId: number;
+  requestId: number;
+  machineId: number;
+  requestReportNumber: string;
+  rowNumber: number;
+  /** @nullable */
+  preliminaryCheckResults?: string | null;
+  /** @nullable */
+  expectedWorkTimeFrom?: string | null;
+  /** @nullable */
+  expectedWorkTimeTo?: string | null;
+  /** @nullable */
+  technicianName?: string | null;
+  /** @nullable */
+  maintenanceTechnicianSignature?: string | null;
+  /** @nullable */
+  concernedSectionSupervisorSignature?: string | null;
+  /** @nullable */
+  actionsTaken?: string | null;
+  /** @nullable */
+  remarksRecommendations?: string | null;
+  performingStaff?: PerformingStaffInput[];
+  /** @nullable */
+  receiverName?: string | null;
+  /** @nullable */
+  receiverSignature?: string | null;
+  /** @nullable */
+  handoverDate?: string | null;
+  /** @nullable */
+  engineeringSignature?: string | null;
+  /** @nullable */
+  completedAt?: string | null;
+}
+
+export interface MaintenanceRequestStatusHistory {
+  id: number;
+  requestId: number;
+  /** @nullable */
+  fromStatus?: string | null;
+  toStatus: string;
+  /** @nullable */
+  changedByUserId?: number | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface MaintenanceRequestDetail {
+  request: MaintenanceRequestSummary;
+  requestedByUserId?: number;
+  /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
+  reportingPersonName?: string | null;
+  /** @nullable */
+  reportingPersonSignature?: string | null;
+  /** @nullable */
+  departmentSupervisorName?: string | null;
+  /** @nullable */
+  departmentSupervisorSignature?: string | null;
+  /** @nullable */
+  qaDecision?: string | null;
+  /** @nullable */
+  qaSupervisorSignature?: string | null;
+  /** @nullable */
+  qaReviewDate?: string | null;
+  /** @nullable */
+  qaReviewNotes?: string | null;
+  /** @nullable */
+  engineeringDecision?: string | null;
+  /** @nullable */
+  assignedTechnicianUserId?: number | null;
+  /** @nullable */
+  engineeringSupervisorSignature?: string | null;
+  /** @nullable */
+  engineeringReviewNotes?: string | null;
+  /** @nullable */
+  expectedWorkTimeFrom?: string | null;
+  /** @nullable */
+  expectedWorkTimeTo?: string | null;
+  correctiveEvent?: CorrectiveMaintenanceEvent | null;
+  statusHistory: MaintenanceRequestStatusHistory[];
+}
+
+export interface CorrectiveMaintenanceRecordDetail {
+  id: number;
+  machineId: number;
+  sequenceNumber: number;
+  documentNumber: string;
+  /** @nullable */
+  executionDate?: string | null;
+  pageCount: string;
+  machineName: string;
+  machineNumber: string;
+  /** @nullable */
+  machineLocation?: string | null;
+  /** @nullable */
+  startupDate?: string | null;
+  maxRows?: number;
+  status: string;
+  events: CorrectiveMaintenanceEvent[];
+}
+
+export interface SparePart {
+  id: number;
+  partName: string;
+  partCode: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  category?: string | null;
+  unit: string;
+  minimumQuantity: number;
+  currentQuantity: number;
+  /** @nullable */
+  location?: string | null;
+  status: string;
+  isLowStock: boolean;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  deletedAt?: string | null;
+}
+
+export interface SparePartInput {
+  partName: string;
+  partCode: string;
+  description?: string;
+  category?: string;
+  unit?: string;
+  minimumQuantity?: number;
+  location?: string;
+  status?: string;
+}
+
+export type SparePartMovementMovementType = typeof SparePartMovementMovementType[keyof typeof SparePartMovementMovementType];
+
+
+export const SparePartMovementMovementType = {
+  IN: 'IN',
+  OUT: 'OUT',
+  ADJUSTMENT: 'ADJUSTMENT',
+} as const;
+
+export type SparePartMovementReferenceType = typeof SparePartMovementReferenceType[keyof typeof SparePartMovementReferenceType];
+
+
+export const SparePartMovementReferenceType = {
+  PM_RECORD: 'PM_RECORD',
+  CM_REQUEST: 'CM_REQUEST',
+  MANUAL: 'MANUAL',
+  OTHER: 'OTHER',
+} as const;
+
+export interface SparePartMovement {
+  id: number;
+  sparePartId: number;
+  movementType: SparePartMovementMovementType;
+  quantity: number;
+  quantityBefore: number;
+  quantityAfter: number;
+  movementDate: string;
+  /** @nullable */
+  reason?: string | null;
+  referenceType: SparePartMovementReferenceType;
+  /** @nullable */
+  referenceId?: number | null;
+  /** @nullable */
+  recordedByUserId?: number | null;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+export type SparePartMovementInputMovementType = typeof SparePartMovementInputMovementType[keyof typeof SparePartMovementInputMovementType];
+
+
+export const SparePartMovementInputMovementType = {
+  IN: 'IN',
+  OUT: 'OUT',
+  ADJUSTMENT: 'ADJUSTMENT',
+} as const;
+
+export type SparePartMovementInputReferenceType = typeof SparePartMovementInputReferenceType[keyof typeof SparePartMovementInputReferenceType];
+
+
+export const SparePartMovementInputReferenceType = {
+  PM_RECORD: 'PM_RECORD',
+  CM_REQUEST: 'CM_REQUEST',
+  MANUAL: 'MANUAL',
+  OTHER: 'OTHER',
+} as const;
+
+export interface SparePartMovementInput {
+  movementType: SparePartMovementInputMovementType;
+  quantity: number;
+  movementDate?: string;
+  reason?: string;
+  referenceType?: SparePartMovementInputReferenceType;
+  /** @nullable */
+  referenceId?: number | null;
+  notes?: string;
+}
+
+export interface DashboardLowStockSparePart {
+  id: number;
+  partName: string;
+  partCode: string;
+  currentQuantity: number;
+  minimumQuantity: number;
+  unit: string;
+}
+
+export interface DashboardPmItem {
+  id: number;
+  machineId: number;
+  machineName: string;
+  machineNumber: string;
+  /** @nullable */
+  plannedDateFrom: string | null;
+  /** @nullable */
+  plannedDateTo: string | null;
+  status: string;
+}
+
+export interface DashboardMaintenanceRequestSummary {
+  total: number;
+  completed: number;
+  pendingQa: number;
+  pendingEngineering: number;
+  acceptedOrInProgress: number;
+  own: number;
+}
+
+export interface DashboardRecentMaintenanceRequest {
+  id: number;
+  requestReportNumber: string;
+  machineName: string;
+  machineNumber: string;
+  status: string;
+  requestDate: string;
+}
+
 export interface CountByLabel {
   label: string;
   count: number;
@@ -242,6 +899,11 @@ export interface DashboardStats {
   totalDepartments: number;
   machinesByDepartment: CountByLabel[];
   machinesByStatus: CountByLabel[];
+  thisWeekPm?: DashboardPmItem[];
+  monthlyPmCompletion?: CountByLabel[];
+  maintenanceRequests?: DashboardMaintenanceRequestSummary;
+  recentMaintenanceRequests?: DashboardRecentMaintenanceRequest[];
+  lowStockSpareParts?: DashboardLowStockSparePart[];
 }
 
 export type GetMachinesParams = {
@@ -249,5 +911,31 @@ export type GetMachinesParams = {
  * Search by machine name or machine number
  */
 search?: string;
+};
+
+export type GetMaintenanceRequestsParams = {
+scope?: GetMaintenanceRequestsScope;
+};
+
+export type GetMaintenanceRequestsScope = typeof GetMaintenanceRequestsScope[keyof typeof GetMaintenanceRequestsScope];
+
+
+export const GetMaintenanceRequestsScope = {
+  all: 'all',
+  own: 'own',
+  qa: 'qa',
+  engineering: 'engineering',
+  technician: 'technician',
+} as const;
+
+export type GetSparePartsParams = {
+q?: string;
+category?: string;
+status?: string;
+includeDeleted?: boolean;
+};
+
+export type SearchSparePartsParams = {
+q?: string;
 };
 

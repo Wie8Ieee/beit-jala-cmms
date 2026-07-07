@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/error-message";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -118,7 +119,7 @@ export default function MachineForm({ params }: { params?: { id: string } }) {
             toast({
               variant: "destructive",
               title: "Failed to update machine",
-              description: error.error || "An unexpected error occurred.",
+              description: getErrorMessage(error, "An unexpected error occurred."),
             });
           }
         }
@@ -139,7 +140,7 @@ export default function MachineForm({ params }: { params?: { id: string } }) {
             toast({
               variant: "destructive",
               title: "Failed to create machine",
-              description: error.error || "An unexpected error occurred.",
+              description: getErrorMessage(error, "An unexpected error occurred."),
             });
           }
         }
