@@ -12,6 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Check, Play, Save, X } from "lucide-react";
 import type { MaintenanceRequestDetail, PerformingStaff } from "./types";
+import { PrintButton } from "@/components/print-button";
+import { OfficialFormHeader } from "@/components/official-form-header";
+import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
 type TechnicianOption = {
   id: number;
@@ -195,6 +198,17 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
           <p className="text-muted-foreground">Maintenance Request and Corrective Maintenance Report (FORM-10-0975)</p>
         </div>
         <Badge variant="secondary">{request.status}</Badge>
+        <PrintButton />
+      </div>
+
+      <div className="rounded-md border bg-white p-6 text-black shadow-sm print:border-none print:p-0 print:shadow-none">
+        <OfficialFormHeader
+          documentName="Maintenance Request / Corrective Maintenance Report"
+          documentNumber="FORM-10-0975 / LOG-00-0102-3"
+          effectiveOrExecutionDate={request.requestDate}
+          machineName={request.machineName}
+          machineNumber={request.machineNumber}
+        />
       </div>
 
       <Card>
@@ -219,7 +233,7 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
           <div><Label>Department supervisor signature placeholder</Label><Input value={data.departmentSupervisorSignature ?? ""} readOnly /></div>
           <div><Label>QA decision</Label><Input value={data.qaDecision ?? ""} readOnly /></div>
           <div><Label>QA review date</Label><Input value={data.qaReviewDate ?? ""} readOnly /></div>
-          <div><Label>QA Supervisor approval signature placeholder</Label><Input value={data.qaSupervisorSignature ?? ""} readOnly /></div>
+          <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="qa_supervisor_approval" label="QA Supervisor Electronic Signature" />
           <div><Label>QA notes</Label><Input value={data.qaReviewNotes ?? ""} readOnly /></div>
         </CardContent>
       </Card>
@@ -228,7 +242,8 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
         <Card>
           <CardHeader><CardTitle>QA Supervisor Review</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <div><Label>QA Supervisor signature placeholder</Label><Input value={qaSignature} onChange={(event) => setQaSignature(event.target.value)} /></div>
+            <div><Label>QA Supervisor name</Label><Input value={qaSignature} onChange={(event) => setQaSignature(event.target.value)} /></div>
+            <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="qa_supervisor_approval" label="QA Supervisor Electronic Signature" />
             <div><Label>Review notes</Label><Input value={qaNotes} onChange={(event) => setQaNotes(event.target.value)} /></div>
             <div className="flex gap-2">
               <Button type="button" onClick={() => qaReview.mutate("approve")}><Check className="mr-2 h-4 w-4" />Approve</Button>
@@ -245,7 +260,7 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
           <div><Label>Assigned technician</Label><Input value={technicians.find((item) => item.id === data.assignedTechnicianUserId)?.fullName ?? ""} readOnly /></div>
           <div><Label>Expected work time From</Label><Input value={data.expectedWorkTimeFrom ?? ""} readOnly /></div>
           <div><Label>Expected work time To</Label><Input value={data.expectedWorkTimeTo ?? ""} readOnly /></div>
-          <div><Label>Engineering supervisor signature placeholder</Label><Input value={data.engineeringSupervisorSignature ?? ""} readOnly /></div>
+          <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="engineering_supervisor_approval" label="Engineering Supervisor Electronic Signature" />
           <div><Label>Engineering notes</Label><Input value={data.engineeringReviewNotes ?? ""} readOnly /></div>
         </CardContent>
       </Card>
@@ -267,7 +282,8 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Engineering supervisor signature placeholder</Label><Input value={engineeringReviewSignature} onChange={(event) => setEngineeringReviewSignature(event.target.value)} /></div>
+            <div><Label>Engineering supervisor name</Label><Input value={engineeringReviewSignature} onChange={(event) => setEngineeringReviewSignature(event.target.value)} /></div>
+            <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="engineering_supervisor_approval" label="Engineering Supervisor Electronic Signature" />
             <div><Label>Expected work time From</Label><Input value={workFrom} onChange={(event) => setWorkFrom(event.target.value)} /></div>
             <div><Label>Expected work time To</Label><Input value={workTo} onChange={(event) => setWorkTo(event.target.value)} /></div>
             <div className="md:col-span-2"><Label>Review notes</Label><Input value={engineeringNotes} onChange={(event) => setEngineeringNotes(event.target.value)} /></div>
@@ -294,8 +310,10 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
             <div><Label>Expected work time From</Label><Input value={workFrom} readOnly={!canTechnicianWork} onChange={(event) => setWorkFrom(event.target.value)} /></div>
             <div><Label>Expected work time To</Label><Input value={workTo} readOnly={!canTechnicianWork} onChange={(event) => setWorkTo(event.target.value)} /></div>
             <div><Label>Maintenance technician name</Label><Input value={technicianName} readOnly={!canTechnicianWork} onChange={(event) => setTechnicianName(event.target.value)} /></div>
-            <div><Label>Maintenance technician signature placeholder</Label><Input value={techSignature} readOnly={!canTechnicianWork} onChange={(event) => setTechSignature(event.target.value)} /></div>
-            <div><Label>Concerned section supervisor signature placeholder</Label><Input value={sectionSupervisorSignature} readOnly={!canTechnicianWork} onChange={(event) => setSectionSupervisorSignature(event.target.value)} /></div>
+            <div><Label>Maintenance technician name/signature reference</Label><Input value={techSignature} readOnly={!canTechnicianWork} onChange={(event) => setTechSignature(event.target.value)} /></div>
+            <div><Label>Concerned section supervisor name/reference</Label><Input value={sectionSupervisorSignature} readOnly={!canTechnicianWork} onChange={(event) => setSectionSupervisorSignature(event.target.value)} /></div>
+            <ElectronicSignatureField documentType="CORRECTIVE_MAINTENANCE" documentId={requestId} fieldName="maintenance_technician" label="Maintenance Technician Electronic Signature" />
+            <ElectronicSignatureField documentType="CORRECTIVE_MAINTENANCE" documentId={requestId} fieldName="concerned_section_supervisor" label="Concerned Section Supervisor Electronic Signature" />
             {canTechnicianWork && <Button type="submit" className="w-fit"><Save className="mr-2 h-4 w-4" />Save Preliminary Findings</Button>}
           </CardContent>
         </Card>
@@ -308,7 +326,7 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
             <div className="md:col-span-2"><Label>Actions taken</Label><Textarea value={actionsTaken} readOnly={!canTechnicianWork} onChange={(event) => setActionsTaken(event.target.value)} /></div>
             <div className="md:col-span-2"><Label>Remarks and recommendations</Label><Textarea value={remarks} readOnly={!canTechnicianWork} onChange={(event) => setRemarks(event.target.value)} /></div>
             <div className="md:col-span-2 space-y-2">
-              <Label>Performing staff - No. / Name / Signature placeholder</Label>
+              <Label>Performing staff - No. / Name / Signature reference</Label>
               {staff.map((item, index) => (
                 <div key={index} className="grid gap-2 md:grid-cols-[80px_1fr_1fr]">
                   <Input value={item.no ?? ""} readOnly={!canTechnicianWork} onChange={(event) => setStaff((current) => current.map((row, i) => i === index ? { ...row, no: event.target.value } : row))} />
@@ -328,9 +346,11 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
           <CardHeader><CardTitle>Section 4 - Hand-over Confirmation</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div><Label>Receiver name</Label><Input value={receiverName} readOnly={!canHandover} onChange={(event) => setReceiverName(event.target.value)} /></div>
-            <div><Label>Receiver signature placeholder</Label><Input value={receiverSignature} readOnly={!canHandover} onChange={(event) => setReceiverSignature(event.target.value)} /></div>
+            <div><Label>Receiver signature reference</Label><Input value={receiverSignature} readOnly={!canHandover} onChange={(event) => setReceiverSignature(event.target.value)} /></div>
             <div><Label>Handover date</Label><Input type="date" value={handoverDate} readOnly={!canHandover} onChange={(event) => setHandoverDate(event.target.value)} /></div>
-            <div><Label>Engineering final confirmation placeholder</Label><Input value={engineeringSignature} readOnly={!canHandover} onChange={(event) => setEngineeringSignature(event.target.value)} /></div>
+            <div><Label>Engineering final confirmation reference</Label><Input value={engineeringSignature} readOnly={!canHandover} onChange={(event) => setEngineeringSignature(event.target.value)} /></div>
+            <ElectronicSignatureField documentType="CORRECTIVE_MAINTENANCE" documentId={requestId} fieldName="receiver" label="Receiver Electronic Signature" />
+            <ElectronicSignatureField documentType="CORRECTIVE_MAINTENANCE" documentId={requestId} fieldName="engineering_final" label="Engineering Final Electronic Signature" />
             {canHandover && <Button type="submit" className="w-fit"><Save className="mr-2 h-4 w-4" />Close Request</Button>}
           </CardContent>
         </Card>

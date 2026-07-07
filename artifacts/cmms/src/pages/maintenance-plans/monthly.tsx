@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Save } from "lucide-react";
+import { OfficialFormHeader } from "@/components/official-form-header";
+import { PrintButton } from "@/components/print-button";
+import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
 const monthNames = [
   "January",
@@ -114,6 +117,7 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
           <Button asChild variant="outline">
             <Link href={`/maintenance-plans/monthly/${year}`}>Back</Link>
           </Button>
+          <PrintButton />
           {canEdit && (
             <Button type="submit" disabled={save.isPending}>
               <Save className="mr-2 h-4 w-4" />
@@ -123,12 +127,20 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
         </div>
       </div>
 
+      <div className="rounded-md border bg-white p-6 text-black shadow-sm print:border-none print:p-0 print:shadow-none">
+        <OfficialFormHeader
+          documentName="Monthly Preventive Maintenance Program"
+          documentNumber="FORM-10-0117"
+          effectiveOrExecutionDate={`${monthNames[month - 1]} ${year}`}
+        />
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Sign-Off Fields</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[
+          {[ 
             ["preparedByName", "Prepared by"],
             ["maintenanceSupervisorName", "Maintenance Section Supervisor"],
             ["departmentManagerName", "Department Manager"],
@@ -149,6 +161,20 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
               <Label>{label}</Label>
               <Input type="date" value={(form[field as keyof MonthlyPlan] as string | null) ?? ""} readOnly={!canEdit} onChange={(event) => updateField(field as keyof MonthlyPlan, event.target.value)} />
             </div>
+          ))}
+          {[
+            ["prepared_by", "Prepared By Electronic Signature"],
+            ["maintenance_supervisor", "Maintenance Supervisor Electronic Signature"],
+            ["department_manager", "Department Manager Electronic Signature"],
+            ["approved_by", "Approved By Electronic Signature"],
+          ].map(([fieldName, label]) => (
+            <ElectronicSignatureField
+              key={fieldName}
+              documentType="MONTHLY_PLAN"
+              documentId={form.id}
+              fieldName={fieldName}
+              label={label}
+            />
           ))}
         </CardContent>
       </Card>

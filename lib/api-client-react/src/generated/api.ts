@@ -29,6 +29,8 @@ import type {
   CorrectiveMaintenanceRecordDetail,
   DashboardStats,
   Department,
+  EligibleSignerAssignment,
+  EligibleSignerInput,
   EquipmentInformation,
   EquipmentInformationInput,
   ErrorResponse,
@@ -37,6 +39,8 @@ import type {
   GetSparePartsParams,
   HandoverInput,
   HealthStatus,
+  ListEligibleSignersParams,
+  ListSignaturesParams,
   LoginCredentials,
   Machine,
   MachineInput,
@@ -61,6 +65,8 @@ import type {
   ReviewDecisionInput,
   Role,
   SearchSparePartsParams,
+  Signature,
+  SignatureInput,
   SparePart,
   SparePartInput,
   SparePartMovement,
@@ -391,6 +397,384 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
 
 
 
+
+export const getListSignaturesUrl = (params: ListSignaturesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/signatures?${stringifiedParams}` : `/api/signatures`
+}
+
+/**
+ * @summary List immutable signatures for a document
+ */
+export const listSignatures = async (params: ListSignaturesParams, options?: RequestInit): Promise<Signature[]> => {
+
+  return customFetch<Signature[]>(getListSignaturesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSignaturesQueryKey = (params?: ListSignaturesParams,) => {
+    return [
+    `/api/signatures`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSignaturesQueryOptions = <TData = Awaited<ReturnType<typeof listSignatures>>, TError = ErrorType<unknown>>(params: ListSignaturesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSignatures>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSignaturesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSignatures>>> = ({ signal }) => listSignatures(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSignatures>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSignaturesQueryResult = NonNullable<Awaited<ReturnType<typeof listSignatures>>>
+export type ListSignaturesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List immutable signatures for a document
+ */
+
+export function useListSignatures<TData = Awaited<ReturnType<typeof listSignatures>>, TError = ErrorType<unknown>>(
+ params: ListSignaturesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSignatures>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSignaturesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListEligibleSignersUrl = (params: ListEligibleSignersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/signatures/eligible?${stringifiedParams}` : `/api/signatures/eligible`
+}
+
+/**
+ * @summary List eligible signer assignments for a document
+ */
+export const listEligibleSigners = async (params: ListEligibleSignersParams, options?: RequestInit): Promise<EligibleSignerAssignment[]> => {
+
+  return customFetch<EligibleSignerAssignment[]>(getListEligibleSignersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEligibleSignersQueryKey = (params?: ListEligibleSignersParams,) => {
+    return [
+    `/api/signatures/eligible`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListEligibleSignersQueryOptions = <TData = Awaited<ReturnType<typeof listEligibleSigners>>, TError = ErrorType<unknown>>(params: ListEligibleSignersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEligibleSigners>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEligibleSignersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEligibleSigners>>> = ({ signal }) => listEligibleSigners(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEligibleSigners>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEligibleSignersQueryResult = NonNullable<Awaited<ReturnType<typeof listEligibleSigners>>>
+export type ListEligibleSignersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List eligible signer assignments for a document
+ */
+
+export function useListEligibleSigners<TData = Awaited<ReturnType<typeof listEligibleSigners>>, TError = ErrorType<unknown>>(
+ params: ListEligibleSignersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEligibleSigners>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEligibleSignersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateEligibleSignerUrl = () => {
+
+
+
+
+  return `/api/signatures/eligible`
+}
+
+/**
+ * @summary Assign an eligible signer to a document field
+ */
+export const createEligibleSigner = async (eligibleSignerInput: EligibleSignerInput, options?: RequestInit): Promise<EligibleSignerAssignment> => {
+
+  return customFetch<EligibleSignerAssignment>(getCreateEligibleSignerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(eligibleSignerInput)
+  }
+);}
+
+
+
+
+export const getCreateEligibleSignerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEligibleSigner>>, TError,{data: BodyType<EligibleSignerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEligibleSigner>>, TError,{data: BodyType<EligibleSignerInput>}, TContext> => {
+
+const mutationKey = ['createEligibleSigner'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEligibleSigner>>, {data: BodyType<EligibleSignerInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createEligibleSigner(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEligibleSignerMutationResult = NonNullable<Awaited<ReturnType<typeof createEligibleSigner>>>
+    export type CreateEligibleSignerMutationBody = BodyType<EligibleSignerInput>
+    export type CreateEligibleSignerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Assign an eligible signer to a document field
+ */
+export const useCreateEligibleSigner = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEligibleSigner>>, TError,{data: BodyType<EligibleSignerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createEligibleSigner>>,
+        TError,
+        {data: BodyType<EligibleSignerInput>},
+        TContext
+      > => {
+      return useMutation(getCreateEligibleSignerMutationOptions(options));
+    }
+
+export const getRevokeEligibleSignerUrl = (id: number,) => {
+
+
+
+
+  return `/api/signatures/eligible/${id}/revoke`
+}
+
+/**
+ * @summary Revoke signer eligibility without deleting old signatures
+ */
+export const revokeEligibleSigner = async (id: number, options?: RequestInit): Promise<EligibleSignerAssignment> => {
+
+  return customFetch<EligibleSignerAssignment>(getRevokeEligibleSignerUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+export const getRevokeEligibleSignerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeEligibleSigner>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeEligibleSigner>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['revokeEligibleSigner'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeEligibleSigner>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeEligibleSigner(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeEligibleSignerMutationResult = NonNullable<Awaited<ReturnType<typeof revokeEligibleSigner>>>
+
+    export type RevokeEligibleSignerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Revoke signer eligibility without deleting old signatures
+ */
+export const useRevokeEligibleSigner = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeEligibleSigner>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeEligibleSigner>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRevokeEligibleSignerMutationOptions(options));
+    }
+
+export const getSignDocumentFieldUrl = () => {
+
+
+
+
+  return `/api/signatures/sign`
+}
+
+/**
+ * @summary Electronically sign an eligible document field
+ */
+export const signDocumentField = async (signatureInput: SignatureInput, options?: RequestInit): Promise<Signature> => {
+
+  return customFetch<Signature>(getSignDocumentFieldUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(signatureInput)
+  }
+);}
+
+
+
+
+export const getSignDocumentFieldMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signDocumentField>>, TError,{data: BodyType<SignatureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof signDocumentField>>, TError,{data: BodyType<SignatureInput>}, TContext> => {
+
+const mutationKey = ['signDocumentField'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof signDocumentField>>, {data: BodyType<SignatureInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  signDocumentField(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SignDocumentFieldMutationResult = NonNullable<Awaited<ReturnType<typeof signDocumentField>>>
+    export type SignDocumentFieldMutationBody = BodyType<SignatureInput>
+    export type SignDocumentFieldMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Electronically sign an eligible document field
+ */
+export const useSignDocumentField = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signDocumentField>>, TError,{data: BodyType<SignatureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof signDocumentField>>,
+        TError,
+        {data: BodyType<SignatureInput>},
+        TContext
+      > => {
+      return useMutation(getSignDocumentFieldMutationOptions(options));
+    }
 
 export const getGetUsersUrl = () => {
 

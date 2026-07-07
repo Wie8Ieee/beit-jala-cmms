@@ -60,6 +60,116 @@ export const GetMeResponse = zod.object({
 
 
 /**
+ * @summary List immutable signatures for a document
+ */
+export const ListSignaturesQueryParams = zod.object({
+  "documentType": zod.coerce.string(),
+  "documentId": zod.coerce.number()
+})
+
+export const ListSignaturesResponseItem = zod.object({
+  "id": zod.number(),
+  "documentType": zod.string(),
+  "documentId": zod.number(),
+  "fieldName": zod.string(),
+  "signatureType": zod.string(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "eligibleSignerAssignmentId": zod.number().nullish(),
+  "signedAt": zod.string()
+})
+export const ListSignaturesResponse = zod.array(ListSignaturesResponseItem)
+
+
+/**
+ * @summary List eligible signer assignments for a document
+ */
+export const ListEligibleSignersQueryParams = zod.object({
+  "documentType": zod.coerce.string(),
+  "documentId": zod.coerce.number()
+})
+
+export const ListEligibleSignersResponseItem = zod.object({
+  "id": zod.number(),
+  "documentType": zod.string(),
+  "documentId": zod.number(),
+  "fieldName": zod.string(),
+  "eligibleUserId": zod.number(),
+  "eligibleUserName": zod.string().nullish(),
+  "grantedBy": zod.number().nullish(),
+  "grantedAt": zod.string(),
+  "revokedAt": zod.string().nullish()
+})
+export const ListEligibleSignersResponse = zod.array(ListEligibleSignersResponseItem)
+
+
+/**
+ * @summary Assign an eligible signer to a document field
+ */
+export const CreateEligibleSignerBody = zod.object({
+  "documentType": zod.string(),
+  "documentId": zod.number(),
+  "fieldName": zod.string(),
+  "eligibleUserId": zod.number()
+})
+
+export const CreateEligibleSignerResponse = zod.object({
+  "id": zod.number(),
+  "documentType": zod.string(),
+  "documentId": zod.number(),
+  "fieldName": zod.string(),
+  "eligibleUserId": zod.number(),
+  "eligibleUserName": zod.string().nullish(),
+  "grantedBy": zod.number().nullish(),
+  "grantedAt": zod.string(),
+  "revokedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Revoke signer eligibility without deleting old signatures
+ */
+export const RevokeEligibleSignerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RevokeEligibleSignerResponse = zod.object({
+  "id": zod.number(),
+  "documentType": zod.string(),
+  "documentId": zod.number(),
+  "fieldName": zod.string(),
+  "eligibleUserId": zod.number(),
+  "eligibleUserName": zod.string().nullish(),
+  "grantedBy": zod.number().nullish(),
+  "grantedAt": zod.string(),
+  "revokedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Electronically sign an eligible document field
+ */
+export const SignDocumentFieldBody = zod.object({
+  "documentType": zod.string(),
+  "documentId": zod.number(),
+  "fieldName": zod.string(),
+  "signatureType": zod.string().optional()
+})
+
+export const SignDocumentFieldResponse = zod.object({
+  "id": zod.number(),
+  "documentType": zod.string(),
+  "documentId": zod.number(),
+  "fieldName": zod.string(),
+  "signatureType": zod.string(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "eligibleSignerAssignmentId": zod.number().nullish(),
+  "signedAt": zod.string()
+})
+
+
+/**
  * @summary List all users
  */
 export const GetUsersResponseItem = zod.object({

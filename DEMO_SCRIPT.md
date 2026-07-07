@@ -12,6 +12,8 @@ Use the demo accounts from `README.md` to walk through the implemented CMMS phas
 6. Open the spare part record and record a stock-in movement.
 7. Record a stock-out movement with reference type `MANUAL`, `PM_RECORD`, or `CM_REQUEST`.
 8. Confirm current quantity and movement history update without deleting older movements.
+9. Open an official form, assign an eligible signer by user ID where needed, sign an eligible field, and confirm the signature shows signer name, timestamp, and immutable status.
+10. Use the Print button on an official form and confirm navigation/buttons are hidden in the browser print view.
 
 ## 2. Maintenance Supervisor
 
@@ -43,9 +45,16 @@ Use the demo accounts from `README.md` to walk through the implemented CMMS phas
 
 - Historical PM inspections, CM records, and spare part movements remain append-only.
 - Soft-deleted machines/checklist points/spare parts are not hard-deleted.
+- Electronic signatures are only available to eligible signers and cannot be edited after signing.
+- Revoking eligibility does not remove old signatures.
+- Browser print views show official headers, form fields, tables, and signatures.
 
-## Phase 5 Status
+## Phase 5 Demo
 
-Phase 5 is remaining work. Real electronic signatures, eligible signer enforcement, immutable signature records, real print views, PDF generation, and final official form-header polishing are not implemented yet.
-
-Current signature and approval fields in PM, CM, and plan screens are visible text fields/placeholders only. Any print-related UI is not a validated official print/PDF workflow.
+1. Log in as `admin`.
+2. Open an official form such as `/machines/1/equipment-information`.
+3. In an unsigned Electronic Signature field, assign an eligible user ID.
+4. Log in as that eligible user and open the same form.
+5. Click **Sign** and confirm the field becomes immutable with signer name and timestamp.
+6. Log in as a non-eligible user and confirm the Sign action is not available.
+7. Log in as a user with `print_forms`, click **Print**, and confirm the print view hides app navigation/actions and shows the official form header.

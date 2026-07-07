@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft } from "lucide-react";
 import type { CorrectiveMaintenanceRecord } from "../maintenance-requests/types";
+import { OfficialFormHeader } from "@/components/official-form-header";
+import { PrintButton } from "@/components/print-button";
 
 export default function MachineCorrectiveMaintenancePage({ params }: { params: { id: string } }) {
   const machineId = Number(params.id);
@@ -26,10 +28,11 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">Corrective Maintenance Record</h1>
           <p className="text-muted-foreground">Equipment Corrective Maintenance log (LOG-00-0102-3).</p>
         </div>
+        <PrintButton />
       </div>
 
       {active ? (
@@ -37,6 +40,18 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
           <Card>
             <CardHeader><CardTitle>Header</CardTitle></CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-4">
+              <div className="md:col-span-4 rounded-md bg-white p-4 text-black">
+                <OfficialFormHeader
+                  documentName="Corrective Maintenance Record"
+                  documentNumber={active.documentNumber}
+                  effectiveOrExecutionDate={active.executionDate}
+                  page={active.pageCount}
+                  machineName={active.machineName}
+                  machineNumber={active.machineNumber}
+                  machineLocation={active.machineLocation}
+                  startupDate={active.startupDate}
+                />
+              </div>
               <div><Label>Document number</Label><Input value={active.documentNumber} readOnly /></div>
               <div><Label>Execution date</Label><Input value={active.executionDate ?? ""} readOnly /></div>
               <div><Label>Page count</Label><Input value={active.pageCount} readOnly /></div>

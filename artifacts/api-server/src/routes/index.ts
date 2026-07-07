@@ -12,6 +12,7 @@ import maintenanceRequestsRouter from "./maintenance-requests.js";
 import correctiveMaintenanceRouter from "./corrective-maintenance.js";
 import sparePartsRouter from "./spare-parts.js";
 import dashboardRouter from "./dashboard.js";
+import signaturesRouter from "./signatures.js";
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.use("/maintenance-plans", maintenancePlansRouter);
 router.use("/maintenance-requests", maintenanceRequestsRouter);
 router.use("/spare-parts", sparePartsRouter);
 router.use("/dashboard", dashboardRouter);
+router.use("/signatures", signaturesRouter);
 
 export default router;

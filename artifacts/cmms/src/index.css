@@ -240,3 +240,56 @@
     inset: -1px;
   }
 }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  aside,
+  header,
+  nav,
+  button,
+  [role='tooltip'],
+  .print\:hidden {
+    display: none !important;
+  }
+
+  main,
+  main > div {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  .official-form-header {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  input,
+  textarea,
+  select {
+    border: none !important;
+    box-shadow: none !important;
+    color: black !important;
+    background: white !important;
+    padding-left: 0 !important;
+  }
+
+  .shadow-xl,
+  .shadow-sm,
+  .shadow {
+    box-shadow: none !important;
+  }
+}

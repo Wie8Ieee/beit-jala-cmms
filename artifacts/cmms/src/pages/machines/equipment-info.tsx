@@ -27,9 +27,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Printer, Save, FileText, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, FileText, Loader2, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { OfficialFormHeader } from "@/components/official-form-header";
+import { PrintButton } from "@/components/print-button";
+import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
 const equipmentInfoSchema = z.object({
   nameOfEquipment: z.string().optional(),
@@ -192,17 +194,7 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
         </div>
 
         <div className="flex gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0}>
-                <Button variant="outline" disabled>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>Coming in a later phase</TooltipContent>
-          </Tooltip>
+          <PrintButton />
 
           {canEdit && (
             <Button 
@@ -229,22 +221,11 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
 
       {/* The Form Paper Container */}
       <div className="bg-white dark:bg-card border shadow-xl rounded-sm p-8 md:p-12 print:shadow-none print:border-none print:p-0">
-        
-        {/* Form Header */}
-        <div className="flex justify-between items-start border-b-2 border-black dark:border-white pb-6 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 bg-primary flex items-center justify-center text-primary-foreground font-bold text-xl rounded">
-              BJP
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-black dark:text-white uppercase tracking-tight">Beit Jala Pharmaceutical Co.</h2>
-              <p className="text-muted-foreground font-mono text-sm uppercase tracking-widest mt-1">Engineering Department</p>
-            </div>
-          </div>
-          <div className="text-right font-mono text-sm">
-            <p className="font-bold border border-black dark:border-white px-2 py-1 uppercase">FORM-10-0118</p>
-          </div>
-        </div>
+        <OfficialFormHeader
+          documentName="Equipment Information Record"
+          documentNumber="FORM-10-0118"
+          effectiveOrExecutionDate={form.watch("preparedByDate") || null}
+        />
 
         <h3 className="text-xl font-bold text-center uppercase tracking-wider mb-10 text-black dark:text-white underline underline-offset-4">
           Equipment Information Record
@@ -415,7 +396,7 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
                 <div className="space-y-4">
                   <FormField control={form.control} name="preparedByName" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-semibold">Prepared By (Name & Signature)</FormLabel>
+                      <FormLabel className="font-semibold">Prepared By Name</FormLabel>
                       <FormControl><Input {...field} readOnly={!canEdit} className="bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm" /></FormControl>
                     </FormItem>
                   )} />
@@ -425,11 +406,17 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
                       <FormControl><Input type="date" {...field} readOnly={!canEdit} className="bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm w-1/2" /></FormControl>
                     </FormItem>
                   )} />
+                  <ElectronicSignatureField
+                    documentType="EQUIPMENT_INFORMATION"
+                    documentId={machineId}
+                    fieldName="prepared_by"
+                    label="Prepared By Electronic Signature"
+                  />
                 </div>
                 <div className="space-y-4">
                   <FormField control={form.control} name="approvedByName" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="font-semibold">Approved By (Name & Signature)</FormLabel>
+                      <FormLabel className="font-semibold">Approved By Name</FormLabel>
                       <FormControl><Input {...field} readOnly={!canEdit} className="bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm" /></FormControl>
                     </FormItem>
                   )} />
@@ -439,6 +426,12 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
                       <FormControl><Input type="date" {...field} readOnly={!canEdit} className="bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm w-1/2" /></FormControl>
                     </FormItem>
                   )} />
+                  <ElectronicSignatureField
+                    documentType="EQUIPMENT_INFORMATION"
+                    documentId={machineId}
+                    fieldName="approved_by"
+                    label="Approved By Electronic Signature"
+                  />
                 </div>
               </div>
             </section>

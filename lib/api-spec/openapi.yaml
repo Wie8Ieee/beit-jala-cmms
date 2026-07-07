@@ -36,6 +36,8 @@ tags:
     description: Spare parts catalogue and stock movements
   - name: dashboard
     description: Dashboard statistics
+  - name: signatures
+    description: Electronic signatures and eligible signer assignments
 paths:
   /healthz:
     get:
@@ -102,6 +104,119 @@ paths:
                 $ref: "#/components/schemas/AuthUser"
         "401":
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /signatures:
+    get:
+      operationId: listSignatures
+      tags: [signatures]
+      summary: List immutable signatures for a document
+      parameters:
+        - name: documentType
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Signatures for the document
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Signature"
+
+  /signatures/eligible:
+    get:
+      operationId: listEligibleSigners
+      tags: [signatures]
+      summary: List eligible signer assignments for a document
+      parameters:
+        - name: documentType
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Eligible signer assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EligibleSignerAssignment"
+    post:
+      operationId: createEligibleSigner
+      tags: [signatures]
+      summary: Assign an eligible signer to a document field
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EligibleSignerInput"
+      responses:
+        "201":
+          description: Eligible signer assignment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibleSignerAssignment"
+
+  /signatures/eligible/{id}/revoke:
+    patch:
+      operationId: revokeEligibleSigner
+      tags: [signatures]
+      summary: Revoke signer eligibility without deleting old signatures
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Assignment revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EligibleSignerAssignment"
+
+  /signatures/sign:
+    post:
+      operationId: signDocumentField
+      tags: [signatures]
+      summary: Electronically sign an eligible document field
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignatureInput"
+      responses:
+        "201":
+          description: Field signed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Signature"
+        "409":
+          description: Field already signed and immutable
           content:
             application/json:
               schema:
@@ -1421,6 +1536,78 @@ components:
           type: string
       required:
         - message
+
+    EligibleSignerAssignment:
+      type: object
+      required: [id, documentType, documentId, fieldName, eligibleUserId, grantedAt]
+      properties:
+        id:
+          type: integer
+        documentType:
+          type: string
+        documentId:
+          type: integer
+        fieldName:
+          type: string
+        eligibleUserId:
+          type: integer
+        eligibleUserName:
+          type: ["string", "null"]
+        grantedBy:
+          type: ["integer", "null"]
+        grantedAt:
+          type: string
+        revokedAt:
+          type: ["string", "null"]
+
+    EligibleSignerInput:
+      type: object
+      required: [documentType, documentId, fieldName, eligibleUserId]
+      properties:
+        documentType:
+          type: string
+        documentId:
+          type: integer
+        fieldName:
+          type: string
+        eligibleUserId:
+          type: integer
+
+    Signature:
+      type: object
+      required: [id, documentType, documentId, fieldName, signatureType, userId, userName, signedAt]
+      properties:
+        id:
+          type: integer
+        documentType:
+          type: string
+        documentId:
+          type: integer
+        fieldName:
+          type: string
+        signatureType:
+          type: string
+        userId:
+          type: integer
+        userName:
+          type: string
+        eligibleSignerAssignmentId:
+          type: ["integer", "null"]
+        signedAt:
+          type: string
+
+    SignatureInput:
+      type: object
+      required: [documentType, documentId, fieldName]
+      properties:
+        documentType:
+          type: string
+        documentId:
+          type: integer
+        fieldName:
+          type: string
+        signatureType:
+          type: string
 
     LoginCredentials:
       type: object

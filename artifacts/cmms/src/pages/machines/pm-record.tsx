@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Save, Settings2 } from "lucide-react";
+import { OfficialFormHeader } from "@/components/official-form-header";
+import { PrintButton } from "@/components/print-button";
+import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
 type PmChecklistPoint = {
   id: number;
@@ -123,6 +126,7 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
             </Link>
           </Button>
         )}
+        <PrintButton />
       </div>
 
       <Card>
@@ -153,6 +157,15 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
           )}
         </CardContent>
       </Card>
+
+      <div className="rounded-md border bg-white p-6 text-black shadow-sm print:border-none print:p-0 print:shadow-none">
+        <OfficialFormHeader
+          documentName="Preventive Maintenance Record"
+          documentNumber={data.header.procedureFormNumber}
+          effectiveOrExecutionDate={data.header.effectiveDate}
+          page={`Page 1 of ${data.pageCount}`}
+        />
+      </div>
 
       <Card>
         <CardHeader>
@@ -219,13 +232,25 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
                 <Textarea value={actionTaken} onChange={(event) => setActionTaken(event.target.value)} />
               </div>
               <div>
-                <Label>Examiner's name and signature</Label>
+                <Label>Examiner's name</Label>
                 <Input value={examinerName} onChange={(event) => setExaminerName(event.target.value)} />
               </div>
               <div>
-                <Label>Machine receiver's name and signature</Label>
+                <Label>Machine receiver's name</Label>
                 <Input value={receiverName} onChange={(event) => setReceiverName(event.target.value)} />
               </div>
+              <ElectronicSignatureField
+                documentType="PM_RECORD"
+                documentId={machineId}
+                fieldName="examiner"
+                label="Examiner Electronic Signature"
+              />
+              <ElectronicSignatureField
+                documentType="PM_RECORD"
+                documentId={machineId}
+                fieldName="machine_receiver"
+                label="Machine Receiver Electronic Signature"
+              />
               <Button type="submit" disabled={saveInspection.isPending || data.checklistPoints.length === 0} className="w-fit">
                 <Save className="mr-2 h-4 w-4" />
                 Save Inspection

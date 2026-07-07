@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Save } from "lucide-react";
+import { OfficialFormHeader } from "@/components/official-form-header";
+import { PrintButton } from "@/components/print-button";
+import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
 type AnnualRow = {
   id: number;
@@ -101,6 +104,7 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
           <Button asChild variant="outline">
             <Link href="/maintenance-plans">Back</Link>
           </Button>
+          <PrintButton />
           {canEdit && (
             <Button type="submit" disabled={save.isPending}>
               <Save className="mr-2 h-4 w-4" />
@@ -110,12 +114,20 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
         </div>
       </div>
 
+      <div className="rounded-md border bg-white p-6 text-black shadow-sm print:border-none print:p-0 print:shadow-none">
+        <OfficialFormHeader
+          documentName="Annual Preventive Maintenance Plan"
+          documentNumber="FORM-10-1025"
+          effectiveOrExecutionDate={String(year)}
+        />
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Approval Page</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[
+          {[ 
             ["preparedByName", "Prepared by"],
             ["approvedEngineeringName", "Engineering Department Manager"],
             ["approvedProductionName", "Production Department Manager"],
@@ -140,6 +152,22 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
               <Label>{label}</Label>
               <Input type="date" value={(form[field as keyof AnnualPlan] as string | null) ?? ""} readOnly={!canEdit} onChange={(event) => updateField(field as keyof AnnualPlan, event.target.value)} />
             </div>
+          ))}
+          {[
+            ["prepared_by", "Prepared By Electronic Signature"],
+            ["engineering_manager", "Engineering Manager Electronic Signature"],
+            ["production_manager", "Production Manager Electronic Signature"],
+            ["qc_manager", "QC Manager Electronic Signature"],
+            ["rd_manager", "R&D Manager Electronic Signature"],
+            ["qa_manager", "QA Manager Electronic Signature"],
+          ].map(([fieldName, label]) => (
+            <ElectronicSignatureField
+              key={fieldName}
+              documentType="ANNUAL_PLAN"
+              documentId={form.id}
+              fieldName={fieldName}
+              label={label}
+            />
           ))}
         </CardContent>
       </Card>

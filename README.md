@@ -70,15 +70,7 @@ node -e "console.log(process.env.DATABASE_URL ? 'DATABASE_URL=set' : 'DATABASE_U
 pnpm --config.verify-deps-before-run=false --filter @workspace/db run push
 ```
 
-**Create the sessions table:**
-```sql
-CREATE TABLE IF NOT EXISTS sessions (
-  sid VARCHAR NOT NULL COLLATE "default" PRIMARY KEY,
-  sess JSON NOT NULL,
-  expire TIMESTAMP(6) NOT NULL
-);
-CREATE INDEX IF NOT EXISTS IDX_sessions_expire ON sessions (expire);
-```
+The `sessions` table is part of the Drizzle schema and is created by the normal schema push command.
 
 ---
 
@@ -173,7 +165,7 @@ pnpm --filter @workspace/api-spec run codegen
 - [x] Dashboard PM widgets sourced from Monthly Plan data
 - [x] Phase 2 permissions for PM checklists, PM record filling, plans, and header editing
 
-Phase 2 intentionally did not include Corrective Maintenance, Spare Parts, real printing, or real electronic signatures. Signature fields are preserved as form fields/placeholders until Phase 5.
+Phase 2 intentionally did not include Corrective Maintenance or Spare Parts. Printing and electronic signatures are provided by the Phase 5 shared form/signature layer.
 
 ---
 
@@ -191,7 +183,7 @@ Phase 2 intentionally did not include Corrective Maintenance, Spare Parts, real 
 - [x] CM log rollover to a new permanent record when the current log is full
 - [x] Status history and audit logs for workflow transitions
 
-Phase 3 intentionally does not include Spare Parts, real printing, or real electronic signatures.
+Phase 3 intentionally does not include Spare Parts. Printing and electronic signatures are provided by the Phase 5 shared form/signature layer.
 
 ---
 
@@ -205,7 +197,22 @@ Phase 3 intentionally does not include Spare Parts, real printing, or real elect
 - [x] Optional PM/CM/manual reference fields on stock movements
 - [x] Phase 4 permissions for viewing, managing, and recording spare part usage
 
-Phase 4 intentionally does not include real printing or real electronic signatures.
+Printing and electronic signatures are provided by the Phase 5 shared form/signature layer.
+
+---
+
+## Phase 5 — Electronic Signatures, Printing, and Official Headers
+
+- [x] Immutable electronic signature records
+- [x] Admin-managed eligible signer assignments per document, record, and field
+- [x] Revocation of signer eligibility without deleting historical signatures
+- [x] Backend enforcement for `manage_signatures` and `sign_assigned_fields`
+- [x] Audit logs for signer assignment, revocation, and document signing
+- [x] Shared official form header component for official forms
+- [x] Browser print views that hide navigation and controls and show form content/signatures
+- [x] Print permission gate through `print_forms`
+- [x] PM print header keeps CM-only machine-identifying fields out of the PM header
+- [x] CM print header includes machine name, machine number, machine location, and start-up date where available
 
 ---
 
@@ -229,9 +236,10 @@ Phase 4 intentionally does not include real printing or real electronic signatur
 - Low-stock alerts — implemented
 
 ### Phase 5 — Printing & Signatures
-- Electronic signatures (Examiner + Machine Receiver)
-- Print-ready PDF generation for all forms
-- Signature eligibility (Admin-assigned per user)
+- Electronic signatures — implemented
+- Eligible signer assignment — implemented
+- Immutable signatures — implemented
+- Browser print-ready official forms — implemented
 
 ---
 
@@ -310,4 +318,9 @@ scripts/            — Utility scripts
 | PATCH | /api/spare-parts/:id/soft-delete | Soft-delete spare part |
 | GET | /api/spare-parts/:id/movements | List spare part movements |
 | POST | /api/spare-parts/:id/movements | Record stock movement |
+| GET | /api/signatures | List immutable signatures for a document |
+| GET | /api/signatures/eligible | List eligible signers for a document |
+| POST | /api/signatures/eligible | Assign eligible signer |
+| PATCH | /api/signatures/eligible/:id/revoke | Revoke signer eligibility |
+| POST | /api/signatures/sign | Sign an eligible document field |
 | GET | /api/dashboard/stats | Dashboard statistics |

@@ -17,6 +17,48 @@ export interface MessageResponse {
   message: string;
 }
 
+export interface EligibleSignerAssignment {
+  id: number;
+  documentType: string;
+  documentId: number;
+  fieldName: string;
+  eligibleUserId: number;
+  /** @nullable */
+  eligibleUserName?: string | null;
+  /** @nullable */
+  grantedBy?: number | null;
+  grantedAt: string;
+  /** @nullable */
+  revokedAt?: string | null;
+}
+
+export interface EligibleSignerInput {
+  documentType: string;
+  documentId: number;
+  fieldName: string;
+  eligibleUserId: number;
+}
+
+export interface Signature {
+  id: number;
+  documentType: string;
+  documentId: number;
+  fieldName: string;
+  signatureType: string;
+  userId: number;
+  userName: string;
+  /** @nullable */
+  eligibleSignerAssignmentId?: number | null;
+  signedAt: string;
+}
+
+export interface SignatureInput {
+  documentType: string;
+  documentId: number;
+  fieldName: string;
+  signatureType?: string;
+}
+
 export interface LoginCredentials {
   username: string;
   password: string;
@@ -905,6 +947,16 @@ export interface DashboardStats {
   recentMaintenanceRequests?: DashboardRecentMaintenanceRequest[];
   lowStockSpareParts?: DashboardLowStockSparePart[];
 }
+
+export type ListSignaturesParams = {
+documentType: string;
+documentId: number;
+};
+
+export type ListEligibleSignersParams = {
+documentType: string;
+documentId: number;
+};
 
 export type GetMachinesParams = {
 /**

@@ -7,9 +7,9 @@ Date: 2026-07-07
 | Check | Result | Notes |
 | --- | --- | --- |
 | Fresh dependency install | Passed with Windows-compatible settings | `pnpm install --frozen-lockfile --config.node-linker=hoisted --ignore-scripts --config.verify-deps-before-run=false` completed previously. |
-| OpenAPI codegen | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/api-spec run codegen` completed. |
-| Typecheck | Passed | Replit run completed `pnpm --config.verify-deps-before-run=false run typecheck` successfully. |
-| Full build | Passed | Replit run completed `PORT=5000 BASE_PATH=/ pnpm --config.verify-deps-before-run=false run build` successfully. |
+| OpenAPI codegen | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/api-spec run codegen` completed after Phase 5 additions. |
+| Typecheck | Passed | Local run completed `pnpm --config.verify-deps-before-run=false run typecheck` successfully after Phase 5 additions. |
+| Full build | Passed | Local PowerShell run completed `$env:PORT='5000'; $env:BASE_PATH='/'; $env:API_PORT='5001'; pnpm --config.verify-deps-before-run=false run build` successfully. |
 | Conflict markers | Passed | Local merge conflicts were resolved; no conflict markers remain. |
 | `.env.example` | Passed | File exists and uses blank secret placeholders. |
 | Secrets committed | Passed | `.env` is not tracked. |
@@ -34,8 +34,8 @@ Date: 2026-07-07
 | Database push in Replit | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/db run push` applied changes successfully. A later rerun reported no changes detected. |
 | Seed run in Replit | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/db run seed` completed and created demo users/data. |
 | Verify run in Replit | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/db run verify` passed all count checks. |
-| Browser demo-user testing | Not run yet | Requires starting the app and testing the five demo users in browser. |
-| Persistence after refresh/restart | Not run yet | Requires browser/app test after seeded DB is running. |
+| Browser demo-user testing | Pending final pass | App opened in Replit during troubleshooting; full role/signature/print checklist still needs final user-side browser pass. |
+| Persistence after refresh/restart | Pending final pass | Requires creating/signing a demo-safe record, refreshing/restarting, and confirming the data remains. |
 
 ## Replit Database Verification Output
 
@@ -64,19 +64,23 @@ Date: 2026-07-07
 
 | Requirement | Status | Notes |
 | --- | --- | --- |
-| Real electronic signatures | Not implemented | Current signature fields are plain placeholders or seed-ready records only. |
-| Eligible signer enforcement | Not implemented in API/UI | DB schema and seed assignments are prepared, but workflow enforcement remains Phase 5. |
-| Immutable signature workflow | Not implemented in API/UI | DB schema exists; signing endpoints/UI remain Phase 5. |
-| Real print/PDF views | Not implemented | Print-ready official forms remain Phase 5. |
-| Official form headers polish | Partial | Header schema is prepared; final print/header integration remains Phase 5. |
+| Real electronic signatures | Implemented | `/api/signatures/sign` creates immutable signature records and rejects duplicate signing. |
+| Eligible signer enforcement | Implemented | `/api/signatures/eligible` manages active/revoked eligibility; signing requires active eligibility and `sign_assigned_fields`. |
+| Immutable signature workflow | Implemented | Signatures are append-only; there are no update/delete endpoints for completed signatures. |
+| Real print/PDF views | Implemented for browser print | Print button invokes browser print; users can save as PDF through the browser print dialog. |
+| Official form headers polish | Implemented | Shared official header component added to official forms, including PM without CM-only machine-identifying fields and CM with machine-identifying fields. |
 
 ## Remaining Replit Browser Test
 
-The database setup commands have passed. Start the app in Replit and test the demo users:
+The database setup commands have passed. After pulling the latest Phase 5 commit, rerun schema push and start the app in Replit:
 
 ```bash
+git pull origin main
+pnpm --config.verify-deps-before-run=false --filter @workspace/db run push
+export PORT=5001
+export NODE_ENV=development
 pnpm --config.verify-deps-before-run=false --filter @workspace/api-server run dev
-PORT=5000 BASE_PATH=/ pnpm --config.verify-deps-before-run=false --filter @workspace/cmms run dev
+PORT=5000 BASE_PATH=/ API_PORT=5001 pnpm --config.verify-deps-before-run=false --filter @workspace/cmms run dev
 ```
 
 Test:

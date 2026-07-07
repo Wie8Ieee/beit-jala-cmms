@@ -65,22 +65,22 @@ artifacts/cmms/src/                 ← React frontend
 - Machines module
 - Equipment Information Record (FORM-10-0118)
 
-### Phase 2 — NOT STARTED
+### Phase 2 — COMPLETE
 - Preventive Maintenance records and checklists
 - Annual and Monthly Maintenance Plans
 
-### Phase 3 — NOT STARTED
+### Phase 3 — COMPLETE
 - Corrective Maintenance request workflow (FORM-10-0975)
 
-### Phase 4 — NOT STARTED
+### Phase 4 — COMPLETE
 - Spare Parts module
 
-### Phase 5 — NOT STARTED
+### Phase 5 — COMPLETE
 - Electronic signatures and printing
 
 ---
 
-## Database Tables (Phase 1)
+## Database Tables
 
 - `roles` — system roles (Admin, Maintenance Supervisor, etc.)
 - `permissions` — individual permission records
@@ -91,6 +91,11 @@ artifacts/cmms/src/                 ← React frontend
 - `equipment_information_records` — FORM-10-0118 per machine (1:1)
 - `audit_logs` — action tracking (ready for future use)
 - `sessions` — express-session persistence
+- `pm_headers`, `pm_checklist_points`, `pm_records`, `pm_inspections`, `pm_inspection_results` — Preventive Maintenance records
+- `annual_pm_plans`, `annual_pm_plan_rows`, `monthly_pm_plans`, `monthly_pm_plan_rows` — maintenance plans
+- `maintenance_requests`, `maintenance_request_status_history`, `corrective_maintenance_records`, `corrective_maintenance_events` — Corrective Maintenance workflow
+- `spare_parts`, `spare_part_movements` — Spare Parts stock management
+- `eligible_signer_assignments`, `signatures`, `form_headers`, `notifications` — Phase 5 signatures, official headers, and support tables
 
 ---
 
@@ -113,12 +118,11 @@ Core permissions (Phase 1):
 - `view_machines`, `create_machine`, `edit_machine`, `soft_delete_machine`
 - `view_equipment_information`, `edit_equipment_information`
 
-Placeholder permissions (Phase 2+):
-- `submit_maintenance_request_placeholder`, `view_own_requests_placeholder`
-- `manage_pm_checklist_placeholder`, `fill_pm_record_placeholder`
-- `approve_qa_request_placeholder`
-- `manage_spare_parts_placeholder`, `view_maintenance_plans_placeholder`
-- `edit_header_placeholder`, `print_forms_placeholder`, `manage_signatures_placeholder`
+Phase 2-5 permissions:
+- `manage_pm_checklist`, `fill_pm_record`, `view_maintenance_plans`, `edit_maintenance_plans`, `edit_header`
+- `submit_maintenance_request`, `view_own_requests`, `review_qa_requests`, `review_engineering_requests`, `fill_corrective_maintenance`, `manage_maintenance_requests`
+- `view_spare_parts`, `manage_spare_parts`, `record_spare_part_usage`, `adjust_spare_parts`
+- `print_forms`, `manage_signatures`, `sign_assigned_fields`
 
 ---
 
