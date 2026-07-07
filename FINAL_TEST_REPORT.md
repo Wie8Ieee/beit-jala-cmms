@@ -8,9 +8,9 @@ Date: 2026-07-07
 | --- | --- | --- |
 | Fresh dependency install | Passed with Windows-compatible settings | `pnpm install --frozen-lockfile --config.node-linker=hoisted --ignore-scripts --config.verify-deps-before-run=false` completed previously. |
 | OpenAPI codegen | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/api-spec run codegen` completed. |
-| Typecheck | Passed | `pnpm --config.verify-deps-before-run=false run typecheck` completed after database-prep changes. |
-| CMMS/API build | Previously passed | Full build passed with `PORT=5000 BASE_PATH=/`; rerun is still required after final merge cleanup. |
-| Conflict markers | Pending | Merge conflicts are being resolved locally before another full check. |
+| Typecheck | Passed | Replit run completed `pnpm --config.verify-deps-before-run=false run typecheck` successfully. |
+| Full build | Passed | Replit run completed `PORT=5000 BASE_PATH=/ pnpm --config.verify-deps-before-run=false run build` successfully. |
+| Conflict markers | Passed | Local merge conflicts were resolved; no conflict markers remain. |
 | `.env.example` | Passed | File exists and uses blank secret placeholders. |
 | Secrets committed | Passed | `.env` is not tracked. |
 
@@ -29,12 +29,27 @@ Date: 2026-07-07
 
 | Check | Result | Notes |
 | --- | --- | --- |
-| `DATABASE_URL` in this Windows/Codex shell | Missing | Environment check still reports `DATABASE_URL=missing`. |
-| Provided Replit URL from this Windows workspace | Failed | Direct `pg` test returned `getaddrinfo ENOTFOUND helium`; the host appears to be Replit-internal. |
-| Database push from this workspace | Blocked | Cannot complete until running inside Replit where the database host resolves, or until an externally reachable database URL is provided. |
-| Seed run | Not run here | Requires successful database push. |
-| Browser demo-user testing | Not run here | Requires schema push, seed data, and a running app. |
-| Persistence after refresh/restart | Not run here | Requires database-backed app startup. |
+| `DATABASE_URL` in Replit shell | Passed | Replit output reported `DATABASE_URL=set`. |
+| `SESSION_SECRET` in Replit shell | Passed | Replit output reported `SESSION_SECRET=set`. |
+| Database push in Replit | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/db run push` applied changes successfully. A later rerun reported no changes detected. |
+| Seed run in Replit | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/db run seed` completed and created demo users/data. |
+| Verify run in Replit | Passed | `pnpm --config.verify-deps-before-run=false --filter @workspace/db run verify` passed all count checks. |
+| Browser demo-user testing | Not run yet | Requires starting the app and testing the five demo users in browser. |
+| Persistence after refresh/restart | Not run yet | Requires browser/app test after seeded DB is running. |
+
+## Replit Database Verification Output
+
+| Check | Result |
+| --- | --- |
+| Users | PASS 10 users |
+| Roles | PASS 10 roles |
+| Permissions | PASS 42 permissions |
+| Machines | PASS 5 machines |
+| PM checklist points | PASS 17 points |
+| Spare parts | PASS 5 spare parts |
+| Maintenance requests | PASS 3 requests |
+| Annual plan | PASS annual plan 2026 exists |
+| Monthly plan | PASS monthly plan exists for current month |
 
 ## Security And Merge Fixes From Remote
 
@@ -55,18 +70,21 @@ Date: 2026-07-07
 | Real print/PDF views | Not implemented | Print-ready official forms remain Phase 5. |
 | Official form headers polish | Partial | Header schema is prepared; final print/header integration remains Phase 5. |
 
-## Replit Commands Still Required
+## Remaining Replit Browser Test
 
-Run these inside the Replit shell where the managed database host resolves:
+The database setup commands have passed. Start the app in Replit and test the demo users:
 
 ```bash
-node -e "console.log(process.env.DATABASE_URL ? 'DATABASE_URL=set' : 'DATABASE_URL=missing')"
-node -e "console.log(process.env.SESSION_SECRET ? 'SESSION_SECRET=set' : 'SESSION_SECRET=missing')"
-pnpm --config.verify-deps-before-run=false --filter @workspace/db run push
-pnpm --config.verify-deps-before-run=false --filter @workspace/db run seed
-pnpm --config.verify-deps-before-run=false --filter @workspace/db run verify
-pnpm --config.verify-deps-before-run=false run typecheck
-PORT=5000 BASE_PATH=/ pnpm --config.verify-deps-before-run=false run build
+pnpm --config.verify-deps-before-run=false --filter @workspace/api-server run dev
+PORT=5000 BASE_PATH=/ pnpm --config.verify-deps-before-run=false --filter @workspace/cmms run dev
 ```
 
-Do not claim the project is complete until database push, seed, verify, browser demo-user testing, and persistence checks pass.
+Test:
+
+- `admin / admin123`
+- `supervisor / supervisor123`
+- `technician / technician123`
+- `employee / employee123`
+- `qa / qa123`
+
+Do not claim the project is complete until browser demo-user testing and persistence checks pass.
