@@ -42,7 +42,7 @@ Required variables:
 | `DATABASE_URL` | PostgreSQL connection string |
 | `SESSION_SECRET` | Secret for session signing (min 32 chars) |
 | `NODE_ENV` | `development` or `production` |
-| `PORT` | Server port (default: 3000) |
+| `PORT` | Server port (default: 5000 for Replit) |
 
 ---
 
@@ -50,9 +50,24 @@ Required variables:
 
 The project uses Drizzle ORM with a pre-configured PostgreSQL database.
 
+### Replit PostgreSQL
+
+1. Open the Replit project.
+2. Open **Tools** and choose **Database** or **PostgreSQL**.
+3. Create/connect the PostgreSQL database.
+4. Open **Secrets** / **Environment Variables**.
+5. Add `DATABASE_URL` with the PostgreSQL connection string.
+6. Add `SESSION_SECRET` with a random value of at least 32 characters.
+7. Restart the Replit shell or workspace.
+8. Confirm the database variable is present without printing the secret:
+
+```bash
+node -e "console.log(process.env.DATABASE_URL ? 'DATABASE_URL=set' : 'DATABASE_URL=missing')"
+```
+
 **Push schema to database:**
 ```bash
-pnpm --filter @workspace/db run push
+pnpm --config.verify-deps-before-run=false --filter @workspace/db run push
 ```
 
 **Create the sessions table:**
@@ -70,14 +85,23 @@ CREATE INDEX IF NOT EXISTS IDX_sessions_expire ON sessions (expire);
 ## Seed Demo Data
 
 ```bash
-# Using tsx (runs from source)
-pnpm dlx tsx artifacts/api-server/src/seed.ts
+pnpm --config.verify-deps-before-run=false --filter @workspace/db run seed
 ```
 
 This creates:
-- 5 departments: Engineering & Maintenance, Production, QA, QC, R&D
-- 5 user accounts (see below)
-- 4 sample machines
+- 6 departments: Engineering & Maintenance, Production, QA, QC, R&D, Warehouse
+- 10 demo user accounts (see below)
+- 5 sample machines
+- PM checklist points, spare parts and stock movements
+- Annual and monthly maintenance plan demo rows
+- Maintenance request / corrective maintenance demo records
+- Eligible signer assignments and sample immutable signature record
+
+**Verify seeded data:**
+
+```bash
+pnpm --config.verify-deps-before-run=false --filter @workspace/db run verify
+```
 
 ---
 
@@ -109,6 +133,11 @@ pnpm --filter @workspace/api-spec run codegen
 | technician | technician123 | Maintenance Technician |
 | employee | employee123 | Department Employee |
 | qa | qa123 | QA Supervisor |
+| engineering_manager | manager123 | Engineering Manager |
+| production_manager | manager123 | Production Manager |
+| qc_manager | manager123 | QC Manager |
+| rd_manager | manager123 | R&D Manager |
+| qa_manager | manager123 | QA Manager |
 
 ---
 

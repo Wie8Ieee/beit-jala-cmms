@@ -43,5 +43,9 @@ Use the demo accounts from `README.md` to walk through the implemented CMMS phas
 
 - Historical PM inspections, CM records, and spare part movements remain append-only.
 - Soft-deleted machines/checklist points/spare parts are not hard-deleted.
-- Signature and approval fields remain visible fields/placeholders unless Phase 5 is implemented.
-- Printing actions remain placeholders unless Phase 5 is implemented.
+
+## Phase 5 Status
+
+Phase 5 is remaining work. Real electronic signatures, eligible signer enforcement, immutable signature records, real print views, PDF generation, and final official form-header polishing are not implemented yet.
+
+Current signature and approval fields in PM, CM, and plan screens are visible text fields/placeholders only. Any print-related UI is not a validated official print/PDF workflow.

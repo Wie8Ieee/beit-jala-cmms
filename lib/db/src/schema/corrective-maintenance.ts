@@ -123,6 +123,28 @@ export const maintenanceRequestStatusHistoryTable = pgTable("maintenance_request
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const correctiveMaintenanceStaffTable = pgTable("corrective_maintenance_staff", {
+  id: serial("id").primaryKey(),
+  eventId: integer("cm_event_id")
+    .notNull()
+    .references(() => correctiveMaintenanceEventsTable.id),
+  staffOrder: integer("staff_order").notNull(),
+  staffName: text("staff_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const correctiveMaintenanceHandoverTable = pgTable("corrective_maintenance_handover", {
+  id: serial("id").primaryKey(),
+  eventId: integer("cm_event_id")
+    .notNull()
+    .references(() => correctiveMaintenanceEventsTable.id),
+  receiverName: text("receiver_name"),
+  handoverDate: text("handover_date"),
+  engineeringFinalConfirmation: text("engineering_final_confirmation"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertMaintenanceRequestSchema = createInsertSchema(maintenanceRequestsTable).omit({
   id: true,
   createdAt: true,
@@ -135,3 +157,5 @@ export type MaintenanceRequest = typeof maintenanceRequestsTable.$inferSelect;
 export type CorrectiveMaintenanceRecord = typeof correctiveMaintenanceRecordsTable.$inferSelect;
 export type CorrectiveMaintenanceEvent = typeof correctiveMaintenanceEventsTable.$inferSelect;
 export type MaintenanceRequestStatusHistory = typeof maintenanceRequestStatusHistoryTable.$inferSelect;
+export type CorrectiveMaintenanceStaff = typeof correctiveMaintenanceStaffTable.$inferSelect;
+export type CorrectiveMaintenanceHandover = typeof correctiveMaintenanceHandoverTable.$inferSelect;

@@ -15,6 +15,8 @@ export const auditLogsTable = pgTable("audit_logs", {
   entityType: text("entity_type"),
   entityId: integer("entity_id"),
   details: jsonb("details"),
+  oldValue: jsonb("old_value"),
+  newValue: jsonb("new_value"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
