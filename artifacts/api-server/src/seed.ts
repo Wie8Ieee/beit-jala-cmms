@@ -60,9 +60,11 @@ async function upsertUser(input: {
 }) {
   const [existing] = await db.select().from(usersTable).where(eq(usersTable.username, input.username));
   if (existing) {
+    const passwordHash = await bcrypt.hash(input.password, 10);
     const [updated] = await db
       .update(usersTable)
       .set({
+        passwordHash,
         fullName: input.fullName,
         roleId: input.roleId,
         departmentId: input.departmentId,
