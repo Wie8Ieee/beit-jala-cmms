@@ -14,6 +14,7 @@ Use the demo accounts from `README.md` to walk through the implemented CMMS phas
 8. Confirm current quantity and movement history update without deleting older movements.
 9. Open an official form, assign an eligible signer by user ID where needed, sign an eligible field, and confirm the signature shows signer name, timestamp, and immutable status.
 10. Use the Print button on an official form and confirm navigation/buttons are hidden in the browser print view.
+11. Use **Official Print** to open the paper-style print template and confirm it follows the company form structure.
 
 ## 2. Maintenance Supervisor
 
@@ -58,3 +59,4 @@ Use the demo accounts from `README.md` to walk through the implemented CMMS phas
 5. Click **Sign** and confirm the field becomes immutable with signer name and timestamp.
 6. Log in as a non-eligible user and confirm the Sign action is not available.
 7. Log in as a user with `print_forms`, click **Print**, and confirm the print view hides app navigation/actions and shows the official form header.
+8. Click **Official Print** on Equipment Information, PM Record, Maintenance Request, CM Record, Annual Plan, and Monthly Plan pages and verify the paper-style template opens.

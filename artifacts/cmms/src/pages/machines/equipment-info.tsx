@@ -195,6 +195,9 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
 
         <div className="flex gap-2">
           <PrintButton />
+          <Button asChild variant="outline">
+            <Link href={`/print/equipment-information/${machineId}`}>Official Print</Link>
+          </Button>
 
           {canEdit && (
             <Button 

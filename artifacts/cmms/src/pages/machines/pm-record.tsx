@@ -127,6 +127,9 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
           </Button>
         )}
         <PrintButton />
+        <Button asChild variant="outline">
+          <Link href={`/print/pm-record/${machineId}`}>Official Print</Link>
+        </Button>
       </div>
 
       <Card>

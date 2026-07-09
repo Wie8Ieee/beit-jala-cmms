@@ -210,6 +210,7 @@ Printing and electronic signatures are provided by the Phase 5 shared form/signa
 - [x] Audit logs for signer assignment, revocation, and document signing
 - [x] Shared official form header component for official forms
 - [x] Browser print views that hide navigation and controls and show form content/signatures
+- [x] Separate official print-only templates matching the paper form structure more closely than the data-entry screens
 - [x] Print permission gate through `print_forms`
 - [x] PM print header keeps CM-only machine-identifying fields out of the PM header
 - [x] CM print header includes machine name, machine number, machine location, and start-up date where available
@@ -324,3 +325,18 @@ scripts/            — Utility scripts
 | PATCH | /api/signatures/eligible/:id/revoke | Revoke signer eligibility |
 | POST | /api/signatures/sign | Sign an eligible document field |
 | GET | /api/dashboard/stats | Dashboard statistics |
+
+---
+
+## Official Print Views
+
+Data-entry screens remain optimized for daily use. Official paper-style output is available through separate print-only routes:
+
+- `/print/equipment-information/:machineId`
+- `/print/pm-record/:machineId`
+- `/print/maintenance-request/:requestId`
+- `/print/corrective-maintenance/:machineId`
+- `/print/annual-plan/:year`
+- `/print/monthly-plan/:year/:month`
+
+Each related form screen includes an **Official Print** button. Use the browser print dialog to print or save as PDF.

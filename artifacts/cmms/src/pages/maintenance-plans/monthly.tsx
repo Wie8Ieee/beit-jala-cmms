@@ -118,6 +118,9 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
             <Link href={`/maintenance-plans/monthly/${year}`}>Back</Link>
           </Button>
           <PrintButton />
+          <Button asChild variant="outline">
+            <Link href={`/print/monthly-plan/${year}/${month}`}>Official Print</Link>
+          </Button>
           {canEdit && (
             <Button type="submit" disabled={save.isPending}>
               <Save className="mr-2 h-4 w-4" />

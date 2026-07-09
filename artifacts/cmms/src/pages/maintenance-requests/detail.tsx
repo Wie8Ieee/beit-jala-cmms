@@ -199,6 +199,9 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
         </div>
         <Badge variant="secondary">{request.status}</Badge>
         <PrintButton />
+        <Button asChild variant="outline">
+          <Link href={`/print/maintenance-request/${requestId}`}>Official Print</Link>
+        </Button>
       </div>
 
       <div className="rounded-md border bg-white p-6 text-black shadow-sm print:border-none print:p-0 print:shadow-none">

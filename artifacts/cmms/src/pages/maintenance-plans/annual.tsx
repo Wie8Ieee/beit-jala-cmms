@@ -105,6 +105,9 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
             <Link href="/maintenance-plans">Back</Link>
           </Button>
           <PrintButton />
+          <Button asChild variant="outline">
+            <Link href={`/print/annual-plan/${year}`}>Official Print</Link>
+          </Button>
           {canEdit && (
             <Button type="submit" disabled={save.isPending}>
               <Save className="mr-2 h-4 w-4" />

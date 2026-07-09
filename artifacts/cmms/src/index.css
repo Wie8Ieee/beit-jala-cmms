@@ -293,3 +293,91 @@
     box-shadow: none !important;
   }
 }
+
+.official-print-page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto 16px;
+  background: white;
+  padding: 18mm;
+  font-family: "Times New Roman", serif;
+  font-size: 11px;
+  line-height: 1.25;
+  color: black;
+  box-shadow: 0 10px 35px rgba(15, 23, 42, 0.18);
+}
+
+.official-print-landscape {
+  width: 297mm;
+  min-height: 210mm;
+}
+
+.official-print-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.official-print-table th,
+.official-print-table td {
+  border: 1px solid black;
+  padding: 4px 6px;
+  vertical-align: top;
+}
+
+.official-print-table th {
+  background: #d9d9d9;
+  font-weight: 700;
+  text-align: center;
+}
+
+.official-print-header-table td {
+  height: 38px;
+  vertical-align: middle;
+}
+
+.official-print-section-title {
+  border: 1px solid black;
+  border-top: 0;
+  padding: 5px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.official-print-line {
+  display: inline-block;
+  min-width: 120px;
+  border-bottom: 1px dotted black;
+  padding: 0 4px;
+  min-height: 14px;
+}
+
+.official-print-row-tall td {
+  height: 34px;
+}
+
+.official-print-row-xl td {
+  height: 70px;
+}
+
+.official-print-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8mm;
+  margin-top: 6mm;
+}
+
+@media print {
+  .official-print-page {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    page-break-after: always;
+  }
+
+  .official-print-landscape {
+    width: auto;
+  }
+}

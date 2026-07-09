@@ -33,6 +33,9 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
           <p className="text-muted-foreground">Equipment Corrective Maintenance log (LOG-00-0102-3).</p>
         </div>
         <PrintButton />
+        <Button asChild variant="outline">
+          <Link href={`/print/corrective-maintenance/${machineId}`}>Official Print</Link>
+        </Button>
       </div>
 
       {active ? (

@@ -32,6 +32,12 @@ import SparePartFormPage from './pages/spare-parts/form';
 import SparePartMovementFormPage from './pages/spare-parts/movement-form';
 import UsersList from './pages/admin/users/list';
 import UserForm from './pages/admin/users/form';
+import EquipmentInformationPrintPage from './pages/print/equipment-information';
+import MaintenanceRequestPrintPage from './pages/print/maintenance-request';
+import CorrectiveMaintenancePrintPage from './pages/print/corrective-maintenance';
+import PmRecordPrintPage from './pages/print/pm-record';
+import AnnualPlanPrintPage from './pages/print/annual-plan';
+import MonthlyPlanPrintPage from './pages/print/monthly-plan';
 
 const queryClient = new QueryClient();
 
@@ -39,6 +45,54 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={LoginPage} />
+
+      <Route path="/print/equipment-information/:id">
+        {(params) => (
+          <ProtectedRoute permission="print_forms">
+            <EquipmentInformationPrintPage params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/print/maintenance-request/:id">
+        {(params) => (
+          <ProtectedRoute permission="print_forms">
+            <MaintenanceRequestPrintPage params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/print/corrective-maintenance/:id">
+        {(params) => (
+          <ProtectedRoute permission="print_forms">
+            <CorrectiveMaintenancePrintPage params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/print/pm-record/:id">
+        {(params) => (
+          <ProtectedRoute permission="print_forms">
+            <PmRecordPrintPage params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/print/annual-plan/:year">
+        {(params) => (
+          <ProtectedRoute permission="print_forms">
+            <AnnualPlanPrintPage params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/print/monthly-plan/:year/:month">
+        {(params) => (
+          <ProtectedRoute permission="print_forms">
+            <MonthlyPlanPrintPage params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
       
       <Route path="/">
         <Redirect to="/dashboard" />
