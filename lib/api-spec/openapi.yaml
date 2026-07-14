@@ -593,6 +593,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /machines/{id}/equipment-information/scan:
+    post:
+      operationId: scanEquipmentNameplate
+      tags: [equipment]
+      summary: Scan a nameplate image and extract equipment information using AI
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Extracted equipment fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScannedEquipmentInfo"
+        "400":
+          description: No image provided
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: AI service not configured (OPENAI_API_KEY missing)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /machines/{id}/pm/header:
     get:
       operationId: getPmHeader
@@ -1918,6 +1949,36 @@ components:
         approvedByName:
           type: string
         approvedByDate:
+          type: string
+
+    ScannedEquipmentInfo:
+      type: object
+      properties:
+        nameOfEquipment:
+          type: string
+        modelNumber:
+          type: string
+        serialNumber:
+          type: string
+        manufacturingCompanyName:
+          type: string
+        manufacturingCompanyAddress:
+          type: string
+        purchasedFromName:
+          type: string
+        utilitiesPowerSupply:
+          type: string
+        dimensionWidthCm:
+          type: ["number", "null"]
+        dimensionHeightCm:
+          type: ["number", "null"]
+        dimensionDepthCm:
+          type: ["number", "null"]
+        weightKg:
+          type: ["number", "null"]
+        safetyIssues:
+          type: string
+        others:
           type: string
 
     PmHeader:

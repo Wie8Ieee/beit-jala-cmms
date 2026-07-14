@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Save, FileText, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, FileText, Loader2, AlertCircle, ScanLine } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OfficialFormHeader } from "@/components/official-form-header";
 import { PrintButton } from "@/components/print-button";
@@ -74,6 +74,74 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
   const queryClient = useQueryClient();
 
   const canEdit = hasPermission("edit_equipment_information");
+  const [isScanning, setIsScanning] = useState(false);
+
+  const handleScanImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    setIsScanning(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch(`/api/machines/${machineId}/equipment-information/scan`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
+      }
+
+      const data = await res.json() as Record<string, unknown>;
+
+      // Fill only fields that AI returned a non-empty value for
+      const patch: Partial<EquipmentInfoValues> = {};
+      if (data.nameOfEquipment)          patch.nameOfEquipment          = String(data.nameOfEquipment);
+      if (data.modelNumber)              patch.modelNumber              = String(data.modelNumber);
+      if (data.serialNumber)             patch.serialNumber             = String(data.serialNumber);
+      if (data.manufacturingCompanyName) patch.manufacturingCompanyName = String(data.manufacturingCompanyName);
+      if (data.manufacturingCompanyAddress) patch.manufacturingCompanyAddress = String(data.manufacturingCompanyAddress);
+      if (data.purchasedFromName)        patch.purchasedFromName        = String(data.purchasedFromName);
+      if (data.utilitiesPowerSupply)     patch.utilitiesPowerSupply     = String(data.utilitiesPowerSupply);
+      if (data.safetyIssues)             patch.safetyIssues             = String(data.safetyIssues);
+      if (data.others)                   patch.others                   = String(data.others);
+      if (data.dimensionWidthCm  != null) patch.dimensionWidthCm  = Number(data.dimensionWidthCm);
+      if (data.dimensionHeightCm != null) patch.dimensionHeightCm = Number(data.dimensionHeightCm);
+      if (data.dimensionDepthCm  != null) patch.dimensionDepthCm  = Number(data.dimensionDepthCm);
+      if (data.weightKg          != null) patch.weightKg          = Number(data.weightKg);
+
+      // Merge with current form values (don't overwrite fields already filled)
+      const current = form.getValues();
+      const merged: Partial<EquipmentInfoValues> = {};
+      for (const key of Object.keys(patch) as (keyof EquipmentInfoValues)[]) {
+        const cur = current[key];
+        const isEmpty = cur == null || cur === "" || cur === 0;
+        if (isEmpty) merged[key] = patch[key] as never;
+      }
+      form.reset({ ...current, ...merged });
+
+      const filledCount = Object.keys(merged).length;
+      toast({
+        title: filledCount > 0 ? "Scan Complete" : "No New Data Found",
+        description: filledCount > 0
+          ? `${filledCount} field${filledCount > 1 ? "s" : ""} filled from nameplate. Review and save.`
+          : "AI could not extract new information from this image.",
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Scan Failed",
+        description: err instanceof Error ? err.message : "Could not process image.",
+      });
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   const { data: machine, isLoading: isLoadingMachine } = useGetMachine(machineId, {
     query: { enabled: !!machineId, queryKey: getGetMachineQueryKey(machineId) }
@@ -200,17 +268,44 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
           </Button>
 
           {canEdit && (
-            <Button 
-              onClick={form.handleSubmit(onSubmit)} 
-              disabled={upsertMutation.isPending}
-            >
-              {upsertMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="mr-2 h-4 w-4" />
-              )}
-              Save Form
-            </Button>
+            <>
+              <label className={isScanning ? "pointer-events-none opacity-60" : ""}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleScanImage}
+                  disabled={isScanning}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isScanning}
+                  asChild
+                >
+                  <span>
+                    {isScanning ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <ScanLine className="mr-2 h-4 w-4" />
+                    )}
+                    {isScanning ? "Scanning…" : "Scan Nameplate"}
+                  </span>
+                </Button>
+              </label>
+
+              <Button
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={upsertMutation.isPending}
+              >
+                {upsertMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                Save Form
+              </Button>
+            </>
           )}
         </div>
       </div>

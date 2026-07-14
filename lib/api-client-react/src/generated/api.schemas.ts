@@ -271,6 +271,26 @@ export interface EquipmentInformationInput {
   approvedByDate?: string;
 }
 
+export interface ScannedEquipmentInfo {
+  nameOfEquipment?: string;
+  modelNumber?: string;
+  serialNumber?: string;
+  manufacturingCompanyName?: string;
+  manufacturingCompanyAddress?: string;
+  purchasedFromName?: string;
+  utilitiesPowerSupply?: string;
+  /** @nullable */
+  dimensionWidthCm?: number | null;
+  /** @nullable */
+  dimensionHeightCm?: number | null;
+  /** @nullable */
+  dimensionDepthCm?: number | null;
+  /** @nullable */
+  weightKg?: number | null;
+  safetyIssues?: string;
+  others?: string;
+}
+
 export interface PmHeader {
   id: number;
   machineId: number;

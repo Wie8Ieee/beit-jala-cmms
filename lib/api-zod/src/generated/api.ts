@@ -592,6 +592,30 @@ export const UpsertEquipmentInformationResponse = zod.object({
 
 
 /**
+ * @summary Scan a nameplate image and extract equipment information using AI
+ */
+export const ScanEquipmentNameplateParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ScanEquipmentNameplateResponse = zod.object({
+  "nameOfEquipment": zod.string().optional(),
+  "modelNumber": zod.string().optional(),
+  "serialNumber": zod.string().optional(),
+  "manufacturingCompanyName": zod.string().optional(),
+  "manufacturingCompanyAddress": zod.string().optional(),
+  "purchasedFromName": zod.string().optional(),
+  "utilitiesPowerSupply": zod.string().optional(),
+  "dimensionWidthCm": zod.number().nullish(),
+  "dimensionHeightCm": zod.number().nullish(),
+  "dimensionDepthCm": zod.number().nullish(),
+  "weightKg": zod.number().nullish(),
+  "safetyIssues": zod.string().optional(),
+  "others": zod.string().optional()
+})
+
+
+/**
  * @summary Get PM form header for a machine
  */
 export const GetPmHeaderParams = zod.object({

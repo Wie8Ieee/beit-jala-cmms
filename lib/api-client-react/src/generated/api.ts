@@ -64,6 +64,7 @@ import type {
   PreliminaryFindingsInput,
   ReviewDecisionInput,
   Role,
+  ScannedEquipmentInfo,
   SearchSparePartsParams,
   Signature,
   SignatureInput,
@@ -1961,6 +1962,76 @@ export const useUpsertEquipmentInformation = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getUpsertEquipmentInformationMutationOptions(options));
+    }
+
+export const getScanEquipmentNameplateUrl = (id: number,) => {
+
+
+
+
+  return `/api/machines/${id}/equipment-information/scan`
+}
+
+/**
+ * @summary Scan a nameplate image and extract equipment information using AI
+ */
+export const scanEquipmentNameplate = async (id: number, options?: RequestInit): Promise<ScannedEquipmentInfo> => {
+
+  return customFetch<ScannedEquipmentInfo>(getScanEquipmentNameplateUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getScanEquipmentNameplateMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanEquipmentNameplate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof scanEquipmentNameplate>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['scanEquipmentNameplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof scanEquipmentNameplate>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  scanEquipmentNameplate(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ScanEquipmentNameplateMutationResult = NonNullable<Awaited<ReturnType<typeof scanEquipmentNameplate>>>
+
+    export type ScanEquipmentNameplateMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Scan a nameplate image and extract equipment information using AI
+ */
+export const useScanEquipmentNameplate = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanEquipmentNameplate>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof scanEquipmentNameplate>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getScanEquipmentNameplateMutationOptions(options));
     }
 
 export const getGetPmHeaderUrl = (id: number,) => {
