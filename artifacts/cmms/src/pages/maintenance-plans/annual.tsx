@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Save } from "lucide-react";
 import { OfficialFormHeader } from "@/components/official-form-header";
-import { PrintButton } from "@/components/print-button";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
 type AnnualRow = {
@@ -104,7 +103,6 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
           <Button asChild variant="outline">
             <Link href="/maintenance-plans">Back</Link>
           </Button>
-          <PrintButton />
           <Button asChild variant="outline">
             <Link href={`/print/annual-plan/${year}`}>Official Print</Link>
           </Button>

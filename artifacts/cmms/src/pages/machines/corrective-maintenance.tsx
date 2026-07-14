@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft } from "lucide-react";
 import type { CorrectiveMaintenanceRecord } from "../maintenance-requests/types";
 import { OfficialFormHeader } from "@/components/official-form-header";
-import { PrintButton } from "@/components/print-button";
 
 export default function MachineCorrectiveMaintenancePage({ params }: { params: { id: string } }) {
   const machineId = Number(params.id);
@@ -32,7 +31,6 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
           <h1 className="text-3xl font-bold tracking-tight">Corrective Maintenance Record</h1>
           <p className="text-muted-foreground">Equipment Corrective Maintenance log (LOG-00-0102-3).</p>
         </div>
-        <PrintButton />
         <Button asChild variant="outline">
           <Link href={`/print/corrective-maintenance/${machineId}`}>Official Print</Link>
         </Button>

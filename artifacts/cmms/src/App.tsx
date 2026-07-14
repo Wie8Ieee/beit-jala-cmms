@@ -5,6 +5,7 @@ import NotFound from '@/pages/not-found';
 import { Route, Switch, Router as WouterRouter, Redirect } from 'wouter';
 
 import { AuthProvider } from './contexts/AuthContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Pages
@@ -321,7 +322,9 @@ function App() {
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <AuthProvider>
-            <Router />
+            <LanguageProvider>
+              <Router />
+            </LanguageProvider>
           </AuthProvider>
         </WouterRouter>
         <Toaster />

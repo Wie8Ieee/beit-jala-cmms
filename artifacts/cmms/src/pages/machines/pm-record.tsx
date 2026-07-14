@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Save, Settings2 } from "lucide-react";
 import { OfficialFormHeader } from "@/components/official-form-header";
-import { PrintButton } from "@/components/print-button";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
 type PmChecklistPoint = {
@@ -126,7 +125,6 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
             </Link>
           </Button>
         )}
-        <PrintButton />
         <Button asChild variant="outline">
           <Link href={`/print/pm-record/${machineId}`}>Official Print</Link>
         </Button>

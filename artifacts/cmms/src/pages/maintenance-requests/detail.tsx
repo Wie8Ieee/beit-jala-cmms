@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Check, Play, Save, X } from "lucide-react";
 import type { MaintenanceRequestDetail, PerformingStaff } from "./types";
-import { PrintButton } from "@/components/print-button";
 import { OfficialFormHeader } from "@/components/official-form-header";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
@@ -198,7 +197,6 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
           <p className="text-muted-foreground">Maintenance Request and Corrective Maintenance Report (FORM-10-0975)</p>
         </div>
         <Badge variant="secondary">{request.status}</Badge>
-        <PrintButton />
         <Button asChild variant="outline">
           <Link href={`/print/maintenance-request/${requestId}`}>Official Print</Link>
         </Button>

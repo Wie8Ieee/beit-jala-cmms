@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Save } from "lucide-react";
 import { OfficialFormHeader } from "@/components/official-form-header";
-import { PrintButton } from "@/components/print-button";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
 const monthNames = [
@@ -117,7 +116,6 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
           <Button asChild variant="outline">
             <Link href={`/maintenance-plans/monthly/${year}`}>Back</Link>
           </Button>
-          <PrintButton />
           <Button asChild variant="outline">
             <Link href={`/print/monthly-plan/${year}/${month}`}>Official Print</Link>
           </Button>

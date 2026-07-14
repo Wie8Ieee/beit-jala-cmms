@@ -1,5 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../../contexts/AuthContext";
+import { useLang } from "../../contexts/LanguageContext";
+import { useTranslation } from "react-i18next";
 import { ReactNode } from "react";
 import {
   Sidebar,
@@ -21,11 +23,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Activity, CalendarDays, ClipboardList, LayoutDashboard, Package, Settings, LogOut, TestTube } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Activity,
+  CalendarDays,
+  ClipboardList,
+  LayoutDashboard,
+  Package,
+  Settings,
+  LogOut,
+  TestTube,
+  Languages,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading, hasPermission, logout } = useAuth();
+  const { lang, toggle } = useLang();
+  const { t } = useTranslation();
   const [location] = useLocation();
 
   if (isLoading) {
@@ -33,15 +48,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <TestTube className="h-8 w-8 text-primary animate-pulse" />
-          <p className="text-muted-foreground text-sm font-medium tracking-wide uppercase">Initializing CMMS...</p>
+          <p className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
+            Initializing CMMS...
+          </p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return null; // Will redirect in AuthProvider
-  }
+  if (!user) return null;
 
   return (
     <SidebarProvider>
@@ -53,8 +68,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <TestTube className="size-5" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold tracking-tight text-sidebar-foreground">Beit Jala Pharma</span>
-                <span className="truncate text-xs text-sidebar-foreground/70 font-mono">CMMS v1.0</span>
+                <span className="truncate font-semibold tracking-tight text-sidebar-foreground">
+                  Beit Jala Pharma
+                </span>
+                <span className="truncate text-xs text-sidebar-foreground/70 font-mono">
+                  CMMS v1.0
+                </span>
               </div>
             </div>
           </SidebarHeader>
@@ -62,20 +81,26 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <SidebarContent className="px-2 py-4">
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/dashboard" || location === "/"}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location === "/dashboard" || location === "/"}
+                >
                   <Link href="/dashboard">
                     <LayoutDashboard className="size-4" />
-                    <span>Dashboard</span>
+                    <span>{t("nav.dashboard")}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               {hasPermission("view_machines") && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location.startsWith("/machines")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.startsWith("/machines")}
+                  >
                     <Link href="/machines">
                       <Activity className="size-4" />
-                      <span>Equipment & Machines</span>
+                      <span>{t("nav.equipment")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -83,10 +108,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
               {hasPermission("view_maintenance_plans") && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location.startsWith("/maintenance-plans")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.startsWith("/maintenance-plans")}
+                  >
                     <Link href="/maintenance-plans">
                       <CalendarDays className="size-4" />
-                      <span>Maintenance Plans</span>
+                      <span>{t("nav.maintenancePlans")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -96,13 +124,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 hasPermission("view_own_requests") ||
                 hasPermission("review_qa_requests") ||
                 hasPermission("review_engineering_requests") ||
-                hasPermission("fill_corrective_maintenance") ||
-                hasPermission("manage_maintenance_requests")) && (
+                hasPermission("approve_reject_requests")) && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location.startsWith("/maintenance-requests")}>
-                    <Link href={hasPermission("view_own_requests") && !hasPermission("manage_maintenance_requests") ? "/maintenance-requests/my" : "/maintenance-requests"}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.startsWith("/maintenance-requests")}
+                  >
+                    <Link href="/maintenance-requests">
                       <ClipboardList className="size-4" />
-                      <span>Maintenance Requests</span>
+                      <span>{t("nav.maintenanceRequests")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -110,10 +140,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
               {hasPermission("view_spare_parts") && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location.startsWith("/spare-parts")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.startsWith("/spare-parts")}
+                  >
                     <Link href="/spare-parts">
                       <Package className="size-4" />
-                      <span>Spare Parts</span>
+                      <span>{t("nav.spareParts")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -121,10 +154,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
               {hasPermission("manage_users") && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location.startsWith("/admin/users")}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.startsWith("/admin")}
+                  >
                     <Link href="/admin/users">
                       <Settings className="size-4" />
-                      <span>Administration</span>
+                      <span>{t("nav.admin")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -132,7 +168,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-sidebar-border p-4">
+          <SidebarFooter className="border-t border-sidebar-border p-2">
             <SidebarMenu>
               <SidebarMenuItem>
                 <DropdownMenu>
@@ -147,8 +183,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
                         </AvatarFallback>
                       </Avatar>
                       <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">{user.fullName || user.username}</span>
-                        <span className="truncate text-xs text-muted-foreground">{user.roleName}</span>
+                        <span className="truncate font-semibold">
+                          {user.fullName || user.username}
+                        </span>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {user.roleName}
+                        </span>
                       </div>
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
@@ -166,15 +206,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
                           </AvatarFallback>
                         </Avatar>
                         <div className="grid flex-1 text-left text-sm leading-tight">
-                          <span className="truncate font-semibold">{user.fullName || user.username}</span>
-                          <span className="truncate text-xs text-muted-foreground">{user.roleName}</span>
+                          <span className="truncate font-semibold">
+                            {user.fullName || user.username}
+                          </span>
+                          <span className="truncate text-xs text-muted-foreground">
+                            {user.roleName}
+                          </span>
                         </div>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => logout()} className="text-destructive focus:bg-destructive/10 cursor-pointer">
+                    <DropdownMenuItem
+                      onClick={() => logout()}
+                      className="text-destructive focus:bg-destructive/10 cursor-pointer"
+                    >
                       <LogOut className="mr-2 size-4" />
-                      Log out
+                      {t("nav.logout")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -187,6 +234,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-card px-4 shadow-sm z-10">
             <SidebarTrigger className="-ml-1" />
             <div className="flex-1" />
+            {/* Language toggle */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggle}
+              className="gap-2 font-medium"
+              title={t("common.language")}
+            >
+              <Languages className="h-4 w-4" />
+              {lang === "en" ? "العربية" : "English"}
+            </Button>
           </header>
           <div className="flex-1 p-6 lg:p-8 max-w-[1600px] mx-auto w-full">
             {children}

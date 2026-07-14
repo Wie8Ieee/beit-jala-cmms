@@ -30,7 +30,6 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Save, FileText, Loader2, AlertCircle, ScanLine } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OfficialFormHeader } from "@/components/official-form-header";
-import { PrintButton } from "@/components/print-button";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
 const equipmentInfoSchema = z.object({
@@ -262,7 +261,6 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
         </div>
 
         <div className="flex gap-2">
-          <PrintButton />
           <Button asChild variant="outline">
             <Link href={`/print/equipment-information/${machineId}`}>Official Print</Link>
           </Button>
