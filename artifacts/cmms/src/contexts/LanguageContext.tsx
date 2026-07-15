@@ -19,10 +19,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const { i18n } = useTranslation();
   const [lang, setLang] = useState<Lang>((localStorage.getItem("cmms-lang") as Lang) ?? "en");
 
+  // Sync i18n + dir on every lang change, including initial mount
   useEffect(() => {
     document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = lang;
-  }, [lang]);
+    if (i18n.language !== lang) {
+      i18n.changeLanguage(lang);
+    }
+  }, [lang, i18n]);
 
   const toggle = () => {
     const next: Lang = lang === "en" ? "ar" : "en";
