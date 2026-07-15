@@ -385,13 +385,17 @@ export default function DashboardPage() {
                 {pmStats?.thisWeekPm?.length ? (
                   <div className="space-y-3">
                     {pmStats.thisWeekPm.map((item) => (
-                      <div key={item.id} className="rounded-md border p-3">
-                        <div className="font-medium">{item.machineName}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.machineNumber} · {item.plannedDateFrom || "-"} to {item.plannedDateTo || "-"}
+                      <Link key={item.id} href={`/machines/${item.machineId}/pm`}>
+                        <div className="rounded-md border p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                          <div className="font-medium">{item.machineName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {item.machineNumber} · {item.plannedDateFrom || "-"} → {item.plannedDateTo || "-"}
+                          </div>
+                          <div className={`text-xs mt-1 font-medium ${item.status === "Completed" ? "text-emerald-600" : item.status === "Overdue" ? "text-red-500" : "text-amber-500"}`}>
+                            {item.status}
+                          </div>
                         </div>
-                        <div className="text-sm mt-1">{item.status}</div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 ) : (
@@ -499,10 +503,24 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg border-muted">
-                  <Activity className="h-8 w-8 mb-3 text-muted-foreground/50" />
-                  <p>{pmStats?.thisWeekPm?.length ?? 0} PM activities scheduled this week.</p>
-                </div>
+                {pmStats?.thisWeekPm?.length ? (
+                  <div className="space-y-2">
+                    {pmStats.thisWeekPm.map((item) => (
+                      <Link key={item.id} href={`/machines/${item.machineId}/pm`}>
+                        <div className="rounded-md border p-3 hover:bg-muted/50 transition-colors cursor-pointer">
+                          <div className="font-medium">{item.machineName}</div>
+                          <div className="text-xs text-muted-foreground">{item.machineNumber} · {item.plannedDateFrom || "-"} → {item.plannedDateTo || "-"}</div>
+                          <div className={`text-xs mt-1 font-medium ${item.status === "Completed" ? "text-emerald-600" : item.status === "Overdue" ? "text-red-500" : "text-amber-500"}`}>{item.status}</div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg border-muted">
+                    <Activity className="h-8 w-8 mb-3 text-muted-foreground/50" />
+                    <p>No PM activities scheduled this week.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
         </div>
