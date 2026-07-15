@@ -39,7 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading, hasPermission, logout } = useAuth();
-  const { lang, toggle } = useLang();
+  const { lang, toggle, isArabic } = useLang();
   const { t } = useTranslation();
   const [location] = useLocation();
 
@@ -61,7 +61,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
-        <Sidebar>
+        <Sidebar side={isArabic ? "right" : "left"}>
           <SidebarHeader className="border-b border-sidebar-border px-4 py-3">
             <div className="flex items-center gap-2">
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">

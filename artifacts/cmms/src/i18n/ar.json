@@ -109,6 +109,39 @@
       "date": "التاريخ"
     }
   },
+  "maintenanceRequests": {
+    "title": "طلبات الصيانة",
+    "myRequests": "طلباتي المقدّمة",
+    "qaQueue": "بانتظار موافقة الجودة",
+    "engineeringQueue": "قائمة مراجعة الهندسة",
+    "technicianQueue": "صيانة تصحيحية مقبولة",
+    "submitRequest": "تقديم طلب",
+    "col": {
+      "requestNo": "رقم الطلب / التقرير",
+      "machine": "الآلة",
+      "department": "القسم / الوحدة",
+      "priority": "الأولوية",
+      "date": "التاريخ",
+      "status": "الحالة",
+      "actions": "إجراءات"
+    },
+    "priority": {
+      "urgent": "عاجل",
+      "normal": "عادي"
+    },
+    "status": {
+      "pending_qa": "بانتظار الجودة",
+      "pending_engineering": "بانتظار الهندسة",
+      "pending_approval": "بانتظار الموافقة",
+      "approved": "موافَق عليه",
+      "accepted": "مقبول",
+      "completed": "مكتمل",
+      "rejected": "مرفوض"
+    },
+    "empty": "لا توجد طلبات.",
+    "loading": "جارٍ تحميل الطلبات...",
+    "open": "فتح"
+  },
   "users": {
     "title": "إدارة المستخدمين",
     "addUser": "إضافة مستخدم",

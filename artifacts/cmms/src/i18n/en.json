@@ -109,6 +109,39 @@
       "date": "Date"
     }
   },
+  "maintenanceRequests": {
+    "title": "Maintenance Requests",
+    "myRequests": "My Submitted Requests",
+    "qaQueue": "Pending QA Approval",
+    "engineeringQueue": "Engineering Review Queue",
+    "technicianQueue": "Accepted Corrective Maintenance",
+    "submitRequest": "Submit Request",
+    "col": {
+      "requestNo": "Request / Report No.",
+      "machine": "Machine",
+      "department": "Department / Section",
+      "priority": "Priority",
+      "date": "Date",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "priority": {
+      "urgent": "Urgent",
+      "normal": "Normal"
+    },
+    "status": {
+      "pending_qa": "Pending QA",
+      "pending_engineering": "Pending Engineering",
+      "pending_approval": "Pending Approval",
+      "approved": "Approved",
+      "accepted": "Accepted",
+      "completed": "Completed",
+      "rejected": "Rejected"
+    },
+    "empty": "No requests found.",
+    "loading": "Loading requests...",
+    "open": "Open"
+  },
   "users": {
     "title": "User Management",
     "addUser": "Add User",
