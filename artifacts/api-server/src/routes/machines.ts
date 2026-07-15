@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { db } from "@workspace/db";
 import {
   machinesTable,
@@ -273,8 +273,8 @@ router.get("/:id/equipment-information", requireActiveAuth, requirePermission("v
 // POST /api/machines/:id/equipment-information/scan
 router.post("/:id/equipment-information/scan", requireActiveAuth, requirePermission("edit_equipment_information"), upload.single("image"), async (req, res, next) => {
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      res.status(503).json({ error: "AI service not configured. Set GEMINI_API_KEY in your environment." });
+    if (!process.env.GROQ_API_KEY) {
+      res.status(503).json({ error: "AI service not configured. Set GROQ_API_KEY in your environment." });
       return;
     }
 
@@ -283,10 +283,20 @@ router.post("/:id/equipment-information/scan", requireActiveAuth, requirePermiss
       return;
     }
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const base64Image = req.file.buffer.toString("base64");
+    const mimeType = req.file.mimetype;
 
-    const prompt = `You are a maintenance technician reading an equipment nameplate or documentation image.
+    const response = await groq.chat.completions.create({
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
+      max_tokens: 1024,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `You are a maintenance technician reading an equipment nameplate or documentation image.
 Extract as much information as possible and return a JSON object with these exact keys (omit keys you cannot find):
 - nameOfEquipment (string): equipment/machine name or type
 - modelNumber (string): model or type number
@@ -302,14 +312,18 @@ Extract as much information as possible and return a JSON object with these exac
 - safetyIssues (string): any safety warnings, certifications, IP rating
 - others (string): any other relevant technical specs not covered above
 
-Return ONLY valid JSON. No markdown, no explanation.`;
+Return ONLY valid JSON. No markdown, no explanation.`,
+            },
+            {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${base64Image}` },
+            },
+          ],
+        },
+      ],
+    });
 
-    const result = await model.generateContent([
-      prompt,
-      { inlineData: { mimeType: req.file.mimetype, data: req.file.buffer.toString("base64") } },
-    ]);
-
-    const raw = result.response.text() ?? "{}";
+    const raw = response.choices[0]?.message?.content ?? "{}";
     let extracted: Record<string, unknown> = {};
     try {
       extracted = JSON.parse(raw);
