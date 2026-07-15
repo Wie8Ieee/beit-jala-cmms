@@ -1,4 +1,5 @@
 import { useAuth } from "../contexts/AuthContext";
+import { useState } from "react";
 import { getGetDashboardStatsQueryKey, useGetDashboardStats } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Package
+  Package,
+  Bell,
+  X,
 } from "lucide-react";
 import {
   Bar,
@@ -75,6 +78,9 @@ export default function DashboardPage() {
     'Maintenance': 'hsl(var(--chart-4))', // yellow-ish
     'Inactive': 'hsl(var(--chart-2))' // gray-ish
   };
+  const [selectedPmSegment, setSelectedPmSegment] = useState<"Completed" | "Overdue / Not Completed" | null>(null);
+
+  type MachineRef = { id: number; machineId: number; machineName: string; machineNumber: string };
   const pmStats = stats as typeof stats & {
     thisWeekPm?: Array<{
       id: number;
@@ -86,6 +92,7 @@ export default function DashboardPage() {
       status: string;
     }>;
     monthlyPmCompletion?: Array<{ label: string; count: number }>;
+    monthlyPmCompletionMachines?: { completed: MachineRef[]; overdue: MachineRef[] };
     maintenanceRequests?: {
       total: number;
       completed: number;
@@ -94,6 +101,7 @@ export default function DashboardPage() {
       acceptedOrInProgress: number;
       own: number;
     };
+    maintenanceRequestNotifications?: Array<{ type: string; message: string; href: string }>;
     recentMaintenanceRequests?: Array<{
       id: number;
       requestReportNumber: string;
@@ -112,6 +120,13 @@ export default function DashboardPage() {
     }>;
   };
   const canViewSpareParts = !!user?.permissions.includes("view_spare_parts");
+
+  const notifications = pmStats?.maintenanceRequestNotifications ?? [];
+  const notificationIcon = (type: string) => {
+    if (type === "overdue_pm") return <Clock className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />;
+    if (type === "qa") return <AlertTriangle className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" />;
+    return <Activity className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />;
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -178,6 +193,31 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* NOTIFICATIONS PANEL — FR-2.8, FR-2.9, FR-2.10 */}
+          {notifications.length > 0 && (
+            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base text-amber-800 dark:text-amber-300">
+                  <Bell className="h-4 w-4" />
+                  Notifications
+                  <span className="ml-auto rounded-full bg-amber-500 text-white text-xs px-2 py-0.5">{notifications.length}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {notifications.map((n, i) => (
+                    <Link key={i} href={n.href}>
+                      <div className="flex items-start gap-3 rounded-md border border-amber-200 dark:border-amber-800 bg-white dark:bg-background p-3 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors cursor-pointer">
+                        {notificationIcon(n.type)}
+                        <span className="text-sm">{n.message}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
             <Card className="col-span-4">
@@ -309,9 +349,24 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
+                  {/* FR-2.5 / FR-2.6 — Total Submitted + Total Completed */}
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="rounded-md border p-3"><div className="text-2xl font-bold">{pmStats?.maintenanceRequests?.pendingQa ?? 0}</div><div className="text-muted-foreground">Pending QA</div></div>
-                    <div className="rounded-md border p-3"><div className="text-2xl font-bold">{pmStats?.maintenanceRequests?.pendingEngineering ?? 0}</div><div className="text-muted-foreground">Engineering Review</div></div>
+                    <div className="rounded-md border p-3 bg-muted/30">
+                      <div className="text-2xl font-bold">{pmStats?.maintenanceRequests?.total ?? 0}</div>
+                      <div className="text-muted-foreground">Total Submitted</div>
+                    </div>
+                    <div className="rounded-md border p-3 bg-emerald-50 dark:bg-emerald-950/20">
+                      <div className="text-2xl font-bold text-emerald-600">{pmStats?.maintenanceRequests?.completed ?? 0}</div>
+                      <div className="text-muted-foreground">Completed</div>
+                    </div>
+                    <div className="rounded-md border p-3">
+                      <div className="text-2xl font-bold text-orange-500">{pmStats?.maintenanceRequests?.pendingQa ?? 0}</div>
+                      <div className="text-muted-foreground">Pending QA</div>
+                    </div>
+                    <div className="rounded-md border p-3">
+                      <div className="text-2xl font-bold text-blue-500">{pmStats?.maintenanceRequests?.pendingEngineering ?? 0}</div>
+                      <div className="text-muted-foreground">Engineering Review</div>
+                    </div>
                   </div>
                   <Button asChild variant="outline" size="sm">
                     <Link href="/maintenance-requests">Open Requests</Link>
@@ -353,20 +408,63 @@ export default function DashboardPage() {
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   Monthly PM Completion
                 </CardTitle>
+                <CardDescription>Click a segment to see machines</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[180px]">
+                {/* FR-2.13 — Clickable pie chart */}
+                <div className="h-[160px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={pmStats?.monthlyPmCompletion ?? []} dataKey="count" nameKey="label" innerRadius={40} outerRadius={70}>
+                      <Pie
+                        data={pmStats?.monthlyPmCompletion ?? []}
+                        dataKey="count"
+                        nameKey="label"
+                        innerRadius={40}
+                        outerRadius={70}
+                        cursor="pointer"
+                        onClick={(entry) => {
+                          const label = entry.label as "Completed" | "Overdue / Not Completed";
+                          setSelectedPmSegment(selectedPmSegment === label ? null : label);
+                        }}
+                      >
                         {(pmStats?.monthlyPmCompletion ?? []).map((entry, index) => (
-                          <Cell key={entry.label} fill={COLORS[index % COLORS.length]} />
+                          <Cell
+                            key={entry.label}
+                            fill={COLORS[index % COLORS.length]}
+                            opacity={!selectedPmSegment || selectedPmSegment === entry.label ? 1 : 0.35}
+                          />
                         ))}
                       </Pie>
                       <RechartsTooltip />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
+                {selectedPmSegment && (
+                  <div className="mt-2 rounded-md border bg-muted/30 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">{selectedPmSegment}</span>
+                      <button onClick={() => setSelectedPmSegment(null)}>
+                        <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                      </button>
+                    </div>
+                    {(() => {
+                      const list = selectedPmSegment === "Completed"
+                        ? (pmStats?.monthlyPmCompletionMachines?.completed ?? [])
+                        : (pmStats?.monthlyPmCompletionMachines?.overdue ?? []);
+                      return list.length ? (
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                          {list.map((m) => (
+                            <Link key={m.id} href={`/machines/${m.machineId}/pm`}>
+                              <div className="text-sm py-1 px-2 rounded hover:bg-muted cursor-pointer">
+                                {m.machineName} <span className="text-muted-foreground">#{m.machineNumber}</span>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : <p className="text-sm text-muted-foreground">No machines in this group.</p>;
+                    })()}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
