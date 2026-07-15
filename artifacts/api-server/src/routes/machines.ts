@@ -284,7 +284,7 @@ router.post("/:id/equipment-information/scan", requireActiveAuth, requirePermiss
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `You are a maintenance technician reading an equipment nameplate or documentation image.
 Extract as much information as possible and return a JSON object with these exact keys (omit keys you cannot find):
