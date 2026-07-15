@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ScanButton } from "@/components/scan-button";
 
 const machineSchema = z.object({
   machineNumber: z.string().min(1, "Machine number is required"),
@@ -180,8 +181,21 @@ export default function MachineForm({ params }: { params?: { id: string } }) {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <Card>
             <CardHeader>
-              <CardTitle>Identification</CardTitle>
-              <CardDescription>Primary identifiers for the equipment</CardDescription>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle>Identification</CardTitle>
+                  <CardDescription>Primary identifiers for the equipment</CardDescription>
+                </div>
+                <ScanButton
+                  formType="machine"
+                  label="Scan Nameplate"
+                  onScanned={(data) => {
+                    if (data.machineName) form.setValue("machineName", data.machineName);
+                    if (data.machineNumber) form.setValue("machineNumber", data.machineNumber);
+                    if (data.location) form.setValue("location", data.location);
+                  }}
+                />
+              </div>
             </CardHeader>
             <CardContent className="grid gap-6 sm:grid-cols-2">
               <FormField

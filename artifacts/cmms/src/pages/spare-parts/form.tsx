@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Save } from "lucide-react";
+import { ScanButton } from "@/components/scan-button";
 import type { SparePart } from "./types";
 
 export default function SparePartFormPage({ params }: { params?: { id?: string } }) {
@@ -78,7 +79,22 @@ export default function SparePartFormPage({ params }: { params?: { id?: string }
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Part Information</CardTitle></CardHeader>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <CardTitle>Part Information</CardTitle>
+            <ScanButton
+              formType="spare-part"
+              label="Scan Label"
+              onScanned={(data) => {
+                if (data.partName) setPartName(data.partName);
+                if (data.partCode) setPartCode(data.partCode);
+                if (data.category) setCategory(data.category);
+                if (data.unit) setUnit(data.unit);
+                if (data.description) setDescription(data.description);
+              }}
+            />
+          </div>
+        </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div><Label>Part name</Label><Input required value={partName} onChange={(event) => setPartName(event.target.value)} /></div>
           <div><Label>Part code</Label><Input required value={partCode} onChange={(event) => setPartCode(event.target.value)} /></div>

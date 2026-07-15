@@ -13,10 +13,12 @@ import correctiveMaintenanceRouter from "./corrective-maintenance.js";
 import sparePartsRouter from "./spare-parts.js";
 import dashboardRouter from "./dashboard.js";
 import signaturesRouter from "./signatures.js";
+import scanRouter from "./scan.js";
 
 const router = Router();
 
 router.use("/", healthRouter);
+router.use("/scan", scanRouter);
 router.use("/auth", authRouter);
 router.use("/users", usersRouter);
 router.use("/roles", rolesRouter);
