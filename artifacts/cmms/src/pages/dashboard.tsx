@@ -39,6 +39,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
+  const [selectedPmSegment, setSelectedPmSegment] = useState<"Completed" | "Overdue / Not Completed" | null>(null);
   const { data: stats, isLoading } = useGetDashboardStats({
     query: {
       queryKey: getGetDashboardStatsQueryKey(),
@@ -79,8 +81,6 @@ export default function DashboardPage() {
     'Maintenance': 'hsl(var(--chart-4))', // yellow-ish
     'Inactive': 'hsl(var(--chart-2))' // gray-ish
   };
-  const { t } = useTranslation();
-  const [selectedPmSegment, setSelectedPmSegment] = useState<"Completed" | "Overdue / Not Completed" | null>(null);
 
   type MachineRef = { id: number; machineId: number; machineName: string; machineNumber: string };
   const pmStats = stats as typeof stats & {
