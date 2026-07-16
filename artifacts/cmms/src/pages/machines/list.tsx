@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { getGetMachinesQueryKey, useGetMachines } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MachinesList() {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 300);
   const { hasPermission } = useAuth();
@@ -47,15 +49,15 @@ export default function MachinesList() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Equipment & Machines</h1>
-          <p className="text-muted-foreground">Manage and track all company industrial equipment.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('machines.title')}</h1>
+          <p className="text-muted-foreground">{t('machines.subtitle')}</p>
         </div>
         
         {hasPermission("create_machine") && (
           <Button asChild>
             <Link href="/machines/new">
               <Plus className="mr-2 h-4 w-4" />
-              Add Machine
+              {t('machines.addNew')}
             </Link>
           </Button>
         )}
@@ -66,7 +68,7 @@ export default function MachinesList() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search by name or number..."
+            placeholder={t('machines.searchPlaceholder')}
             className="pl-9 bg-background"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -78,12 +80,12 @@ export default function MachinesList() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="w-[100px]">ID No.</TableHead>
-              <TableHead>Machine Name</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="w-[100px]">{t('machines.idNumber')}</TableHead>
+              <TableHead>{t('machines.machineName')}</TableHead>
+              <TableHead>{t('machines.department')}</TableHead>
+              <TableHead>{t('machines.location')}</TableHead>
+              <TableHead>{t('machines.status')}</TableHead>
+              <TableHead className="text-right">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -103,7 +105,7 @@ export default function MachinesList() {
                 <TableCell colSpan={6} className="h-32 text-center">
                   <div className="flex flex-col items-center justify-center text-destructive">
                     <AlertCircle className="h-8 w-8 mb-2" />
-                    <p>Failed to load machines.</p>
+                    <p>{t('machines.failedToLoad')}</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -112,8 +114,8 @@ export default function MachinesList() {
                 <TableCell colSpan={6} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center text-muted-foreground">
                     <Server className="h-10 w-10 mb-3 opacity-20" />
-                    <p className="text-lg font-medium text-foreground">No machines found</p>
-                    <p className="text-sm">Try adjusting your search query.</p>
+                    <p className="text-lg font-medium text-foreground">{t('machines.noMachines')}</p>
+                    <p className="text-sm">{t('machines.adjustSearch')}</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -122,12 +124,12 @@ export default function MachinesList() {
                 <TableRow key={machine.id} className="group hover:bg-muted/30 transition-colors">
                   <TableCell className="font-mono text-sm">{machine.machineNumber}</TableCell>
                   <TableCell className="font-medium text-primary">{machine.machineName}</TableCell>
-                  <TableCell>{machine.departmentName || "Unassigned"}</TableCell>
+                  <TableCell>{machine.departmentName || t('common_extra.unassigned')}</TableCell>
                   <TableCell className="text-muted-foreground">{machine.location || "—"}</TableCell>
                   <TableCell>{getStatusBadge(machine.status)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" asChild className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Link href={`/machines/${machine.id}`}>View Profile</Link>
+                      <Link href={`/machines/${machine.id}`}>{t('machines.viewProfile')}</Link>
                     </Button>
                   </TableCell>
                 </TableRow>

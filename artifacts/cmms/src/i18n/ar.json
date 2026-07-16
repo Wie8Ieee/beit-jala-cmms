@@ -36,7 +36,9 @@
     "password": "كلمة المرور",
     "submit": "دخول",
     "usernamePlaceholder": "مثال: jsmith",
-    "footer": "الوصول غير المصرح به ممنوع منعاً باتاً."
+    "footer": "الوصول غير المصرح به ممنوع منعاً باتاً.",
+    "cmmsTitle": "نظام إدارة الصيانة المحوسب",
+    "cmmsDesc": "تتبع الصيانة بدقة لتحقيق التميز التشغيلي بالمعايير الصيدلانية."
   },
   "dashboard": {
     "title": "لوحة التحكم",
@@ -45,12 +47,46 @@
     "uptime": "وقت التشغيل",
     "openWOs": "أوامر العمل المفتوحة",
     "totalMachines": "إجمالي الآلات",
-    "activeMachines": "الآلات النشطة",
-    "pendingPM": "الصيانة المعلّقة",
-    "recentActivity": "آخر النشاطات"
+    "activeMachines": "نشطة",
+    "acrossDepts": "في {{count}} أقسام",
+    "outOfTotal": "من أصل {{total}} مسجّل",
+    "pendingPM": "صيانة وقائية معلّقة",
+    "recentActivity": "آخر النشاطات",
+    "activeUsers": "المستخدمون النشطون",
+    "departments": "الأقسام",
+    "monitoredFacilities": "المنشآت المُراقَبة",
+    "scheduledThisWeek": "مجدول هذا الأسبوع",
+    "equipByDept": "المعدات حسب القسم",
+    "equipByDeptDesc": "توزيع الآلات عبر منشآت الشركة",
+    "equipStatus": "حالة المعدات",
+    "equipStatusDesc": "الوضع التشغيلي الحالي لجميع الآلات",
+    "lowStockParts": "قطع الغيار منخفضة المخزون",
+    "openSpareParts": "فتح قطع الغيار",
+    "maintenanceRequests": "طلبات الصيانة",
+    "totalSubmitted": "إجمالي المقدَّمة",
+    "completed": "المنجزة",
+    "pendingQA": "بانتظار QA",
+    "engineeringReview": "مراجعة الهندسة",
+    "openRequests": "فتح الطلبات",
+    "thisWeekPMs": "الصيانة الوقائية هذا الأسبوع",
+    "monthlyPMCompletion": "إنجاز الصيانة الشهرية",
+    "clickSegment": "اضغط على قطاع لرؤية الآلات",
+    "notifications": "الإشعارات",
+    "noPMThisWeek": "لا توجد أنشطة صيانة وقائية مجدولة هذا الأسبوع.",
+    "noLowStock": "لا توجد قطع غيار منخفضة المخزون.",
+    "noMachinesInGroup": "لا توجد آلات في هذه المجموعة.",
+    "acceptedCMWork": "أعمال الصيانة المقبولة",
+    "openCMWork": "فتح أعمال الصيانة",
+    "pmThisWeek": "الصيانة الوقائية (هذا الأسبوع)",
+    "reportIssue": "الإبلاغ عن عطل",
+    "reportIssueDesc": "قدّم طلب صيانة علاجية لآلة معطوبة أو تعاني من خلل.",
+    "submitRequest": "تقديم طلب",
+    "myRequests": "طلباتي المقدَّمة",
+    "viewProfile": "عرض الملف"
   },
   "machines": {
     "title": "المعدات والآلات",
+    "subtitle": "إدارة وتتبع جميع المعدات الصناعية للشركة.",
     "addNew": "إضافة آلة",
     "machineNumber": "رقم الآلة",
     "machineName": "اسم الآلة",
@@ -65,7 +101,11 @@
     "pmRecord": "سجل الصيانة الوقائية",
     "correctiveMaintenance": "الصيانة التصحيحية",
     "noMachines": "لا توجد آلات.",
-    "searchPlaceholder": "البحث في الآلات…"
+    "searchPlaceholder": "البحث بالاسم أو الرقم…",
+    "idNumber": "رقم التعريف",
+    "viewProfile": "عرض الملف",
+    "failedToLoad": "فشل تحميل الآلات.",
+    "adjustSearch": "حاول تعديل مصطلح البحث."
   },
   "equipmentInfo": {
     "title": "معلومات المعدة",
@@ -144,6 +184,8 @@
   },
   "users": {
     "title": "إدارة المستخدمين",
+    "systemTitle": "مستخدمو النظام",
+    "subtitle": "إدارة صلاحيات الموظفين وأدوارهم.",
     "addUser": "إضافة مستخدم",
     "username": "اسم المستخدم",
     "fullName": "الاسم الكامل",
@@ -152,7 +194,16 @@
     "status": "الحالة",
     "permissions": "الصلاحيات",
     "deactivate": "تعطيل",
-    "reactivate": "تفعيل"
+    "reactivate": "تفعيل",
+    "searchPlaceholder": "البحث باسم المستخدم أو الاسم…",
+    "noUsersFound": "لا يوجد مستخدمون",
+    "adjustSearch": "حاول تعديل مصطلح البحث.",
+    "actions": "إجراءات",
+    "editUser": "تعديل المستخدم"
+  },
+  "common_extra": {
+    "unassigned": "غير مُعيَّن",
+    "adjustSearch": "حاول تعديل مصطلح البحث."
   },
   "print": {
     "equipmentInfo": {

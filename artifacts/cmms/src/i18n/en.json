@@ -36,7 +36,9 @@
     "password": "Password",
     "submit": "Sign In",
     "usernamePlaceholder": "e.g. jsmith",
-    "footer": "Unauthorized access is strictly prohibited."
+    "footer": "Unauthorized access is strictly prohibited.",
+    "cmmsTitle": "Computerized Maintenance Management System",
+    "cmmsDesc": "Precision maintenance tracking for pharmaceutical-grade operational excellence."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -45,12 +47,46 @@
     "uptime": "Uptime",
     "openWOs": "Open WOs",
     "totalMachines": "Total Machines",
-    "activeMachines": "Active Machines",
-    "pendingPM": "Pending PM",
-    "recentActivity": "Recent Activity"
+    "activeMachines": "active",
+    "acrossDepts": "across {{count}} departments",
+    "outOfTotal": "Out of {{total}} total registered",
+    "pendingPM": "Pending PMs",
+    "recentActivity": "Recent Activity",
+    "activeUsers": "Active Users",
+    "departments": "Departments",
+    "monitoredFacilities": "Monitored facilities",
+    "scheduledThisWeek": "Scheduled for this week",
+    "equipByDept": "Equipment by Department",
+    "equipByDeptDesc": "Distribution of machines across company facilities",
+    "equipStatus": "Equipment Status",
+    "equipStatusDesc": "Current operational state of all machines",
+    "lowStockParts": "Low-stock Spare Parts",
+    "openSpareParts": "Open Spare Parts",
+    "maintenanceRequests": "Maintenance Requests",
+    "totalSubmitted": "Total Submitted",
+    "completed": "Completed",
+    "pendingQA": "Pending QA",
+    "engineeringReview": "Engineering Review",
+    "openRequests": "Open Requests",
+    "thisWeekPMs": "This Week's PMs",
+    "monthlyPMCompletion": "Monthly PM Completion",
+    "clickSegment": "Click a segment to see machines",
+    "notifications": "Notifications",
+    "noPMThisWeek": "No PM activities scheduled this week.",
+    "noLowStock": "No low-stock spare parts.",
+    "noMachinesInGroup": "No machines in this group.",
+    "acceptedCMWork": "Accepted CM Work",
+    "openCMWork": "Open CM Work",
+    "pmThisWeek": "Preventive Maintenance (This Week)",
+    "reportIssue": "Report Equipment Issue",
+    "reportIssueDesc": "Submit a corrective maintenance request for a broken or malfunctioning machine.",
+    "submitRequest": "Submit a Request",
+    "myRequests": "My Submitted Requests",
+    "viewProfile": "View Profile"
   },
   "machines": {
     "title": "Equipment & Machines",
+    "subtitle": "Manage and track all company industrial equipment.",
     "addNew": "Add Machine",
     "machineNumber": "Machine Number",
     "machineName": "Machine Name",
@@ -65,7 +101,11 @@
     "pmRecord": "PM Record",
     "correctiveMaintenance": "Corrective Maintenance",
     "noMachines": "No machines found.",
-    "searchPlaceholder": "Search machines…"
+    "searchPlaceholder": "Search by name or number…",
+    "idNumber": "ID No.",
+    "viewProfile": "View Profile",
+    "failedToLoad": "Failed to load machines.",
+    "adjustSearch": "Try adjusting your search query."
   },
   "equipmentInfo": {
     "title": "Equipment Information",
@@ -144,6 +184,8 @@
   },
   "users": {
     "title": "User Management",
+    "systemTitle": "System Users",
+    "subtitle": "Manage employee access, roles, and permissions.",
     "addUser": "Add User",
     "username": "Username",
     "fullName": "Full Name",
@@ -152,7 +194,16 @@
     "status": "Status",
     "permissions": "Permissions",
     "deactivate": "Deactivate",
-    "reactivate": "Reactivate"
+    "reactivate": "Reactivate",
+    "searchPlaceholder": "Search by username or name…",
+    "noUsersFound": "No users found",
+    "adjustSearch": "Try adjusting your search query.",
+    "actions": "Actions",
+    "editUser": "Edit user"
+  },
+  "common_extra": {
+    "unassigned": "Unassigned",
+    "adjustSearch": "Try adjusting your search query."
   },
   "print": {
     "equipmentInfo": {

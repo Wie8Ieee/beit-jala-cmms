@@ -1,5 +1,6 @@
 import { useAuth } from "../contexts/AuthContext";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getGetDashboardStatsQueryKey, useGetDashboardStats } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ export default function DashboardPage() {
     'Maintenance': 'hsl(var(--chart-4))', // yellow-ish
     'Inactive': 'hsl(var(--chart-2))' // gray-ish
   };
+  const { t } = useTranslation();
   const [selectedPmSegment, setSelectedPmSegment] = useState<"Completed" | "Overdue / Not Completed" | null>(null);
 
   type MachineRef = { id: number; machineId: number; machineName: string; machineNumber: string };
@@ -143,52 +145,52 @@ export default function DashboardPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card className="hover-elevate transition-all border-l-4 border-l-primary">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Machines</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard.totalMachines')}</CardTitle>
                 <Server className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{stats.totalMachines}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  <span className="text-emerald-500 font-medium">{stats.activeMachines} active</span> across {stats.totalDepartments} departments
+                  <span className="text-emerald-500 font-medium">{stats.activeMachines} {t('dashboard.activeMachines')}</span> {t('dashboard.acrossDepts', { count: stats.totalDepartments })}
                 </p>
               </CardContent>
             </Card>
             
             <Card className="hover-elevate transition-all">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard.activeUsers')}</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{stats.activeUsers}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Out of {stats.totalUsers} total registered
+                  {t('dashboard.outOfTotal', { total: stats.totalUsers })}
                 </p>
               </CardContent>
             </Card>
 
             <Card className="hover-elevate transition-all">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Departments</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard.departments')}</CardTitle>
                 <Building2 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{stats.totalDepartments}</div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Monitored facilities
+                  {t('dashboard.monitoredFacilities')}
                 </p>
               </CardContent>
             </Card>
 
             <Card className="hover-elevate transition-all">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Pending PMs</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard.pendingPM')}</CardTitle>
                 <Wrench className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{pmStats?.thisWeekPm?.length ?? 0}</div>
                 <p className="text-xs text-amber-500 font-medium mt-1">
-                  Scheduled for this week
+                  {t('dashboard.scheduledThisWeek')}
                 </p>
               </CardContent>
             </Card>
@@ -200,7 +202,7 @@ export default function DashboardPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base text-amber-800 dark:text-amber-300">
                   <Bell className="h-4 w-4" />
-                  Notifications
+                  {t('dashboard.notifications')}
                   <span className="ml-auto rounded-full bg-amber-500 text-white text-xs px-2 py-0.5">{notifications.length}</span>
                 </CardTitle>
               </CardHeader>
@@ -222,9 +224,9 @@ export default function DashboardPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
             <Card className="col-span-4">
               <CardHeader>
-                <CardTitle>Equipment by Department</CardTitle>
+                <CardTitle>{t('dashboard.equipByDept')}</CardTitle>
                 <CardDescription>
-                  Distribution of machines across company facilities
+                  {t('dashboard.equipByDeptDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pl-0">
@@ -262,9 +264,9 @@ export default function DashboardPage() {
 
             <Card className="col-span-3">
               <CardHeader>
-                <CardTitle>Equipment Status</CardTitle>
+                <CardTitle>{t('dashboard.equipStatus')}</CardTitle>
                 <CardDescription>
-                  Current operational state of all machines
+                  {t('dashboard.equipStatusDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -314,7 +316,7 @@ export default function DashboardPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Package className="h-4 w-4 text-primary" />
-                    Low-stock Spare Parts
+                    {t('dashboard.lowStockParts')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -334,7 +336,7 @@ export default function DashboardPage() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
                       <Package className="h-8 w-8 mb-3 text-muted-foreground/50" />
-                      <p>No low-stock spare parts.</p>
+                      <p>{t('dashboard.noLowStock')}</p>
                     </div>
                   )}
                 </CardContent>
@@ -344,7 +346,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Activity className="h-4 w-4 text-primary" />
-                  Maintenance Requests
+                  {t('dashboard.maintenanceRequests')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -353,23 +355,23 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="rounded-md border p-3 bg-muted/30">
                       <div className="text-2xl font-bold">{pmStats?.maintenanceRequests?.total ?? 0}</div>
-                      <div className="text-muted-foreground">Total Submitted</div>
+                      <div className="text-muted-foreground">{t('dashboard.totalSubmitted')}</div>
                     </div>
                     <div className="rounded-md border p-3 bg-emerald-50 dark:bg-emerald-950/20">
                       <div className="text-2xl font-bold text-emerald-600">{pmStats?.maintenanceRequests?.completed ?? 0}</div>
-                      <div className="text-muted-foreground">Completed</div>
+                      <div className="text-muted-foreground">{t('dashboard.completed')}</div>
                     </div>
                     <div className="rounded-md border p-3">
                       <div className="text-2xl font-bold text-orange-500">{pmStats?.maintenanceRequests?.pendingQa ?? 0}</div>
-                      <div className="text-muted-foreground">Pending QA</div>
+                      <div className="text-muted-foreground">{t('dashboard.pendingQA')}</div>
                     </div>
                     <div className="rounded-md border p-3">
                       <div className="text-2xl font-bold text-blue-500">{pmStats?.maintenanceRequests?.pendingEngineering ?? 0}</div>
-                      <div className="text-muted-foreground">Engineering Review</div>
+                      <div className="text-muted-foreground">{t('dashboard.engineeringReview')}</div>
                     </div>
                   </div>
                   <Button asChild variant="outline" size="sm">
-                    <Link href="/maintenance-requests">Open Requests</Link>
+                    <Link href="/maintenance-requests">{t('dashboard.openRequests')}</Link>
                   </Button>
                 </div>
               </CardContent>
@@ -378,7 +380,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Clock className="h-4 w-4 text-amber-500" />
-                  This Week's PMs
+                  {t('dashboard.thisWeekPMs')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -401,7 +403,7 @@ export default function DashboardPage() {
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
                     <Activity className="h-8 w-8 mb-3 text-muted-foreground/50" />
-                    <p>No PM activities scheduled this week.</p>
+                    <p>{t('dashboard.noPMThisWeek')}</p>
                   </div>
                 )}
               </CardContent>
@@ -410,9 +412,9 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  Monthly PM Completion
+                  {t('dashboard.monthlyPMCompletion')}
                 </CardTitle>
-                <CardDescription>Click a segment to see machines</CardDescription>
+                <CardDescription>{t('dashboard.clickSegment')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {/* FR-2.13 — Clickable pie chart */}
@@ -465,7 +467,7 @@ export default function DashboardPage() {
                             </Link>
                           ))}
                         </div>
-                      ) : <p className="text-sm text-muted-foreground">No machines in this group.</p>;
+                      ) : <p className="text-sm text-muted-foreground">{t('dashboard.noMachinesInGroup')}</p>;
                     })()}
                   </div>
                 )}
@@ -482,7 +484,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Wrench className="h-4 w-4 text-primary" />
-                  Accepted CM Work
+                  {t('dashboard.acceptedCMWork')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -490,7 +492,7 @@ export default function DashboardPage() {
                   <AlertTriangle className="h-8 w-8 text-muted-foreground/50" />
                   <p>{pmStats?.maintenanceRequests?.acceptedOrInProgress ?? 0} accepted or in-progress requests.</p>
                   <Button asChild size="sm">
-                    <Link href="/maintenance-requests/technician">Open CM Work</Link>
+                    <Link href="/maintenance-requests/technician">{t('dashboard.openCMWork')}</Link>
                   </Button>
                 </div>
               </CardContent>
@@ -499,7 +501,7 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Clock className="h-4 w-4 text-amber-500" />
-                  Preventive Maintenance (This Week)
+                  {t('dashboard.pmThisWeek')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -518,7 +520,7 @@ export default function DashboardPage() {
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg border-muted">
                     <Activity className="h-8 w-8 mb-3 text-muted-foreground/50" />
-                    <p>No PM activities scheduled this week.</p>
+                    <p>{t('dashboard.noPMThisWeek')}</p>
                   </div>
                 )}
               </CardContent>
@@ -533,16 +535,16 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <AlertTriangle className="h-4 w-4 text-destructive" />
-                Report Equipment Issue
+                  {t('dashboard.reportIssue')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col items-start gap-4">
                 <p className="text-sm text-muted-foreground">
-                  Submit a new corrective maintenance request if you notice equipment malfunction.
+                  {t('dashboard.reportIssueDesc')}
                 </p>
                 <Button asChild className="w-full">
-                  <Link href="/maintenance-requests/new">Submit Maintenance Request</Link>
+                  <Link href="/maintenance-requests/new">{t('dashboard.submitRequest')}</Link>
                 </Button>
               </div>
             </CardContent>
@@ -552,7 +554,7 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Activity className="h-4 w-4 text-primary" />
-                My Recent Requests
+                  {t('dashboard.myRequests')}
               </CardTitle>
             </CardHeader>
             <CardContent>
