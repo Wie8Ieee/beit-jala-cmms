@@ -122,6 +122,12 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
     acceptedOrInProgress: requestRows.filter((row) => row.status === "Accepted" || row.status === "In Progress").length,
     own: requestRows.filter((row) => row.requestedByUserId === currentUserId).length,
   };
+  const todayStr = isoDate(new Date());
+  const overdueRows = monthlyPmRows.filter(
+    (r) => !r.actualDate && r.plannedDateTo && r.plannedDateTo < todayStr
+  );
+  const overdueCount = overdueRows.length;
+
   const requestNotifications = [
     ...(requestSummary.pendingQa
       ? [{ type: "qa", message: `${requestSummary.pendingQa} maintenance request(s) pending QA approval`, href: "/maintenance-requests/qa" }]
@@ -129,7 +135,18 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
     ...(requestSummary.pendingEngineering
       ? [{ type: "engineering", message: `${requestSummary.pendingEngineering} QA-approved request(s) pending engineering review`, href: "/maintenance-requests/engineering" }]
       : []),
+    ...(overdueCount > 0
+      ? [{ type: "overdue_pm", message: `${overdueCount} PM activity(ies) overdue this month`, href: "/maintenance-plans" }]
+      : []),
   ];
+
+  const monthlyPmCompletionMachines = {
+    completed: monthlyPmRows
+      .filter((r) => !!r.actualDate)
+      .map((r) => ({ id: r.id, machineId: r.machineId, machineName: r.machineName, machineNumber: r.machineNumber ?? "" })),
+    overdue: overdueRows
+      .map((r) => ({ id: r.id, machineId: r.machineId, machineName: r.machineName, machineNumber: r.machineNumber ?? "" })),
+  };
   const recentRequests = requestRows
     .slice()
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
@@ -172,6 +189,7 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
     maintenanceRequests: requestSummary,
     maintenanceRequestNotifications: requestNotifications,
     recentMaintenanceRequests: recentRequests,
+    monthlyPmCompletionMachines,
     lowStockSpareParts: lowStockParts.map((part) => ({
       id: part.id,
       partName: part.partName,

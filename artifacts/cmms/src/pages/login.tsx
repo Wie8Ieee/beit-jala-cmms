@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLogin } from "@workspace/api-client-react";
 import { TestTube, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,7 @@ const loginSchema = z.object({
 });
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const loginMutation = useLogin();
@@ -71,10 +73,10 @@ export default function LoginPage() {
 
         <div className="relative z-10 max-w-md">
           <h2 className="text-4xl font-semibold mb-4 leading-tight">
-            Computerized Maintenance Management System
+            {t('login.cmmsTitle')}
           </h2>
           <p className="text-lg text-primary-foreground/80">
-            Precision maintenance tracking for pharmaceutical-grade operational excellence.
+            {t('login.cmmsDesc')}
           </p>
         </div>
 
@@ -87,9 +89,9 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-sm space-y-8">
           <div className="space-y-2 text-center md:text-left">
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">Sign In</h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t('login.title')}</h1>
             <p className="text-muted-foreground text-sm">
-              Enter your credentials to access the system
+              {t('login.subtitle')}
             </p>
           </div>
 
@@ -102,11 +104,11 @@ export default function LoginPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-                        Username
+                        {t('login.username')}
                       </FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="e.g. jsmith" 
+                          placeholder={t('login.usernamePlaceholder')} 
                           {...field} 
                           className="h-12 bg-muted/50 border-muted focus-visible:bg-background transition-colors"
                         />
@@ -121,7 +123,7 @@ export default function LoginPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-                        Password
+                        {t('login.password')}
                       </FormLabel>
                       <FormControl>
                         <Input 
@@ -146,14 +148,14 @@ export default function LoginPage() {
                     Authenticating...
                   </>
                 ) : (
-                  "Sign In"
+                  t('login.submit')
                 )}
               </Button>
             </form>
           </Form>
 
           <div className="text-center text-xs text-muted-foreground pt-8">
-            Unauthorized access is strictly prohibited.
+            {t('login.footer')}
           </div>
         </div>
       </div>

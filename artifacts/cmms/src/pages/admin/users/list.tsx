@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useGetUsers } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import { Search, Plus, UserCircle, Edit } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UsersList() {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   
   const { data: users, isLoading } = useGetUsers({
@@ -32,14 +34,14 @@ export default function UsersList() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">System Users</h1>
-          <p className="text-muted-foreground">Manage employee access, roles, and permissions.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('users.systemTitle')}</h1>
+          <p className="text-muted-foreground">{t('users.subtitle')}</p>
         </div>
         
         <Button asChild>
           <Link href="/admin/users/new">
             <Plus className="mr-2 h-4 w-4" />
-            Add User
+            {t('users.addUser')}
           </Link>
         </Button>
       </div>
@@ -49,7 +51,7 @@ export default function UsersList() {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search by username or name..."
+            placeholder={t('users.searchPlaceholder')}
             className="pl-9 bg-background"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -61,12 +63,12 @@ export default function UsersList() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead>Username</TableHead>
-              <TableHead>Full Name</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t('users.username')}</TableHead>
+              <TableHead>{t('users.fullName')}</TableHead>
+              <TableHead>{t('users.role')}</TableHead>
+              <TableHead>{t('users.department')}</TableHead>
+              <TableHead>{t('users.status')}</TableHead>
+              <TableHead className="text-right">{t('users.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -86,8 +88,8 @@ export default function UsersList() {
                 <TableCell colSpan={6} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center text-muted-foreground">
                     <UserCircle className="h-10 w-10 mb-3 opacity-20" />
-                    <p className="text-lg font-medium text-foreground">No users found</p>
-                    <p className="text-sm">Try adjusting your search query.</p>
+                    <p className="text-lg font-medium text-foreground">{t('users.noUsersFound')}</p>
+                    <p className="text-sm">{t('users.adjustSearch')}</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -104,9 +106,9 @@ export default function UsersList() {
                   <TableCell className="text-muted-foreground">{user.departmentName || "—"}</TableCell>
                   <TableCell>
                     {user.isActive ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 shadow-none">Active</Badge>
+                      <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20 shadow-none">{t('common.active')}</Badge>
                     ) : (
-                      <Badge variant="secondary" className="text-muted-foreground shadow-none">Inactive</Badge>
+                      <Badge variant="secondary" className="text-muted-foreground shadow-none">{t('common.inactive')}</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
