@@ -28,6 +28,7 @@ import {
   Activity,
   CalendarDays,
   ClipboardList,
+  BarChart3,
   LayoutDashboard,
   Package,
   Settings,
@@ -64,15 +65,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <Sidebar side={isArabic ? "right" : "left"}>
           <SidebarHeader className="border-b border-sidebar-border px-4 py-3">
             <div className="flex items-center gap-2">
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <TestTube className="size-5" />
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white p-1">
+                <img src="/beit-jala-logo.svg" alt="Beit Jala Pharmaceutical logo" className="h-full w-full object-contain" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold tracking-tight text-sidebar-foreground">
                   Beit Jala Pharma
-                </span>
-                <span className="truncate text-xs text-sidebar-foreground/70 font-mono">
-                  CMMS v1.0
                 </span>
               </div>
             </div>
@@ -124,7 +122,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 hasPermission("view_own_requests") ||
                 hasPermission("review_qa_requests") ||
                 hasPermission("review_engineering_requests") ||
-                hasPermission("approve_reject_requests")) && (
+                hasPermission("approve_reject_requests") ||
+                hasPermission("sign_assigned_fields")) && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
@@ -137,6 +136,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location.startsWith("/reports")}>
+                  <Link href="/reports">
+                    <BarChart3 className="size-4" />
+                    <span>Reports</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
               {hasPermission("view_spare_parts") && (
                 <SidebarMenuItem>

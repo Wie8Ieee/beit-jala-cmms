@@ -8,6 +8,9 @@
 import type { PmInspectionResultInput } from './pmInspectionResultInput';
 
 export interface PmInspectionInput {
+  employeeNumber?: string;
+  /** @nullable */
+  executionMonthYear?: string | null;
   inspectionDate: string;
   inspectionTime: string;
   actionTaken?: string;

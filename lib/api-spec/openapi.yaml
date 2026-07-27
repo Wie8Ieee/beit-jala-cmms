@@ -135,6 +135,112 @@ paths:
                 items:
                   $ref: "#/components/schemas/Signature"
 
+  /signatures/profile:
+    get:
+      operationId: getSignatureProfile
+      tags: [signatures]
+      summary: Get the signed-in user's saved drawn signature
+      responses:
+        "200":
+          description: Signature profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureProfile"
+    put:
+      operationId: updateSignatureProfile
+      tags: [signatures]
+      summary: Save the signed-in user's drawn signature
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignatureProfile"
+      responses:
+        "200":
+          description: Saved signature profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureProfile"
+
+  /signatures/users/{id}/profile:
+    put:
+      operationId: updateUserSignatureProfile
+      tags: [signatures]
+      summary: Save or replace a user's drawn signature as an administrator
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignatureProfile"
+      responses:
+        "200":
+          description: Saved user signature profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureProfile"
+
+  /signatures/field-permissions:
+    get:
+      operationId: listSignatureFieldPermissions
+      tags: [signatures]
+      summary: List permanent signature permissions
+      responses:
+        "200":
+          description: Permanent signature permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SignatureFieldPermission"
+    post:
+      operationId: createSignatureFieldPermission
+      tags: [signatures]
+      summary: Allow an employee to sign a field on every matching form
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignatureFieldPermissionInput"
+      responses:
+        "201":
+          description: Permanent signature permission created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureFieldPermission"
+
+  /signatures/field-permissions/{id}/revoke:
+    patch:
+      operationId: revokeSignatureFieldPermission
+      tags: [signatures]
+      summary: Revoke a permanent signature permission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Permanent signature permission revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureFieldPermission"
+
   /signatures/eligible:
     get:
       operationId: listEligibleSigners
@@ -593,6 +699,32 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /machines/{id}/equipment-information/header:
+    get:
+      operationId: getEquipmentInformationHeader
+      tags: [equipment]
+      summary: Get the official equipment-information form header
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Form header
+    put:
+      operationId: updateEquipmentInformationHeader
+      tags: [equipment]
+      summary: Update the official equipment-information form header
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Form header
+
   /machines/{id}/equipment-information/scan:
     post:
       operationId: scanEquipmentNameplate
@@ -776,6 +908,30 @@ paths:
       responses:
         "200":
           description: Current PM record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PmRecordDetail"
+
+  /machines/{id}/pm/history/{recordId}:
+    get:
+      operationId: getPmHistoryRecord
+      tags: [preventive-maintenance]
+      summary: Get one preserved PM record with its inspections and results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: recordId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Preserved PM record detail
           content:
             application/json:
               schema:
@@ -993,6 +1149,115 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/MaintenanceRequestTechnicianOption"
+
+  /maintenance-requests/closed-log:
+    get:
+      operationId: getClosedCorrectiveMaintenanceLog
+      tags: [maintenance-requests]
+      summary: List closed corrective maintenance requests for LOG-10-0659-0
+      responses:
+        "200":
+          description: Closed corrective maintenance request log rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClosedCorrectiveMaintenanceLogRow"
+
+  /maintenance-requests/{id}/external-maintenance:
+    get:
+      operationId: getExternalMaintenanceRequest
+      tags: [maintenance-requests]
+      summary: Get the FORM-00-0077-1 external maintenance request linked to an original request
+      parameters:
+        - $ref: "#/components/parameters/MaintenanceRequestId"
+      responses:
+        "200":
+          description: External maintenance request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalMaintenanceRequestDetail"
+    post:
+      operationId: convertMaintenanceRequestToExternal
+      tags: [maintenance-requests]
+      summary: Convert a corrective maintenance request to external maintenance
+      parameters:
+        - $ref: "#/components/parameters/MaintenanceRequestId"
+      responses:
+        "201":
+          description: External maintenance request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalMaintenanceRequestDetail"
+    patch:
+      operationId: updateExternalMaintenanceRequest
+      tags: [maintenance-requests]
+      summary: Update the editable signatures and recommendations of an external maintenance request
+      parameters:
+        - $ref: "#/components/parameters/MaintenanceRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExternalMaintenanceRequestUpdate"
+      responses:
+        "200":
+          description: External maintenance request updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalMaintenanceRequestDetail"
+
+  /maintenance-requests/{id}/external-maintenance-receipt:
+    get:
+      operationId: getExternalMaintenanceReceipt
+      tags: [maintenance-requests]
+      summary: Get FORM-10-0240-1 external maintenance receipt
+      parameters:
+        - $ref: "#/components/parameters/MaintenanceRequestId"
+      responses:
+        "200":
+          description: External maintenance receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalMaintenanceReceiptDetail"
+    post:
+      operationId: createExternalMaintenanceReceipt
+      tags: [maintenance-requests]
+      summary: Create an external maintenance receipt after external work is completed
+      parameters:
+        - $ref: "#/components/parameters/MaintenanceRequestId"
+      responses:
+        "201":
+          description: External maintenance receipt created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalMaintenanceReceiptDetail"
+    patch:
+      operationId: updateExternalMaintenanceReceipt
+      tags: [maintenance-requests]
+      summary: Update FORM-10-0240-1 receipt fields
+      parameters:
+        - $ref: "#/components/parameters/MaintenanceRequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExternalMaintenanceReceiptUpdate"
+      responses:
+        "200":
+          description: External maintenance receipt updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalMaintenanceReceiptDetail"
 
   /maintenance-requests/{id}:
     get:
@@ -1314,6 +1579,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/CorrectiveMaintenanceRecordDetail"
 
+  /machines/{id}/corrective-maintenance/header:
+    put:
+      operationId: updateCorrectiveMaintenanceHeader
+      tags: [corrective-maintenance]
+      summary: Update the active Corrective Maintenance record header
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrectiveMaintenanceHeaderInput"
+      responses:
+        "200":
+          description: Corrective Maintenance record header updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorrectiveMaintenanceRecordDetail"
+
   /machines/{id}/corrective-maintenance/history:
     get:
       operationId: getMachineCorrectiveMaintenanceHistory
@@ -1334,6 +1624,61 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/CorrectiveMaintenanceRecordDetail"
+
+  /machines/{id}/corrective-maintenance/events/{eventId}:
+    put:
+      operationId: updateCorrectiveMaintenanceLogRow
+      tags: [corrective-maintenance]
+      summary: Manually update an automatically linked corrective maintenance log row
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrectiveMaintenanceLogRowInput"
+      responses:
+        "200":
+          description: Corrective maintenance log row updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorrectiveMaintenanceEvent"
+
+  /machines/{id}/corrective-maintenance/events:
+    post:
+      operationId: createCorrectiveMaintenanceLogRow
+      tags: [corrective-maintenance]
+      summary: Add a manually editable Corrective Maintenance log row
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrectiveMaintenanceLogRowInput"
+      responses:
+        "201":
+          description: Corrective maintenance log row created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CorrectiveMaintenanceEvent"
 
   /spare-parts:
     get:
@@ -1543,6 +1888,13 @@ paths:
                 $ref: "#/components/schemas/DashboardStats"
 
 components:
+  parameters:
+    MaintenanceRequestId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
   schemas:
     HealthStatus:
       type: object
@@ -1622,9 +1974,48 @@ components:
           type: integer
         userName:
           type: string
+        signatureData:
+          type: ["string", "null"]
         eligibleSignerAssignmentId:
           type: ["integer", "null"]
         signedAt:
+          type: string
+
+    SignatureProfile:
+      type: object
+      required: [signatureData]
+      properties:
+        signatureData:
+          type: ["string", "null"]
+
+    SignatureFieldPermission:
+      type: object
+      required: [id, documentType, fieldName, eligibleUserId, grantedAt]
+      properties:
+        id:
+          type: integer
+        documentType:
+          type: string
+        fieldName:
+          type: string
+        eligibleUserId:
+          type: integer
+        eligibleUserName:
+          type: ["string", "null"]
+        grantedAt:
+          type: string
+        revokedAt:
+          type: ["string", "null"]
+
+    SignatureFieldPermissionInput:
+      type: object
+      required: [documentType, fieldName, employeeNumber]
+      properties:
+        documentType:
+          type: string
+        fieldName:
+          type: string
+        employeeNumber:
           type: string
 
     SignatureInput:
@@ -1646,6 +2037,8 @@ components:
       properties:
         username:
           type: string
+        employeeNumber:
+          type: ["string", "null"]
         password:
           type: string
 
@@ -1679,6 +2072,8 @@ components:
           type: integer
         username:
           type: string
+        employeeNumber:
+          type: ["string", "null"]
         fullName:
           type: ["string", "null"]
         email:
@@ -1706,6 +2101,8 @@ components:
           type: ["string", "null"]
         email:
           type: ["string", "null"]
+        signatureData:
+          type: ["string", "null"]
         roleId:
           type: integer
         roleName:
@@ -1725,11 +2122,13 @@ components:
 
     UserInput:
       type: object
-      required: [username, password, roleId]
+      required: [username, password, roleId, employeeNumber]
       properties:
         username:
           type: string
           minLength: 2
+        employeeNumber:
+          type: string
         password:
           type: string
           minLength: 4
@@ -1886,7 +2285,11 @@ components:
           type: ["string", "null"]
         others:
           type: ["string", "null"]
+        othersDetails:
+          type: ["string", "null"]
         safetyIssues:
+          type: ["string", "null"]
+        safetyIssuesDetails:
           type: ["string", "null"]
         preparedByName:
           type: ["string", "null"]
@@ -1940,7 +2343,11 @@ components:
           type: string
         others:
           type: string
+        othersDetails:
+          type: string
         safetyIssues:
+          type: string
+        safetyIssuesDetails:
           type: string
         preparedByName:
           type: string
@@ -1983,7 +2390,7 @@ components:
 
     PmHeader:
       type: object
-      required: [id, machineId, procedureFormNumber, columnsPerRecord, createdAt, updatedAt]
+      required: [id, machineId, procedureFormNumber, columnsPerRecord, inspectionColumnsPerPrintPage, createdAt, updatedAt]
       properties:
         id:
           type: integer
@@ -1996,6 +2403,8 @@ components:
         department:
           type: ["string", "null"]
         columnsPerRecord:
+          type: integer
+        inspectionColumnsPerPrintPage:
           type: integer
         createdAt:
           type: string
@@ -2012,6 +2421,10 @@ components:
         department:
           type: ["string", "null"]
         columnsPerRecord:
+          type: integer
+          minimum: 1
+          maximum: 10
+        inspectionColumnsPerPrintPage:
           type: integer
           minimum: 1
           maximum: 10
@@ -2042,7 +2455,7 @@ components:
 
     PmChecklistPointInput:
       type: object
-      required: [pointText, resultType, sortOrder]
+      required: [pointText, resultType]
       properties:
         pointText:
           type: string
@@ -2050,8 +2463,6 @@ components:
         resultType:
           type: string
           enum: [yes_no, value, text]
-        sortOrder:
-          type: integer
 
     PmInspectionResultInput:
       type: object
@@ -2066,6 +2477,10 @@ components:
       type: object
       required: [inspectionDate, inspectionTime, results]
       properties:
+        employeeNumber:
+          type: string
+        executionMonthYear:
+          type: ["string", "null"]
         inspectionDate:
           type: string
         inspectionTime:
@@ -2110,6 +2525,8 @@ components:
           type: integer
         columnNumber:
           type: integer
+        executionMonthYear:
+          type: ["string", "null"]
         inspectionDate:
           type: string
         inspectionTime:
@@ -2133,10 +2550,18 @@ components:
 
     PmRecordDetail:
       type: object
-      required: [record, header, checklistPoints, inspections, pageCount]
+      required: [record, machine, header, checklistPoints, inspections, pageCount]
       properties:
         record:
           $ref: "#/components/schemas/PmRecordSummary"
+        machine:
+          type: object
+          required: [name, number]
+          properties:
+            name:
+              type: string
+            number:
+              type: string
         header:
           $ref: "#/components/schemas/PmHeader"
         checklistPoints:
@@ -2409,6 +2834,7 @@ components:
         - In Progress
         - Completed
         - Closed
+        - External Maintenance
 
     MaintenanceRequestInput:
       type: object
@@ -2585,6 +3011,149 @@ components:
         updatedAt:
           type: string
 
+    ClosedCorrectiveMaintenanceLogRow:
+      type: object
+      required: [id, machineName, machineNumber, requestDate, requestReportNumber, priority, closedDate, remarks]
+      properties:
+        id:
+          type: integer
+        machineName:
+          type: string
+        machineNumber:
+          type: string
+        requestDate:
+          type: string
+        requestReportNumber:
+          type: string
+        priority:
+          type: string
+        closedDate:
+          type: string
+        remarks:
+          type: string
+
+    ExternalMaintenanceRequest:
+      type: object
+      required: [id, maintenanceRequestId, externalRequestNumber, requestDate, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        maintenanceRequestId:
+          type: integer
+        externalRequestNumber:
+          type: string
+        requestDate:
+          type: string
+        departmentSection:
+          type: ["string", "null"]
+        requiredMaintenance:
+          type: ["string", "null"]
+        preliminaryFindings:
+          type: ["string", "null"]
+        technicianSuggestions:
+          type: ["string", "null"]
+        maintenanceTechnicianSignature:
+          type: ["string", "null"]
+        maintenanceTechnicianDate:
+          type: ["string", "null"]
+        departmentManagerSignature:
+          type: ["string", "null"]
+        departmentManagerDate:
+          type: ["string", "null"]
+        generalManagerSignature:
+          type: ["string", "null"]
+        generalManagerDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ExternalMaintenanceRequestDetail:
+      type: object
+      required: [request, externalRequest]
+      properties:
+        request:
+          $ref: "#/components/schemas/MaintenanceRequestSummary"
+        externalRequest:
+          $ref: "#/components/schemas/ExternalMaintenanceRequest"
+
+    ExternalMaintenanceRequestUpdate:
+      type: object
+      properties:
+        technicianSuggestions:
+          type: string
+        maintenanceTechnicianSignature:
+          type: string
+        maintenanceTechnicianDate:
+          type: string
+        departmentManagerSignature:
+          type: string
+        departmentManagerDate:
+          type: string
+        generalManagerSignature:
+          type: string
+        generalManagerDate:
+          type: string
+
+    ExternalMaintenanceReceipt:
+      type: object
+      required: [id, externalMaintenanceRequestId, maintenanceType, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        externalMaintenanceRequestId:
+          type: integer
+        maintenanceType:
+          type: string
+        requestingDepartment:
+          type: ["string", "null"]
+        receiptDate:
+          type: ["string", "null"]
+        performingEntity:
+          type: ["string", "null"]
+        workAcceptanceReport:
+          type: ["string", "null"]
+        workFailureCause:
+          type: ["string", "null"]
+        examinerName:
+          type: ["string", "null"]
+        examinerSignature:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ExternalMaintenanceReceiptDetail:
+      type: object
+      required: [request, externalRequest, receipt]
+      properties:
+        request:
+          $ref: "#/components/schemas/MaintenanceRequestSummary"
+        externalRequest:
+          $ref: "#/components/schemas/ExternalMaintenanceRequest"
+        receipt:
+          $ref: "#/components/schemas/ExternalMaintenanceReceipt"
+
+    ExternalMaintenanceReceiptUpdate:
+      type: object
+      properties:
+        maintenanceType:
+          type: string
+        receiptDate:
+          type: string
+        performingEntity:
+          type: string
+        workAcceptanceReport:
+          type: string
+        workFailureCause:
+          type: string
+        examinerName:
+          type: string
+        examinerSignature:
+          type: string
+
     MaintenanceRequestDetail:
       type: object
       required: [request, statusHistory]
@@ -2653,18 +3222,22 @@ components:
 
     CorrectiveMaintenanceEvent:
       type: object
-      required: [id, recordId, requestId, machineId, requestReportNumber, rowNumber]
+      required: [id, recordId, machineId, rowNumber]
       properties:
         id:
           type: integer
         recordId:
           type: integer
         requestId:
-          type: integer
+          type: ["integer", "null"]
         machineId:
           type: integer
         requestReportNumber:
-          type: string
+          type: ["string", "null"]
+        requestDate:
+          type: ["string", "null"]
+        priority:
+          type: ["string", "null"]
         rowNumber:
           type: integer
         preliminaryCheckResults:
@@ -2730,6 +3303,36 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CorrectiveMaintenanceEvent"
+
+    CorrectiveMaintenanceLogRowInput:
+      type: object
+      properties:
+        requestReportNumber:
+          type: ["string", "null"]
+        preliminaryCheckResults:
+          type: ["string", "null"]
+        expectedWorkTimeFrom:
+          type: ["string", "null"]
+        expectedWorkTimeTo:
+          type: ["string", "null"]
+        actionsTaken:
+          type: ["string", "null"]
+        receiverName:
+          type: ["string", "null"]
+        handoverDate:
+          type: ["string", "null"]
+
+
+    CorrectiveMaintenanceHeaderInput:
+      type: object
+      required: [documentNumber, pageCount]
+      properties:
+        documentNumber:
+          type: string
+        executionDate:
+          type: ["string", "null"]
+        pageCount:
+          type: string
 
     SparePart:
       type: object
@@ -2949,6 +3552,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DashboardLowStockSparePart"
+        completedCorrectiveThisMonth:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              requestReportNumber: { type: string }
+              machineId: { type: integer }
+              machineName: { type: string }
+              machineNumber: { type: string }
+              completedDate: { type: string }
 
     CountByLabel:
       type: object

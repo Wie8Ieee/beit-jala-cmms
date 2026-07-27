@@ -4,6 +4,8 @@ Computerized Maintenance Management System (CMMS) — Graduation Project for Bei
 
 The system digitizes machine maintenance records, checklists, requests, and plans currently maintained on paper, keeping the underlying maintenance workflow unchanged.
 
+It also includes a **Reports** screen with an annual/monthly corrective-maintenance summary, machine and request details, and a monthly completion bar chart.
+
 ---
 
 ## Tech Stack

@@ -10,6 +10,7 @@ import type { DashboardLowStockSparePart } from './dashboardLowStockSparePart';
 import type { DashboardMaintenanceRequestSummary } from './dashboardMaintenanceRequestSummary';
 import type { DashboardPmItem } from './dashboardPmItem';
 import type { DashboardRecentMaintenanceRequest } from './dashboardRecentMaintenanceRequest';
+import type { DashboardStatsCompletedCorrectiveThisMonthItem } from './dashboardStatsCompletedCorrectiveThisMonthItem';
 
 export interface DashboardStats {
   totalMachines: number;
@@ -24,4 +25,5 @@ export interface DashboardStats {
   maintenanceRequests?: DashboardMaintenanceRequestSummary;
   recentMaintenanceRequests?: DashboardRecentMaintenanceRequest[];
   lowStockSpareParts?: DashboardLowStockSparePart[];
+  completedCorrectiveThisMonth?: DashboardStatsCompletedCorrectiveThisMonthItem[];
 }

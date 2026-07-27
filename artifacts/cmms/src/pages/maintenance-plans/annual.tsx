@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Save } from "lucide-react";
+import { Printer, Save } from "lucide-react";
 import { OfficialFormHeader } from "@/components/official-form-header";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
@@ -45,6 +45,15 @@ type AnnualPlan = {
   rows: AnnualRow[];
 };
 
+function calculateScheduledMonths(startDate: string | null, frequencyMonths: number | null) {
+  if (!startDate || !frequencyMonths || frequencyMonths < 1) return [];
+  const month = Number(startDate.slice(5, 7));
+  if (!month || month > 12) return [];
+  const months: number[] = [];
+  for (let current = month; current <= 12; current += frequencyMonths) months.push(current);
+  return months;
+}
+
 export default function AnnualPlanPage({ params }: { params: { year: string } }) {
   const year = Number(params.year);
   const queryClient = useQueryClient();
@@ -58,7 +67,7 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
   });
 
   useEffect(() => {
-    if (data) setForm(data);
+    if (data) setForm({ ...data, rows: data.rows.map((row) => ({ ...row, scheduledMonths: calculateScheduledMonths(row.startDate, row.frequencyMonths) })) });
   }, [data]);
 
   const save = useMutation({
@@ -174,19 +183,24 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
           <CardTitle>Machine Schedule</CardTitle>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/print/annual-plan/${year}/schedule`}>
+              <Printer className="mr-2 h-4 w-4" />
+              Print Schedule
+            </Link>
+          </Button>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Department</TableHead>
-                <TableHead>Machine / Location / Code</TableHead>
+                <TableHead>Machine / Code</TableHead>
                 <TableHead>Frequency</TableHead>
                 <TableHead>Duration</TableHead>
                 <TableHead>Start</TableHead>
-                <TableHead>Finish</TableHead>
                 <TableHead>Months</TableHead>
               </TableRow>
             </TableHeader>
@@ -196,30 +210,19 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
                   <TableCell>{row.department}</TableCell>
                   <TableCell>
                     <div className="font-medium">{row.machineName}</div>
-                    <div className="text-xs text-muted-foreground">{row.machineLocation || "-"} · {row.machineCode || "-"}</div>
+                    <div className="text-xs text-muted-foreground">{row.machineCode || "-"}</div>
                   </TableCell>
                   <TableCell>{row.frequencyMonths ? `Every ${row.frequencyMonths} months` : "-"}</TableCell>
                   <TableCell>
                     <Input value={row.duration ?? ""} readOnly={!canEdit} onChange={(event) => updateRow(row.id, { duration: event.target.value })} />
                   </TableCell>
                   <TableCell>
-                    <Input type="date" value={row.startDate ?? ""} readOnly={!canEdit} onChange={(event) => updateRow(row.id, { startDate: event.target.value })} />
-                  </TableCell>
-                  <TableCell>
-                    <Input type="date" value={row.finishDate ?? ""} readOnly={!canEdit} onChange={(event) => updateRow(row.id, { finishDate: event.target.value })} />
+                    <Input type="date" value={row.startDate ?? ""} readOnly={!canEdit} onChange={(event) => updateRow(row.id, { startDate: event.target.value, scheduledMonths: calculateScheduledMonths(event.target.value, row.frequencyMonths) })} />
                   </TableCell>
                   <TableCell>
                     <Input
                       value={row.scheduledMonths.join(",")}
-                      readOnly={!canEdit}
-                      onChange={(event) =>
-                        updateRow(row.id, {
-                          scheduledMonths: event.target.value
-                            .split(",")
-                            .map((value) => Number(value.trim()))
-                            .filter((value) => value >= 1 && value <= 12),
-                        })
-                      }
+                      readOnly
                     />
                   </TableCell>
                 </TableRow>

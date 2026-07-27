@@ -13,6 +13,8 @@ export interface User {
   fullName?: string | null;
   /** @nullable */
   email?: string | null;
+  /** @nullable */
+  signatureData?: string | null;
   roleId: number;
   roleName: string;
   /** @nullable */

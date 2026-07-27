@@ -29,7 +29,9 @@ export interface EquipmentInformationInput {
   utilitiesWater?: string;
   utilitiesOther?: string;
   others?: string;
+  othersDetails?: string;
   safetyIssues?: string;
+  safetyIssuesDetails?: string;
   preparedByName?: string;
   preparedByDate?: string;
   approvedByName?: string;

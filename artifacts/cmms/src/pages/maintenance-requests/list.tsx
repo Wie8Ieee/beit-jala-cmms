@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { BookOpen, Plus } from "lucide-react";
 import type { MaintenanceRequestSummary } from "./types";
 
 function titleForScope(scope: string, t: (k: string) => string) {
@@ -40,14 +40,21 @@ export default function MaintenanceRequestsListPage({ scope = "all" }: { scope?:
           <h1 className="text-3xl font-bold tracking-tight">{titleForScope(scope, t)}</h1>
           <p className="text-muted-foreground">FORM-10-0975 {t("maintenanceRequests.title").toLowerCase()}.</p>
         </div>
-        {hasPermission("submit_maintenance_request") && (
-          <Button asChild>
-            <Link href="/maintenance-requests/new">
-              <Plus className="me-2 h-4 w-4" />
-              {t("maintenanceRequests.submitRequest")}
-            </Link>
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {hasPermission("manage_maintenance_requests") && (
+            <Button variant="outline" asChild>
+              <Link href="/maintenance-requests/closed-log"><BookOpen className="me-2 h-4 w-4" />سجل الطلبات المغلقة</Link>
+            </Button>
+          )}
+          {hasPermission("submit_maintenance_request") && (
+            <Button asChild>
+              <Link href="/maintenance-requests/new">
+                <Plus className="me-2 h-4 w-4" />
+                {t("maintenanceRequests.submitRequest")}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>

@@ -23,14 +23,19 @@ export type PerformingStaff = {
 export type CorrectiveMaintenanceEvent = {
   id: number;
   recordId: number;
-  requestId: number;
+  requestId: number | null;
   machineId: number;
-  requestReportNumber: string;
+  requestReportNumber: string | null;
+  requestDate?: string | null;
+  priority?: string | null;
+  maintenanceType?: string | null;
   rowNumber: number;
   preliminaryCheckResults: string | null;
   expectedWorkTimeFrom: string | null;
   expectedWorkTimeTo: string | null;
+  repairTimeSlots: Array<{ date: string; from: string; to: string }>;
   technicianName: string | null;
+  sparePartsUsed: string | null;
   maintenanceTechnicianSignature: string | null;
   concernedSectionSupervisorSignature: string | null;
   actionsTaken: string | null;
@@ -69,6 +74,49 @@ export type MaintenanceRequestDetail = {
     notes: string | null;
     createdAt: string;
   }>;
+};
+
+export type ExternalMaintenanceRequest = {
+  id: number;
+  maintenanceRequestId: number;
+  externalRequestNumber: string;
+  requestDate: string;
+  departmentSection: string | null;
+  requiredMaintenance: string | null;
+  preliminaryFindings: string | null;
+  technicianSuggestions: string | null;
+  maintenanceTechnicianSignature: string | null;
+  maintenanceTechnicianDate: string | null;
+  departmentManagerSignature: string | null;
+  departmentManagerDate: string | null;
+  generalManagerSignature: string | null;
+  generalManagerDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ExternalMaintenanceRequestDetail = {
+  request: MaintenanceRequestSummary;
+  externalRequest: ExternalMaintenanceRequest;
+};
+
+export type ExternalMaintenanceReceipt = {
+  id: number;
+  externalMaintenanceRequestId: number;
+  maintenanceType: string;
+  requestingDepartment: string | null;
+  receiptDate: string | null;
+  performingEntity: string | null;
+  workAcceptanceReport: string | null;
+  workFailureCause: string | null;
+  examinerName: string | null;
+  examinerSignature: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ExternalMaintenanceReceiptDetail = ExternalMaintenanceRequestDetail & {
+  receipt: ExternalMaintenanceReceipt;
 };
 
 export type CorrectiveMaintenanceRecord = {

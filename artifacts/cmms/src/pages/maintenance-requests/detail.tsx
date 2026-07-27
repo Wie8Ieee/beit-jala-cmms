@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Check, Play, Save, X } from "lucide-react";
-import type { MaintenanceRequestDetail, PerformingStaff } from "./types";
+import type { ExternalMaintenanceRequestDetail, MaintenanceRequestDetail, PerformingStaff } from "./types";
 import { OfficialFormHeader } from "@/components/official-form-header";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
@@ -24,6 +24,7 @@ type TechnicianOption = {
 export default function MaintenanceRequestDetailPage({ params }: { params: { id: string } }) {
   const requestId = Number(params.id);
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const { user, hasPermission } = useAuth();
   const [qaNotes, setQaNotes] = useState("");
   const [qaSignature, setQaSignature] = useState("");
@@ -159,15 +160,25 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
     onSuccess: refresh,
   });
 
+  const convertToExternalMaintenance = useMutation({
+    mutationFn: () => apiRequest<ExternalMaintenanceRequestDetail>(`/maintenance-requests/${requestId}/external-maintenance`, { method: "POST" }),
+    onSuccess: () => {
+      refresh();
+      setLocation(`/maintenance-requests/${requestId}/external-maintenance`);
+    },
+  });
+
   if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading request...</div>;
 
   const request = data.request;
   const isAssignedTechnician = data.assignedTechnicianUserId === user?.id;
+  const canManageCorrectiveWork = hasPermission("fill_corrective_maintenance") && (isAssignedTechnician || user?.roleName === "Admin");
   const canQaReview = hasPermission("review_qa_requests") && request.status === "Pending QA Approval";
   const canEngineeringReview = hasPermission("review_engineering_requests") && request.status === "QA Approved";
-  const canStartWork = hasPermission("fill_corrective_maintenance") && isAssignedTechnician && request.status === "Accepted";
-  const canTechnicianWork = hasPermission("fill_corrective_maintenance") && isAssignedTechnician && (request.status === "Accepted" || request.status === "In Progress");
-  const canHandover = hasPermission("fill_corrective_maintenance") && isAssignedTechnician && (request.status === "In Progress" || request.status === "Completed");
+  const canStartWork = canManageCorrectiveWork && request.status === "Accepted";
+  const canTechnicianWork = canManageCorrectiveWork && (request.status === "Accepted" || request.status === "In Progress");
+  const canHandover = canManageCorrectiveWork && (request.status === "In Progress" || request.status === "Completed");
+  const canConvertToExternal = hasPermission("manage_maintenance_requests") && !["Closed", "Rejected", "QA Rejected", "External Maintenance"].includes(request.status);
 
   function submitPreliminary(event: FormEvent) {
     event.preventDefault();
@@ -200,6 +211,11 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
         <Button asChild variant="outline">
           <Link href={`/print/maintenance-request/${requestId}`}>Official Print</Link>
         </Button>
+        {request.status === "External Maintenance" ? (
+          <Button asChild variant="outline"><Link href={`/maintenance-requests/${requestId}/external-maintenance`}>External Maintenance Request</Link></Button>
+        ) : canConvertToExternal ? (
+          <Button variant="outline" onClick={() => convertToExternalMaintenance.mutate()} disabled={convertToExternalMaintenance.isPending}>Convert to External Maintenance</Button>
+        ) : null}
       </div>
 
       <div className="rounded-md border bg-white p-6 text-black shadow-sm print:border-none print:p-0 print:shadow-none">
@@ -229,9 +245,9 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
           <div><Label>Date</Label><Input value={request.requestDate} readOnly /></div>
           <div className="md:col-span-2"><Label>Failure description</Label><Textarea value={request.failureDescription} readOnly /></div>
           <div><Label>Person reporting failure</Label><Input value={data.reportingPersonName ?? ""} readOnly /></div>
-          <div><Label>Person reporting failure signature placeholder</Label><Input value={data.reportingPersonSignature ?? ""} readOnly /></div>
+          <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="reporting_person" label="Person Reporting Failure Electronic Signature" />
           <div><Label>Department supervisor</Label><Input value={data.departmentSupervisorName ?? ""} readOnly /></div>
-          <div><Label>Department supervisor signature placeholder</Label><Input value={data.departmentSupervisorSignature ?? ""} readOnly /></div>
+          <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="department_supervisor" label="Department Supervisor Electronic Signature" />
           <div><Label>QA decision</Label><Input value={data.qaDecision ?? ""} readOnly /></div>
           <div><Label>QA review date</Label><Input value={data.qaReviewDate ?? ""} readOnly /></div>
           <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="qa_supervisor_approval" label="QA Supervisor Electronic Signature" />

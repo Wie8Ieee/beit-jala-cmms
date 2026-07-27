@@ -10,9 +10,15 @@ import type { PerformingStaffInput } from './performingStaffInput';
 export interface CorrectiveMaintenanceEvent {
   id: number;
   recordId: number;
-  requestId: number;
+  /** @nullable */
+  requestId?: number | null;
   machineId: number;
-  requestReportNumber: string;
+  /** @nullable */
+  requestReportNumber?: string | null;
+  /** @nullable */
+  requestDate?: string | null;
+  /** @nullable */
+  priority?: string | null;
   rowNumber: number;
   /** @nullable */
   preliminaryCheckResults?: string | null;

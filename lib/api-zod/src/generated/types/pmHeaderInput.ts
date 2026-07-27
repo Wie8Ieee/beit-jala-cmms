@@ -17,4 +17,9 @@ export interface PmHeaderInput {
      * @maximum 10
      */
   columnsPerRecord?: number;
+  /**
+     * @minimum 1
+     * @maximum 10
+     */
+  inspectionColumnsPerPrintPage?: number;
 }

@@ -17,8 +17,10 @@ async function getUserWithPermissions(userId: number) {
     .select({
       id: usersTable.id,
       username: usersTable.username,
+      employeeNumber: usersTable.employeeNumber,
       fullName: usersTable.fullName,
       email: usersTable.email,
+      signatureData: usersTable.signatureData,
       roleId: usersTable.roleId,
       roleName: rolesTable.name,
       departmentId: usersTable.departmentId,
@@ -61,6 +63,7 @@ router.get("/", requireActiveAuth, requirePermission("manage_users"), async (req
       .select({
         id: usersTable.id,
         username: usersTable.username,
+        employeeNumber: usersTable.employeeNumber,
         fullName: usersTable.fullName,
         email: usersTable.email,
         roleId: usersTable.roleId,
@@ -110,7 +113,7 @@ router.get("/", requireActiveAuth, requirePermission("manage_users"), async (req
 // POST /api/users
 router.post("/", requireActiveAuth, requirePermission("manage_users"), async (req, res, next) => {
   try {
-    const { username, password, fullName, email, roleId, departmentId } =
+    const { username, password, fullName, email, roleId, departmentId, employeeNumber } =
       req.body as {
         username?: string;
         password?: string;
@@ -118,6 +121,7 @@ router.post("/", requireActiveAuth, requirePermission("manage_users"), async (re
         email?: string;
         roleId?: number;
         departmentId?: number | null;
+        employeeNumber?: string;
       };
 
     if (!username || !password || !roleId) {
@@ -132,6 +136,7 @@ router.post("/", requireActiveAuth, requirePermission("manage_users"), async (re
         .insert(usersTable)
         .values({
           username,
+          employeeNumber: employeeNumber?.trim() || null,
           passwordHash,
           fullName: fullName ?? null,
           email: email ?? null,
@@ -180,12 +185,13 @@ router.put("/:id", requireActiveAuth, requirePermission("manage_users"), async (
       return;
     }
 
-    const { fullName, email, roleId, departmentId, password } = req.body as {
+    const { fullName, email, roleId, departmentId, password, employeeNumber } = req.body as {
       fullName?: string;
       email?: string;
       roleId?: number;
       departmentId?: number | null;
       password?: string;
+      employeeNumber?: string;
     };
 
     const updateData: Partial<{
@@ -194,6 +200,7 @@ router.put("/:id", requireActiveAuth, requirePermission("manage_users"), async (
       roleId: number;
       departmentId: number | null;
       passwordHash: string;
+      employeeNumber: string | null;
       updatedAt: Date;
     }> = { updatedAt: new Date() };
 
@@ -202,6 +209,7 @@ router.put("/:id", requireActiveAuth, requirePermission("manage_users"), async (
     if (roleId !== undefined) updateData.roleId = roleId;
     if (departmentId !== undefined) updateData.departmentId = departmentId;
     if (password) updateData.passwordHash = await hashPassword(password);
+    if (employeeNumber !== undefined) updateData.employeeNumber = employeeNumber.trim() || null;
 
     const [updated] = await db
       .update(usersTable)

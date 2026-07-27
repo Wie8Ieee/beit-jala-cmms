@@ -294,14 +294,18 @@ async function seed() {
     "view_maintenance_plans", "edit_maintenance_plans", "engineering_review_requests",
     "review_engineering_requests", "assign_technician", "view_corrective_maintenance",
     "manage_maintenance_requests", "manage_spare_parts", "view_spare_parts", "record_spare_part_usage",
-    "adjust_spare_parts", "print_forms", "sign_assigned_fields", "edit_header",
+    "adjust_spare_parts", "print_forms", "sign_assigned_fields",
   ]));
   await setUserPermissions(users.technician.id, ids([
     "view_dashboard", "view_machines", "view_equipment_information", "fill_pm_record", "view_pm_records",
-    "fill_corrective_maintenance", "view_corrective_maintenance", "sign_assigned_fields",
+    "fill_corrective_maintenance", "view_corrective_maintenance", "print_forms", "sign_assigned_fields",
   ]));
   await setUserPermissions(users.employee.id, ids(["view_dashboard", "submit_maintenance_request", "view_own_requests", "sign_assigned_fields"]));
-  await setUserPermissions(users.qa.id, ids(["view_dashboard", "qa_review_requests", "review_qa_requests", "sign_assigned_fields"]));
+  await setUserPermissions(users.qa.id, ids([
+    "view_dashboard", "view_machines", "view_equipment_information", "view_pm_records",
+    "view_maintenance_plans", "view_corrective_maintenance", "print_forms",
+    "qa_review_requests", "review_qa_requests", "edit_header", "sign_assigned_fields",
+  ]));
   for (const manager of [users.engineeringManager, users.productionManager, users.qcManager, users.rdManager, users.qaManager]) {
     await setUserPermissions(manager.id, ids(["view_dashboard", "view_maintenance_plans", "sign_assigned_fields"]));
   }

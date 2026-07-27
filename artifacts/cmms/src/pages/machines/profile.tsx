@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { 
   useGetMachine, 
   getGetMachineQueryKey 
@@ -10,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Edit, FileText, Settings2, Wrench, History, Loader2, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiRequest } from "@/lib/api";
 
 export default function MachineProfile({ params }: { params: { id: string } }) {
   const machineId = parseInt(params.id, 10);
@@ -20,6 +22,11 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
       enabled: !!machineId,
       queryKey: getGetMachineQueryKey(machineId)
     }
+  });
+  const { data: nextPm } = useQuery({
+    queryKey: ["machine-next-pm", machineId],
+    queryFn: () => apiRequest<{ nextPmDate: string | null; source: "monthly" | "annual" | null }>(`/machines/${machineId}/next-pm`),
+    enabled: !!machineId,
   });
 
   if (isLoading) {
@@ -71,6 +78,20 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
     }
   };
 
+  const nextPmDisplay = (() => {
+    if (!nextPm?.nextPmDate) return null;
+    const target = new Date(`${nextPm.nextPmDate}T00:00:00`);
+    const today = new Date();
+    const sameMonth = target.getFullYear() === today.getFullYear() && target.getMonth() === today.getMonth();
+    const monthStart = new Date(target.getFullYear(), target.getMonth(), 1);
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const days = Math.max(0, Math.ceil((monthStart.getTime() - todayStart.getTime()) / 86_400_000));
+    return {
+      date: target.toLocaleDateString(),
+      status: sameMonth ? "Due" : `${days} days until month start`,
+    };
+  })();
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
       <div className="flex items-center gap-4">
@@ -114,12 +135,6 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
                   <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground mb-1">PM Frequency</h3>
                   <p className="font-medium text-lg">{machine.pmFrequencyMonths ? `Every ${machine.pmFrequencyMonths} Months` : "Not scheduled"}</p>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground mb-1">PM Start Date</h3>
-                  <p className="font-medium text-lg">
-                    {machine.pmStartDate ? new Date(machine.pmStartDate).toLocaleDateString() : "—"}
-                  </p>
-                </div>
               </div>
             </div>
             
@@ -127,16 +142,12 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
                <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground mb-4">Quick Stats</h3>
                <div className="space-y-4">
                  <div className="flex justify-between items-center border-b pb-2">
-                   <span className="text-muted-foreground">Uptime</span>
-                   <span className="font-mono font-medium">98.2%</span>
-                 </div>
-                 <div className="flex justify-between items-center border-b pb-2">
                    <span className="text-muted-foreground">Open WOs</span>
                    <span className="font-mono font-medium text-amber-600">0</span>
                  </div>
                  <div className="flex justify-between items-center">
                    <span className="text-muted-foreground">Next PM</span>
-                   <span className="font-mono font-medium text-primary">In 14 days</span>
+                   {nextPmDisplay ? <span className="text-right"><span className="block font-mono text-lg font-bold text-primary">{nextPmDisplay.date}</span><span className={`text-sm font-medium ${nextPmDisplay.status === "Due" ? "text-amber-600" : "text-muted-foreground"}`}>{nextPmDisplay.status}</span></span> : <span className="font-mono font-medium text-muted-foreground">Not scheduled</span>}
                  </div>
                </div>
             </div>

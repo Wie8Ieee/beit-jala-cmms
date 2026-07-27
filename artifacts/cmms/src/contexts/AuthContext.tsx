@@ -12,6 +12,16 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// During Vite Fast Refresh, a route can briefly render while this provider is
+// being replaced. Treat that transition as an unauthenticated loading state
+// instead of throwing a runtime error or rendering protected content.
+const loadingAuthContext: AuthContextType = {
+  user: null,
+  isLoading: true,
+  hasPermission: () => false,
+  logout: () => undefined,
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [, setLocation] = useLocation();
   const { data: user, isLoading, isError, error } = useGetMe({
@@ -31,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasPermission = (permission: string) => {
     if (!user) return false;
-    return user.permissions.includes(permission);
+    return user.roleName === "Admin" || user.permissions.includes(permission);
   };
 
   const logout = () => {
@@ -51,8 +61,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  return context ?? loadingAuthContext;
 }

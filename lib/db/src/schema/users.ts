@@ -32,6 +32,7 @@ export const departmentsTable = pgTable("departments", {
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
+  employeeNumber: text("employee_number").unique(),
   passwordHash: text("password_hash").notNull(),
   fullName: text("full_name"),
   email: text("email"),
@@ -39,6 +40,7 @@ export const usersTable = pgTable("users", {
     .notNull()
     .references(() => rolesTable.id),
   departmentId: integer("department_id").references(() => departmentsTable.id),
+  signatureData: text("signature_data"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

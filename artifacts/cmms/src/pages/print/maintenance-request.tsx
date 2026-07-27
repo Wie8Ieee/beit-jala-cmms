@@ -3,99 +3,50 @@ import { apiRequest } from "@/lib/api";
 import type { MaintenanceRequestDetail } from "../maintenance-requests/types";
 import { DottedLine, PrintLayout, PrintPage } from "./print-layout";
 
+type DrawnSignature = { fieldName: string; signatureData: string | null; userName: string };
+
+function formatDate(value?: string | null) {
+  if (!value) return "";
+  const [year, month, day] = value.slice(0, 10).split("-");
+  return year && month && day ? `${day}/${month}/${year}` : value;
+}
+
+function SignatureLine({ label, signature, fallback }: { label: string; signature?: DrawnSignature; fallback?: string | null }) {
+  return <span className="official-print-mr-signature-line">{label}: {signature?.signatureData ? <img src={signature.signatureData} className="official-print-form-signature" alt={label} /> : <DottedLine text={fallback} />}</span>;
+}
+
 export default function MaintenanceRequestPrintPage({ params }: { params: { id: string } }) {
   const requestId = Number(params.id);
-  const { data } = useQuery({
-    queryKey: ["print-maintenance-request", requestId],
-    queryFn: () => apiRequest<MaintenanceRequestDetail>(`/maintenance-requests/${requestId}`),
-  });
+  const { data } = useQuery({ queryKey: ["print-maintenance-request", requestId], queryFn: () => apiRequest<MaintenanceRequestDetail>(`/maintenance-requests/${requestId}`) });
+  const { data: requestSignatures = [] } = useQuery({ queryKey: ["print-maintenance-request-signatures", requestId], queryFn: () => apiRequest<DrawnSignature[]>(`/signatures?documentType=MAINTENANCE_REQUEST&documentId=${requestId}`) });
+  const { data: correctiveSignatures = [] } = useQuery({ queryKey: ["print-corrective-request-signatures", requestId], queryFn: () => apiRequest<DrawnSignature[]>(`/signatures?documentType=CORRECTIVE_MAINTENANCE&documentId=${requestId}`) });
 
   const request = data?.request;
   const event = data?.correctiveEvent;
+  const priority = request?.priority?.toLowerCase();
+  const signature = (field: string, type: "request" | "corrective" = "request") => (type === "request" ? requestSignatures : correctiveSignatures).find((item) => item.fieldName === field);
+  const staff = Array.from({ length: 4 }, (_, index) => event?.performingStaff[index]);
 
-  return (
-    <PrintLayout title="Maintenance Request - Official Print">
-      <PrintPage>
-        <table className="official-print-table official-print-header-table">
-          <tbody>
-            <tr>
-              <td className="text-center">FORM-10-0975-1<br />Effective date: 18/3/2023<br />Page 1 of 1</td>
-              <td className="text-center font-semibold">طلب صيانة / تقرير صيانة علاجية<br />(Maintenance Request & Corrective Maintenance Report)</td>
-              <td className="text-center">شركة بيت جالا لصناعة الادوية<br />بيت جالا<br />فلسطين</td>
-            </tr>
-          </tbody>
-        </table>
+  return <PrintLayout title="Maintenance Request - Official Print"><PrintPage><div dir="rtl" className="official-print-maintenance-request"><div className="official-print-maintenance-request-content">
+    <table dir="ltr" className="official-print-table official-print-maintenance-request-header"><tbody><tr>
+      <td dir="rtl" className="w-[34%] text-center font-bold">رقم الطريقة: <bdi dir="ltr">FORM-10-0975-1</bdi><hr />تاريخ التنفيذ: <bdi dir="ltr">18/3/2023</bdi><hr />صفحة 1 من 1</td>
+      <td dir="rtl" className="w-[40%] text-center font-bold">طلب / تقرير صيانة علاجية<br /><span dir="ltr">(Maintenance Request &amp; Corrective<br />Maintenance Report)</span></td>
+      <td dir="rtl" className="w-[26%] text-center font-bold">شركة بيت جالا لصناعة الأدوية<br />بيت جالا<br />فلسطين</td>
+    </tr></tbody></table>
 
-        <table className="official-print-table mt-4">
-          <tbody>
-            <tr>
-              <td>رقم الطلب / التقرير: <DottedLine text={request?.requestReportNumber} /></td>
-              <td>التاريخ: <DottedLine text={request?.requestDate} /></td>
-            </tr>
-            <tr>
-              <td>اسم الالة / رقمها: <DottedLine text={request ? `${request.machineName} / ${request.machineNumber}` : ""} /></td>
-              <td>الدائرة / القسم: <DottedLine text={request?.departmentSection} /></td>
-            </tr>
-            <tr>
-              <td>الاولوية: <DottedLine text={request?.priority} /></td>
-              <td>توقيع مقدم الطلب: <DottedLine text={data?.reportingPersonSignature} /></td>
-            </tr>
-            <tr>
-              <td>توقيع مسؤول القسم: <DottedLine text={data?.departmentSupervisorSignature} /></td>
-              <td>توقيع مشرف QA: <DottedLine text={data?.qaSupervisorSignature} /></td>
-            </tr>
-            <tr className="official-print-row-xl">
-              <td colSpan={2}><strong>وصف العطل:</strong><br />{request?.failureDescription}</td>
-            </tr>
-          </tbody>
-        </table>
+    <div className="official-print-maintenance-request-number">طلب / تقرير صيانة رقم: <DottedLine text={request?.requestReportNumber} /></div>
+    <section className="official-print-mr-box">
+      <div className="official-print-mr-fields-row official-print-mr-first-row"><span>الدائرة / القسم: <DottedLine text={request?.departmentSection} /></span><span className="official-print-priority">{priority === "urgent" ? "☑" : "☐"} مستعجل &nbsp;&nbsp; {priority === "normal" ? "☑" : "☐"} عادي</span></div>
+      <div className="official-print-mr-fields-row official-print-mr-machine-row"><span>اسم الآلة (المعدة) ورقمها: <DottedLine text={request ? `${request.machineName} / ${request.machineNumber}` : ""} /></span><span>التاريخ: <DottedLine text={formatDate(request?.requestDate)} /></span></div>
+      <div className="official-print-mr-text-area"><strong>وصف العطل:</strong><div className="official-print-mr-failure-lines">{request?.failureDescription}</div></div>
+      <div className="official-print-mr-signature-row"><SignatureLine label="توقيع مقدم الطلب" signature={signature("reporting_person")} fallback={data?.reportingPersonSignature} /><SignatureLine label="توقيع مشرف القسم" signature={signature("department_supervisor")} fallback={data?.departmentSupervisorSignature} /><SignatureLine label="توقيع مشرف QA" signature={signature("qa_supervisor_approval")} fallback={data?.qaSupervisorSignature} /></div>
+    </section>
 
-        <div className="official-print-section-title">نتائج الفحص الاولي / Preliminary Findings</div>
-        <table className="official-print-table">
-          <tbody>
-            <tr className="official-print-row-xl"><td colSpan={2}>{event?.preliminaryCheckResults}</td></tr>
-            <tr>
-              <td>وقت العمل المتوقع من: <DottedLine text={event?.expectedWorkTimeFrom || data?.expectedWorkTimeFrom} /></td>
-              <td>الى: <DottedLine text={event?.expectedWorkTimeTo || data?.expectedWorkTimeTo} /></td>
-            </tr>
-            <tr>
-              <td>توقيع فني الصيانة: <DottedLine text={event?.maintenanceTechnicianSignature} /></td>
-              <td>توقيع مسؤول القسم المعني: <DottedLine text={event?.concernedSectionSupervisorSignature} /></td>
-            </tr>
-          </tbody>
-        </table>
+    <section className="official-print-mr-section"><h3>نتائج الكشف الأولي (خاص بالصيانة)</h3><div className="official-print-mr-ruled-area official-print-mr-findings">{event?.preliminaryCheckResults}</div><div className="official-print-mr-worktime"><span>وقت بدء العمل المتوقع: من <DottedLine text={event?.expectedWorkTimeFrom || data?.expectedWorkTimeFrom} /> إلى: <DottedLine text={event?.expectedWorkTimeTo || data?.expectedWorkTimeTo} /></span></div><div className="official-print-mr-signature-row official-print-mr-technician-signatures"><SignatureLine label="توقيع فني الصيانة" signature={signature("maintenance_technician", "corrective")} fallback={event?.maintenanceTechnicianSignature} /><SignatureLine label="توقيع مشرف القسم المعني" signature={signature("concerned_section_supervisor", "corrective")} fallback={event?.concernedSectionSupervisorSignature} /></div></section>
 
-        <div className="official-print-section-title">الاجراءات المتخذة / Actions Taken</div>
-        <table className="official-print-table">
-          <tbody>
-            <tr className="official-print-row-xl"><td>{event?.actionsTaken}</td></tr>
-            <tr className="official-print-row-tall"><td>ملاحظات وتوصيات: {event?.remarksRecommendations}</td></tr>
-          </tbody>
-        </table>
+    <section className="official-print-mr-section"><h3>الإجراءات المتخذة</h3><div className="official-print-mr-ruled-area official-print-mr-actions">{event?.actionsTaken}</div><div className="official-print-mr-remarks">ملاحظات وتوصيات: {event?.remarksRecommendations}</div></section>
 
-        <table className="official-print-table mt-2">
-          <thead><tr><th className="w-[12%]">الرقم</th><th>القائم بالعمل</th><th>التوقيع</th></tr></thead>
-          <tbody>
-            {Array.from({ length: 4 }).map((_, index) => {
-              const staff = event?.performingStaff[index];
-              return <tr key={index}><td>{staff?.no || index + 1}</td><td>{staff?.name}</td><td>{staff?.signature}</td></tr>;
-            })}
-          </tbody>
-        </table>
-
-        <table className="official-print-table mt-2">
-          <tbody>
-            <tr><td>اسم المستلم / القسم: <DottedLine text={event?.receiverName} /></td></tr>
-            <tr>
-              <td>
-                توقيع مستلم الالة / القسم: <DottedLine text={event?.receiverSignature} />
-                &nbsp;&nbsp; التاريخ: <DottedLine text={event?.handoverDate} />
-              </td>
-            </tr>
-            <tr><td>توقيع الهندسة: <DottedLine text={event?.engineeringSignature} /></td></tr>
-          </tbody>
-        </table>
-      </PrintPage>
-    </PrintLayout>
-  );
+    <table className="official-print-table official-print-mr-staff-table"><thead><tr><th className="w-[8%]">الرقم</th><th>القائم بالعمل</th><th>التوقيع</th></tr></thead><tbody>{staff.map((person, index) => <tr key={index}><td>{person?.no || index + 1}</td><td>{person?.name}</td><td>{person?.signature}</td></tr>)}</tbody></table>
+    <section className="official-print-mr-closing"><h3>تسليم الماكينة / العمل المنجز</h3><div>اسم المستلم / القسم: <DottedLine text={event?.receiverName} /></div><div><SignatureLine label="توقيع مستلم الماكينة/ العمل المنجز" signature={signature("receiver", "corrective")} fallback={event?.receiverSignature} /><span>التاريخ: <DottedLine text={formatDate(event?.handoverDate)} /></span></div><div><SignatureLine label="توقيع الهندسة" signature={signature("engineering_final", "corrective")} fallback={event?.engineeringSignature} /><span>التاريخ: <DottedLine text={formatDate(event?.handoverDate)} /></span></div></section>
+  </div></div></PrintPage></PrintLayout>;
 }

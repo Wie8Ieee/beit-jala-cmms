@@ -13,7 +13,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { getErrorMessage } from "@/lib/error-message";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,10 +28,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Save, FileText, Loader2, AlertCircle, ScanLine } from "lucide-react";
+import { ArrowLeft, Save, FileText, Loader2, AlertCircle, ScanLine, Settings2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OfficialFormHeader } from "@/components/official-form-header";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
+
+type EquipmentHeader = { companyName: string; documentName: string; documentNumber: string; effectiveOrExecutionDate: string | null; pageNumber: number; totalPages: number };
 
 const equipmentInfoSchema = z.object({
   nameOfEquipment: z.string().optional(),
@@ -56,7 +59,9 @@ const equipmentInfoSchema = z.object({
   utilitiesOther: z.string().optional(),
   
   others: z.string().optional(),
+  othersDetails: z.string().optional(),
   safetyIssues: z.string().optional(),
+  safetyIssuesDetails: z.string().optional(),
   
   preparedByName: z.string().optional(),
   preparedByDate: z.string().optional(),
@@ -73,7 +78,9 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
   const queryClient = useQueryClient();
 
   const canEdit = hasPermission("edit_equipment_information");
+  const canEditHeader = hasPermission("edit_header");
   const [isScanning, setIsScanning] = useState(false);
+  const [headerForm, setHeaderForm] = useState<EquipmentHeader | null>(null);
 
   const handleScanImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -149,6 +156,13 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
   const { data: equipInfo, isLoading: isLoadingInfo } = useGetEquipmentInformation(machineId, {
     query: { enabled: !!machineId, queryKey: getGetEquipmentInformationQueryKey(machineId) }
   });
+  const { data: equipmentHeader } = useQuery({ queryKey: ["equipment-header", machineId], queryFn: () => apiRequest<EquipmentHeader>(`/machines/${machineId}/equipment-information/header`) });
+  useEffect(() => { if (equipmentHeader) setHeaderForm(equipmentHeader); }, [equipmentHeader]);
+  const saveHeader = useMutation({
+    mutationFn: () => apiRequest<EquipmentHeader>(`/machines/${machineId}/equipment-information/header`, { method: "PUT", body: JSON.stringify(headerForm) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["equipment-header", machineId] }); toast({ title: "Header Saved" }); },
+    onError: (error) => toast({ variant: "destructive", title: "Header save failed", description: getErrorMessage(error, "Could not save header.") }),
+  });
 
   const upsertMutation = useUpsertEquipmentInformation();
 
@@ -183,7 +197,9 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
         utilitiesOther: equipInfo.utilitiesOther || "",
         
         others: equipInfo.others || "",
+        othersDetails: equipInfo.othersDetails || "",
         safetyIssues: equipInfo.safetyIssues || "",
+        safetyIssuesDetails: equipInfo.safetyIssuesDetails || "",
         
         preparedByName: equipInfo.preparedByName || "",
         preparedByDate: equipInfo.preparedByDate ? equipInfo.preparedByDate.split('T')[0] : "",
@@ -318,10 +334,23 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
       {/* The Form Paper Container */}
       <div className="bg-white dark:bg-card border shadow-xl rounded-sm p-8 md:p-12 print:shadow-none print:border-none print:p-0">
         <OfficialFormHeader
-          documentName="Equipment Information Record"
-          documentNumber="FORM-10-0118"
-          effectiveOrExecutionDate={form.watch("preparedByDate") || null}
+          documentName={equipmentHeader?.documentName ?? "Equipment Information Record"}
+          documentNumber={equipmentHeader?.documentNumber ?? "FORM-10-0118"}
+          effectiveOrExecutionDate={(equipmentHeader?.effectiveOrExecutionDate ?? form.watch("preparedByDate")) || null}
+          page={`Page ${equipmentHeader?.pageNumber ?? 1} of ${equipmentHeader?.totalPages ?? 1}`}
         />
+
+        {canEditHeader && headerForm && (
+          <div className="mb-8 rounded-md border bg-muted/30 p-4 print:hidden">
+            <div className="mb-3 flex items-center gap-2 font-semibold"><Settings2 className="h-4 w-4" /> Edit Header</div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <Input value={headerForm.documentNumber} onChange={(e) => setHeaderForm({ ...headerForm, documentNumber: e.target.value })} placeholder="Document number" />
+              <Input type="date" value={headerForm.effectiveOrExecutionDate ?? ""} onChange={(e) => setHeaderForm({ ...headerForm, effectiveOrExecutionDate: e.target.value || null })} />
+              <Input value={`Page ${headerForm.pageNumber} of ${headerForm.totalPages}`} readOnly />
+            </div>
+            <Button type="button" size="sm" className="mt-3" onClick={() => saveHeader.mutate()} disabled={saveHeader.isPending}><Save className="mr-2 h-4 w-4" />{saveHeader.isPending ? "Saving..." : "Save Header"}</Button>
+          </div>
+        )}
 
         <h3 className="text-xl font-bold text-center uppercase tracking-wider mb-10 text-black dark:text-white underline underline-offset-4">
           Equipment Information Record
@@ -471,18 +500,34 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
             <section>
               <h4 className="font-bold uppercase tracking-wider mb-4 border-b border-muted-foreground pb-1 text-sm text-primary">6. Safety & Additional Notes</h4>
               <div className="space-y-6">
-                <FormField control={form.control} name="safetyIssues" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-semibold">Safety Issues / Warnings</FormLabel>
-                    <FormControl><Textarea {...field} readOnly={!canEdit} className="bg-transparent border border-black/20 dark:border-white/20 rounded min-h-[80px] focus-visible:ring-1 focus-visible:border-primary font-mono text-sm resize-none" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="others" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-semibold">Other Relevant Information</FormLabel>
-                    <FormControl><Textarea {...field} readOnly={!canEdit} className="bg-transparent border border-black/20 dark:border-white/20 rounded min-h-[80px] focus-visible:ring-1 focus-visible:border-primary font-mono text-sm resize-none" /></FormControl>
-                  </FormItem>
-                )} />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField control={form.control} name="safetyIssues" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-semibold">Safety Issues / Warnings (Left Column)</FormLabel>
+                      <FormControl><Textarea {...field} readOnly={!canEdit} placeholder="One issue per line" className="bg-transparent border border-black/20 dark:border-white/20 rounded min-h-[120px] focus-visible:ring-1 focus-visible:border-primary font-mono text-sm resize-none" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="safetyIssuesDetails" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-semibold">Related Information (Right Column)</FormLabel>
+                      <FormControl><Textarea {...field} readOnly={!canEdit} placeholder="Matching detail for each issue on the left" className="bg-transparent border border-black/20 dark:border-white/20 rounded min-h-[120px] focus-visible:ring-1 focus-visible:border-primary font-mono text-sm resize-none" /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField control={form.control} name="others" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-semibold">Other Relevant Information (Left Column)</FormLabel>
+                      <FormControl><Textarea {...field} readOnly={!canEdit} placeholder="One item per line" className="bg-transparent border border-black/20 dark:border-white/20 rounded min-h-[120px] focus-visible:ring-1 focus-visible:border-primary font-mono text-sm resize-none" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="othersDetails" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="font-semibold">Related Information (Right Column)</FormLabel>
+                      <FormControl><Textarea {...field} readOnly={!canEdit} placeholder="Matching detail for each line on the left" className="bg-transparent border border-black/20 dark:border-white/20 rounded min-h-[120px] focus-visible:ring-1 focus-visible:border-primary font-mono text-sm resize-none" /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
               </div>
             </section>
 

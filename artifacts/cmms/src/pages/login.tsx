@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLogin } from "@workspace/api-client-react";
-import { TestTube, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -62,27 +62,24 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff11_1px,transparent_1px),linear-gradient(to_bottom,#ffffff11_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
         
         <div className="relative z-10 flex items-center gap-3">
-          <div className="flex aspect-square size-12 items-center justify-center rounded-xl bg-white text-primary shadow-lg">
-            <TestTube className="size-6" />
+          <div className="flex aspect-square size-12 items-center justify-center rounded-xl bg-white p-1.5 shadow-lg">
+            <img src="/beit-jala-logo.svg" alt="Beit Jala Pharmaceutical logo" className="h-full w-full object-contain" />
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Beit Jala</h1>
-            <p className="text-sm text-primary-foreground/80 font-medium tracking-widest uppercase">Pharmaceutical Co.</p>
+            <p className="text-sm font-medium tracking-widest uppercase text-primary-foreground/80">Pharmaceutical Co.</p>
           </div>
         </div>
 
-        <div className="relative z-10 max-w-md">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-12 text-center">
           <h2 className="text-4xl font-semibold mb-4 leading-tight">
             {t('login.cmmsTitle')}
           </h2>
-          <p className="text-lg text-primary-foreground/80">
+          <p className="max-w-md text-lg text-primary-foreground/80">
             {t('login.cmmsDesc')}
           </p>
         </div>
 
-        <div className="relative z-10 text-sm font-mono text-primary-foreground/60">
-          SYSTEM VERSION 1.0.0
-        </div>
       </div>
 
       {/* Right side - Login Form */}

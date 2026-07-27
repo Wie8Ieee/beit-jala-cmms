@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Save, Settings2 } from "lucide-react";
+import { ArrowLeft, Clock, Printer, Save, Settings2 } from "lucide-react";
 import { OfficialFormHeader } from "@/components/official-form-header";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
+
 
 type PmChecklistPoint = {
   id: number;
@@ -23,6 +25,7 @@ type PmChecklistPoint = {
 type PmInspection = {
   id: number;
   columnNumber: number;
+  executionMonthYear: string | null;
   inspectionDate: string;
   inspectionTime: string;
   actionTaken: string | null;
@@ -38,17 +41,21 @@ type PmRecordDetail = {
     effectiveDate: string | null;
     department: string | null;
     columnsPerRecord: number;
+    inspectionColumnsPerPrintPage: number;
   };
   checklistPoints: PmChecklistPoint[];
   inspections: PmInspection[];
   pageCount: number;
 };
 
-export default function PmRecordPage({ params }: { params: { id: string } }) {
+export default function PmRecordPage({ params }: { params: { id: string; recordId?: string } }) {
   const machineId = Number(params.id);
+  const historicalRecordId = params.recordId ? Number(params.recordId) : undefined;
+  const isHistorical = historicalRecordId !== undefined;
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const [results, setResults] = useState<Record<number, string>>({});
+  const [executionMonthYear, setExecutionMonthYear] = useState(() => new Date().toISOString().slice(0, 7));
   const [inspectionDate, setInspectionDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [inspectionTime, setInspectionTime] = useState(() => new Date().toTimeString().slice(0, 5));
   const [actionTaken, setActionTaken] = useState("");
@@ -56,8 +63,10 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
   const [receiverName, setReceiverName] = useState("");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["pm-current", machineId],
-    queryFn: () => apiRequest<PmRecordDetail>(`/machines/${machineId}/pm/current`),
+    queryKey: ["pm-record", machineId, historicalRecordId ?? "current"],
+    queryFn: () => apiRequest<PmRecordDetail>(
+      historicalRecordId ? `/machines/${machineId}/pm/history/${historicalRecordId}` : `/machines/${machineId}/pm/current`,
+    ),
   });
 
   const saveInspection = useMutation({
@@ -65,6 +74,7 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
       apiRequest<PmRecordDetail>(`/machines/${machineId}/pm/inspections`, {
         method: "POST",
         body: JSON.stringify({
+          executionMonthYear,
           inspectionDate,
           inspectionTime,
           actionTaken,
@@ -100,6 +110,10 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
     saveInspection.mutate();
   }
 
+  function useCurrentTime() {
+    setInspectionTime(new Date().toTimeString().slice(0, 5));
+  }
+
   if (isLoading) return <div className="p-8 text-muted-foreground">Loading PM record...</div>;
   if (error || !data) return <div className="p-8 text-destructive">Failed to load PM record.</div>;
 
@@ -114,10 +128,10 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">Preventive Maintenance Record</h1>
           <p className="text-muted-foreground">
-            Record #{data.record.sequenceNumber} · {data.record.inspectionCount}/{data.header.columnsPerRecord} inspection columns used
+            Record #{data.record.sequenceNumber} · {data.record.inspectionCount}/{data.header.inspectionColumnsPerPrintPage} inspections used
           </p>
         </div>
-        {hasPermission("manage_pm_checklist") && (
+        {!isHistorical && hasPermission("manage_pm_checklist") && (
           <Button asChild variant="outline">
             <Link href={`/machines/${machineId}/pm/checklist`}>
               <Settings2 className="mr-2 h-4 w-4" />
@@ -126,9 +140,28 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
           </Button>
         )}
         <Button asChild variant="outline">
-          <Link href={`/print/pm-record/${machineId}`}>Official Print</Link>
+          <Link href={`/machines/${machineId}/pm/history`}>Record History</Link>
         </Button>
+        {!isHistorical && <Button asChild variant="outline">
+          <Link href={`/print/pm-record/${machineId}`}>Official Print</Link>
+        </Button>}
+        {isHistorical && hasPermission("print_forms") && (
+          <Button asChild variant="outline">
+            <Link href={`/print/pm-record/${machineId}/history/${historicalRecordId}`}>
+              <Printer className="mr-2 h-4 w-4" />
+              Official Print
+            </Link>
+          </Button>
+        )}
       </div>
+
+      {isHistorical && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="p-4 text-sm text-amber-900">
+            This is a preserved historical record. Its inspections and results are read-only.
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -151,7 +184,11 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
             <Label>Page count</Label>
             <Input value={`Page 1 of ${data.pageCount}`} readOnly />
           </div>
-          {hasPermission("edit_header") && (
+          <div>
+            <Label>Inspection columns per print page</Label>
+            <Input value={String(data.header.inspectionColumnsPerPrintPage)} readOnly />
+          </div>
+          {!isHistorical && hasPermission("edit_header") && (
             <Button asChild variant="secondary" className="md:col-span-4 w-fit">
               <Link href={`/machines/${machineId}/pm/header`}>Edit Header</Link>
             </Button>
@@ -185,7 +222,7 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
                       <div className="text-xs font-normal text-muted-foreground">{inspection.inspectionDate}</div>
                     </TableHead>
                   ))}
-                  {hasPermission("fill_pm_record") && <TableHead className="min-w-48">New Inspection</TableHead>}
+                  {!isHistorical && hasPermission("fill_pm_record") && <TableHead className="min-w-48">New Inspection</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -196,13 +233,28 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
                     {data.inspections.map((inspection) => (
                       <TableCell key={inspection.id}>{resultMap.get(`${inspection.id}-${point.id}`) ?? ""}</TableCell>
                     ))}
-                    {hasPermission("fill_pm_record") && (
+                    {!isHistorical && hasPermission("fill_pm_record") && (
                       <TableCell>
-                        <Input
-                          value={results[point.id] ?? ""}
-                          placeholder={point.resultType === "yes_no" ? "Yes / No" : "Value"}
-                          onChange={(event) => setResults((current) => ({ ...current, [point.id]: event.target.value }))}
-                        />
+                        {point.resultType === "yes_no" ? (
+                          <Select
+                            value={results[point.id] ?? ""}
+                            onValueChange={(value) => setResults((current) => ({ ...current, [point.id]: value }))}
+                          >
+                            <SelectTrigger><SelectValue placeholder="Select result" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="نعم">نعم</SelectItem>
+                              <SelectItem value="لا">لا</SelectItem>
+                              <SelectItem value="yes">Yes</SelectItem>
+                              <SelectItem value="no">No</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            value={results[point.id] ?? ""}
+                            placeholder={point.resultType === "value" ? "Value" : "Result"}
+                            onChange={(event) => setResults((current) => ({ ...current, [point.id]: event.target.value }))}
+                          />
+                        )}
                       </TableCell>
                     )}
                   </TableRow>
@@ -213,7 +265,7 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
         </CardContent>
       </Card>
 
-      {hasPermission("fill_pm_record") && (
+      {!isHistorical && hasPermission("fill_pm_record") && (
         <form onSubmit={submit}>
           <Card>
             <CardHeader>
@@ -226,7 +278,17 @@ export default function PmRecordPage({ params }: { params: { id: string } }) {
               </div>
               <div>
                 <Label>Inspection time</Label>
-                <Input type="time" value={inspectionTime} onChange={(event) => setInspectionTime(event.target.value)} />
+                <div className="flex gap-2">
+                  <Input type="time" value={inspectionTime} onChange={(event) => setInspectionTime(event.target.value)} />
+                  <Button type="button" variant="outline" onClick={useCurrentTime} title="Use current time">
+                    <Clock className="mr-2 h-4 w-4" />
+                    Current time
+                  </Button>
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <Label>Scheduled execution month / year</Label>
+                <Input type="month" value={executionMonthYear} onChange={(event) => setExecutionMonthYear(event.target.value)} />
               </div>
               <div className="md:col-span-2">
                 <Label>Action taken in case of error/deviation</Label>

@@ -76,11 +76,6 @@ export default function DashboardPage() {
 
   // Colors for charts
   const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
-  const STATUS_COLORS = {
-    'Active': 'hsl(var(--chart-3))', // green-ish
-    'Maintenance': 'hsl(var(--chart-4))', // yellow-ish
-    'Inactive': 'hsl(var(--chart-2))' // gray-ish
-  };
 
   type MachineRef = { id: number; machineId: number; machineName: string; machineNumber: string };
   const pmStats = stats as typeof stats & {
@@ -120,6 +115,7 @@ export default function DashboardPage() {
       minimumQuantity: number;
       unit: string;
     }>;
+    completedCorrectiveThisMonth?: Array<{ id: number; requestReportNumber: string; machineId: number; machineName: string; machineNumber: string; completedDate: string }>;
   };
   const canViewSpareParts = !!user?.permissions.includes("view_spare_parts");
 
@@ -221,8 +217,8 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="col-span-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="md:col-span-2 lg:col-span-2 lg:order-5">
               <CardHeader>
                 <CardTitle>{t('dashboard.equipByDept')}</CardTitle>
                 <CardDescription>
@@ -262,57 +258,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="col-span-3">
-              <CardHeader>
-                <CardTitle>{t('dashboard.equipStatus')}</CardTitle>
-                <CardDescription>
-                  {t('dashboard.equipStatusDesc')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={stats.machinesByStatus}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="count"
-                        nameKey="label"
-                        label={({ label, percent }) => `${label} ${(percent * 100).toFixed(0)}%`}
-                        labelLine={false}
-                      >
-                        {stats.machinesByStatus.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={STATUS_COLORS[entry.label as keyof typeof STATUS_COLORS] || COLORS[index % COLORS.length]} 
-                          />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip 
-                         contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex justify-center gap-4 mt-2">
-                  {stats.machinesByStatus.map((status) => (
-                    <div key={status.label} className="flex items-center gap-2 text-sm">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: STATUS_COLORS[status.label as keyof typeof STATUS_COLORS] || COLORS[0] }} />
-                      <span className="text-muted-foreground">{status.label} ({status.count})</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {canViewSpareParts && isAdminOrSupervisor && (
-              <Card>
+              <Card className="lg:order-4">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Package className="h-4 w-4 text-primary" />
@@ -342,7 +289,7 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             )}
-            <Card>
+            <Card className="lg:order-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Activity className="h-4 w-4 text-primary" />
@@ -376,7 +323,20 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="lg:order-3">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  Corrective Maintenance Completed This Month
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {pmStats?.completedCorrectiveThisMonth?.length ? <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {pmStats.completedCorrectiveThisMonth.map((item) => <Link key={item.id} href={`/maintenance-requests/${item.id}`}><div className="rounded-md border p-3 hover:bg-muted/50"><div className="font-medium">{item.machineName}</div><div className="text-xs text-muted-foreground">{item.requestReportNumber} · {item.machineNumber} · {item.completedDate}</div></div></Link>)}
+                </div> : <p className="py-8 text-center text-sm text-muted-foreground">No corrective maintenance was completed this month.</p>}
+              </CardContent>
+            </Card>
+            <Card className="lg:order-3">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Clock className="h-4 w-4 text-amber-500" />
@@ -408,7 +368,7 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-            <Card>
+            <Card className="lg:order-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -444,6 +404,9 @@ export default function DashboardPage() {
                       <RechartsTooltip />
                     </PieChart>
                   </ResponsiveContainer>
+                </div>
+                <div className="mt-2 text-right text-sm text-muted-foreground">
+                  Total PM this month: <span className="font-semibold text-foreground">{(pmStats?.monthlyPmCompletion ?? []).reduce((total, item) => total + item.count, 0)}</span>
                 </div>
                 {selectedPmSegment && (
                   <div className="mt-2 rounded-md border bg-muted/30 p-3">

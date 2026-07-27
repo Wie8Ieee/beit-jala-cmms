@@ -6,8 +6,13 @@ import {
   machinesTable,
   departmentsTable,
   equipmentInformationTable,
+  formHeadersTable,
+  annualPmPlanRowsTable,
+  annualPmPlansTable,
+  monthlyPmPlanRowsTable,
+  monthlyPmPlansTable,
 } from "@workspace/db";
-import { eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { requireActiveAuth, requirePermission, parseIdParam } from "../lib/auth.js";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -97,6 +102,44 @@ router.get("/", requireActiveAuth, requirePermission("view_machines"), async (re
     }
 
     res.json(results.map(formatMachine));
+  } catch (err) { next(err); }
+});
+
+// The machine profile obtains its next PM directly from the approved planning
+// rows. Monthly plan dates take precedence over the annual plan schedule.
+router.get("/:id/next-pm", requireActiveAuth, requirePermission("view_machines"), async (req, res, next) => {
+  try {
+    const machineId = parseIdParam(req.params.id);
+    const today = new Date().toISOString().slice(0, 10);
+    const monthlyRows = await db
+      .select({ plannedDateFrom: monthlyPmPlanRowsTable.plannedDateFrom, plannedDateTo: monthlyPmPlanRowsTable.plannedDateTo })
+      .from(monthlyPmPlanRowsTable)
+      .innerJoin(monthlyPmPlansTable, eq(monthlyPmPlanRowsTable.planId, monthlyPmPlansTable.id))
+      .where(eq(monthlyPmPlanRowsTable.machineId, machineId));
+    const monthlyDate = monthlyRows
+      .flatMap((row) => [row.plannedDateFrom, row.plannedDateTo])
+      .filter((date): date is string => Boolean(date && date >= today))
+      .sort()[0];
+    if (monthlyDate) {
+      res.json({ nextPmDate: monthlyDate, source: "monthly" });
+      return;
+    }
+
+    const annualRows = await db
+      .select({ year: annualPmPlansTable.year, scheduledMonths: annualPmPlanRowsTable.scheduledMonths, startDate: annualPmPlanRowsTable.startDate })
+      .from(annualPmPlanRowsTable)
+      .innerJoin(annualPmPlansTable, eq(annualPmPlanRowsTable.planId, annualPmPlansTable.id))
+      .where(eq(annualPmPlanRowsTable.machineId, machineId));
+    const annualDates = annualRows.flatMap((row) => {
+      try {
+        const months = JSON.parse(row.scheduledMonths) as number[];
+        const day = row.startDate?.slice(8, 10) || "01";
+        return months.map((month) => `${row.year}-${String(month).padStart(2, "0")}-${day}`);
+      } catch {
+        return [];
+      }
+    }).filter((date) => date >= today).sort();
+    res.json({ nextPmDate: annualDates[0] ?? null, source: annualDates.length ? "annual" : null });
   } catch (err) { next(err); }
 });
 
@@ -240,6 +283,49 @@ router.patch("/:id/soft-delete", requireActiveAuth, requirePermission("soft_dele
 });
 
 // GET /api/machines/:id/equipment-information
+router.get("/:id/equipment-information/header", requireActiveAuth, requirePermission("view_equipment_information"), async (req, res, next) => {
+  try {
+    const machineId = parseIdParam(req.params.id);
+    const machine = await getMachineWithDept(machineId);
+    if (!machine) {
+      res.status(404).json({ error: "Machine not found" });
+      return;
+    }
+    const [existing] = await db.select().from(formHeadersTable).where(and(eq(formHeadersTable.documentType, "EQUIPMENT_INFORMATION"), eq(formHeadersTable.documentId, machineId)));
+    if (existing) {
+      res.json(existing);
+      return;
+    }
+    const [created] = await db.insert(formHeadersTable).values({ documentType: "EQUIPMENT_INFORMATION", documentId: machineId, documentName: "Equipment Information Record", documentNumber: "FORM-10-0118", effectiveOrExecutionDate: null }).returning();
+    res.json(created);
+  } catch (err) { next(err); }
+});
+
+router.put("/:id/equipment-information/header", requireActiveAuth, requirePermission("edit_header"), async (req, res, next) => {
+  try {
+    const machineId = parseIdParam(req.params.id);
+    if (!(await getMachineWithDept(machineId))) {
+      res.status(404).json({ error: "Machine not found" });
+      return;
+    }
+    const body = req.body as Partial<typeof formHeadersTable.$inferInsert>;
+    const values = {
+      companyName: body.companyName ?? "Beit Jala Pharmaceutical Co.",
+      documentName: body.documentName ?? "Equipment Information Record",
+      documentNumber: body.documentNumber ?? "FORM-10-0118",
+      effectiveOrExecutionDate: body.effectiveOrExecutionDate ?? null,
+      pageNumber: Math.max(1, Number(body.pageNumber ?? 1)),
+      totalPages: Math.max(1, Number(body.totalPages ?? 1)),
+      updatedAt: new Date(),
+    };
+    const [existing] = await db.select().from(formHeadersTable).where(and(eq(formHeadersTable.documentType, "EQUIPMENT_INFORMATION"), eq(formHeadersTable.documentId, machineId)));
+    const [saved] = existing
+      ? await db.update(formHeadersTable).set(values).where(eq(formHeadersTable.id, existing.id)).returning()
+      : await db.insert(formHeadersTable).values({ documentType: "EQUIPMENT_INFORMATION", documentId: machineId, ...values }).returning();
+    res.json(saved);
+  } catch (err) { next(err); }
+});
+
 router.get("/:id/equipment-information", requireActiveAuth, requirePermission("view_equipment_information"), async (req, res, next) => {
   try {
     const id = parseIdParam(req.params.id);

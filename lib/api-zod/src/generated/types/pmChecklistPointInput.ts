@@ -11,5 +11,4 @@ export interface PmChecklistPointInput {
   /** @minLength 1 */
   pointText: string;
   resultType: PmChecklistPointInputResultType;
-  sortOrder: number;
 }

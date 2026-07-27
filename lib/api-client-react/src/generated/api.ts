@@ -26,6 +26,10 @@ import type {
   AnnualPmPlanInput,
   AssignTechnicianInput,
   AuthUser,
+  ClosedCorrectiveMaintenanceLogRow,
+  CorrectiveMaintenanceEvent,
+  CorrectiveMaintenanceHeaderInput,
+  CorrectiveMaintenanceLogRowInput,
   CorrectiveMaintenanceRecordDetail,
   DashboardStats,
   Department,
@@ -34,6 +38,10 @@ import type {
   EquipmentInformation,
   EquipmentInformationInput,
   ErrorResponse,
+  ExternalMaintenanceReceiptDetail,
+  ExternalMaintenanceReceiptUpdate,
+  ExternalMaintenanceRequestDetail,
+  ExternalMaintenanceRequestUpdate,
   GetMachinesParams,
   GetMaintenanceRequestsParams,
   GetSparePartsParams,
@@ -67,7 +75,10 @@ import type {
   ScannedEquipmentInfo,
   SearchSparePartsParams,
   Signature,
+  SignatureFieldPermission,
+  SignatureFieldPermissionInput,
   SignatureInput,
+  SignatureProfile,
   SparePart,
   SparePartInput,
   SparePartMovement,
@@ -482,6 +493,441 @@ export function useListSignatures<TData = Awaited<ReturnType<typeof listSignatur
 
 
 
+
+export const getGetSignatureProfileUrl = () => {
+
+
+
+
+  return `/api/signatures/profile`
+}
+
+/**
+ * @summary Get the signed-in user's saved drawn signature
+ */
+export const getSignatureProfile = async ( options?: RequestInit): Promise<SignatureProfile> => {
+
+  return customFetch<SignatureProfile>(getGetSignatureProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSignatureProfileQueryKey = () => {
+    return [
+    `/api/signatures/profile`
+    ] as const;
+    }
+
+
+export const getGetSignatureProfileQueryOptions = <TData = Awaited<ReturnType<typeof getSignatureProfile>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSignatureProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSignatureProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSignatureProfile>>> = ({ signal }) => getSignatureProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSignatureProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSignatureProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getSignatureProfile>>>
+export type GetSignatureProfileQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the signed-in user's saved drawn signature
+ */
+
+export function useGetSignatureProfile<TData = Awaited<ReturnType<typeof getSignatureProfile>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSignatureProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSignatureProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateSignatureProfileUrl = () => {
+
+
+
+
+  return `/api/signatures/profile`
+}
+
+/**
+ * @summary Save the signed-in user's drawn signature
+ */
+export const updateSignatureProfile = async (signatureProfile: SignatureProfile, options?: RequestInit): Promise<SignatureProfile> => {
+
+  return customFetch<SignatureProfile>(getUpdateSignatureProfileUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(signatureProfile)
+  }
+);}
+
+
+
+
+export const getUpdateSignatureProfileMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSignatureProfile>>, TError,{data: BodyType<SignatureProfile>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSignatureProfile>>, TError,{data: BodyType<SignatureProfile>}, TContext> => {
+
+const mutationKey = ['updateSignatureProfile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSignatureProfile>>, {data: BodyType<SignatureProfile>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateSignatureProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSignatureProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateSignatureProfile>>>
+    export type UpdateSignatureProfileMutationBody = BodyType<SignatureProfile>
+    export type UpdateSignatureProfileMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Save the signed-in user's drawn signature
+ */
+export const useUpdateSignatureProfile = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSignatureProfile>>, TError,{data: BodyType<SignatureProfile>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSignatureProfile>>,
+        TError,
+        {data: BodyType<SignatureProfile>},
+        TContext
+      > => {
+      return useMutation(getUpdateSignatureProfileMutationOptions(options));
+    }
+
+export const getUpdateUserSignatureProfileUrl = (id: number,) => {
+
+
+
+
+  return `/api/signatures/users/${id}/profile`
+}
+
+/**
+ * @summary Save or replace a user's drawn signature as an administrator
+ */
+export const updateUserSignatureProfile = async (id: number,
+    signatureProfile: SignatureProfile, options?: RequestInit): Promise<SignatureProfile> => {
+
+  return customFetch<SignatureProfile>(getUpdateUserSignatureProfileUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(signatureProfile)
+  }
+);}
+
+
+
+
+export const getUpdateUserSignatureProfileMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUserSignatureProfile>>, TError,{id: number;data: BodyType<SignatureProfile>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateUserSignatureProfile>>, TError,{id: number;data: BodyType<SignatureProfile>}, TContext> => {
+
+const mutationKey = ['updateUserSignatureProfile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateUserSignatureProfile>>, {id: number;data: BodyType<SignatureProfile>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateUserSignatureProfile(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateUserSignatureProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateUserSignatureProfile>>>
+    export type UpdateUserSignatureProfileMutationBody = BodyType<SignatureProfile>
+    export type UpdateUserSignatureProfileMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Save or replace a user's drawn signature as an administrator
+ */
+export const useUpdateUserSignatureProfile = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUserSignatureProfile>>, TError,{id: number;data: BodyType<SignatureProfile>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateUserSignatureProfile>>,
+        TError,
+        {id: number;data: BodyType<SignatureProfile>},
+        TContext
+      > => {
+      return useMutation(getUpdateUserSignatureProfileMutationOptions(options));
+    }
+
+export const getListSignatureFieldPermissionsUrl = () => {
+
+
+
+
+  return `/api/signatures/field-permissions`
+}
+
+/**
+ * @summary List permanent signature permissions
+ */
+export const listSignatureFieldPermissions = async ( options?: RequestInit): Promise<SignatureFieldPermission[]> => {
+
+  return customFetch<SignatureFieldPermission[]>(getListSignatureFieldPermissionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSignatureFieldPermissionsQueryKey = () => {
+    return [
+    `/api/signatures/field-permissions`
+    ] as const;
+    }
+
+
+export const getListSignatureFieldPermissionsQueryOptions = <TData = Awaited<ReturnType<typeof listSignatureFieldPermissions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSignatureFieldPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSignatureFieldPermissionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSignatureFieldPermissions>>> = ({ signal }) => listSignatureFieldPermissions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSignatureFieldPermissions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSignatureFieldPermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listSignatureFieldPermissions>>>
+export type ListSignatureFieldPermissionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List permanent signature permissions
+ */
+
+export function useListSignatureFieldPermissions<TData = Awaited<ReturnType<typeof listSignatureFieldPermissions>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSignatureFieldPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSignatureFieldPermissionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSignatureFieldPermissionUrl = () => {
+
+
+
+
+  return `/api/signatures/field-permissions`
+}
+
+/**
+ * @summary Allow an employee to sign a field on every matching form
+ */
+export const createSignatureFieldPermission = async (signatureFieldPermissionInput: SignatureFieldPermissionInput, options?: RequestInit): Promise<SignatureFieldPermission> => {
+
+  return customFetch<SignatureFieldPermission>(getCreateSignatureFieldPermissionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(signatureFieldPermissionInput)
+  }
+);}
+
+
+
+
+export const getCreateSignatureFieldPermissionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSignatureFieldPermission>>, TError,{data: BodyType<SignatureFieldPermissionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSignatureFieldPermission>>, TError,{data: BodyType<SignatureFieldPermissionInput>}, TContext> => {
+
+const mutationKey = ['createSignatureFieldPermission'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSignatureFieldPermission>>, {data: BodyType<SignatureFieldPermissionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSignatureFieldPermission(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSignatureFieldPermissionMutationResult = NonNullable<Awaited<ReturnType<typeof createSignatureFieldPermission>>>
+    export type CreateSignatureFieldPermissionMutationBody = BodyType<SignatureFieldPermissionInput>
+    export type CreateSignatureFieldPermissionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Allow an employee to sign a field on every matching form
+ */
+export const useCreateSignatureFieldPermission = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSignatureFieldPermission>>, TError,{data: BodyType<SignatureFieldPermissionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSignatureFieldPermission>>,
+        TError,
+        {data: BodyType<SignatureFieldPermissionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSignatureFieldPermissionMutationOptions(options));
+    }
+
+export const getRevokeSignatureFieldPermissionUrl = (id: number,) => {
+
+
+
+
+  return `/api/signatures/field-permissions/${id}/revoke`
+}
+
+/**
+ * @summary Revoke a permanent signature permission
+ */
+export const revokeSignatureFieldPermission = async (id: number, options?: RequestInit): Promise<SignatureFieldPermission> => {
+
+  return customFetch<SignatureFieldPermission>(getRevokeSignatureFieldPermissionUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+export const getRevokeSignatureFieldPermissionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeSignatureFieldPermission>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeSignatureFieldPermission>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['revokeSignatureFieldPermission'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeSignatureFieldPermission>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeSignatureFieldPermission(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeSignatureFieldPermissionMutationResult = NonNullable<Awaited<ReturnType<typeof revokeSignatureFieldPermission>>>
+
+    export type RevokeSignatureFieldPermissionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Revoke a permanent signature permission
+ */
+export const useRevokeSignatureFieldPermission = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeSignatureFieldPermission>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeSignatureFieldPermission>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRevokeSignatureFieldPermissionMutationOptions(options));
+    }
 
 export const getListEligibleSignersUrl = (params: ListEligibleSignersParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -1964,6 +2410,153 @@ export const useUpsertEquipmentInformation = <TError = ErrorType<ErrorResponse>,
       return useMutation(getUpsertEquipmentInformationMutationOptions(options));
     }
 
+export const getGetEquipmentInformationHeaderUrl = (id: number,) => {
+
+
+
+
+  return `/api/machines/${id}/equipment-information/header`
+}
+
+/**
+ * @summary Get the official equipment-information form header
+ */
+export const getEquipmentInformationHeader = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getGetEquipmentInformationHeaderUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEquipmentInformationHeaderQueryKey = (id: number,) => {
+    return [
+    `/api/machines/${id}/equipment-information/header`
+    ] as const;
+    }
+
+
+export const getGetEquipmentInformationHeaderQueryOptions = <TData = Awaited<ReturnType<typeof getEquipmentInformationHeader>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEquipmentInformationHeader>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEquipmentInformationHeaderQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEquipmentInformationHeader>>> = ({ signal }) => getEquipmentInformationHeader(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEquipmentInformationHeader>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEquipmentInformationHeaderQueryResult = NonNullable<Awaited<ReturnType<typeof getEquipmentInformationHeader>>>
+export type GetEquipmentInformationHeaderQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the official equipment-information form header
+ */
+
+export function useGetEquipmentInformationHeader<TData = Awaited<ReturnType<typeof getEquipmentInformationHeader>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEquipmentInformationHeader>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEquipmentInformationHeaderQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateEquipmentInformationHeaderUrl = (id: number,) => {
+
+
+
+
+  return `/api/machines/${id}/equipment-information/header`
+}
+
+/**
+ * @summary Update the official equipment-information form header
+ */
+export const updateEquipmentInformationHeader = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUpdateEquipmentInformationHeaderUrl(id),
+  {
+    ...options,
+    method: 'PUT'
+
+
+  }
+);}
+
+
+
+
+export const getUpdateEquipmentInformationHeaderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEquipmentInformationHeader>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEquipmentInformationHeader>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['updateEquipmentInformationHeader'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEquipmentInformationHeader>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  updateEquipmentInformationHeader(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEquipmentInformationHeaderMutationResult = NonNullable<Awaited<ReturnType<typeof updateEquipmentInformationHeader>>>
+
+    export type UpdateEquipmentInformationHeaderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update the official equipment-information form header
+ */
+export const useUpdateEquipmentInformationHeader = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEquipmentInformationHeader>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEquipmentInformationHeader>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getUpdateEquipmentInformationHeaderMutationOptions(options));
+    }
+
 export const getScanEquipmentNameplateUrl = (id: number,) => {
 
 
@@ -2540,6 +3133,88 @@ export function useGetCurrentPmRecord<TData = Awaited<ReturnType<typeof getCurre
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetCurrentPmRecordQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPmHistoryRecordUrl = (id: number,
+    recordId: number,) => {
+
+
+
+
+  return `/api/machines/${id}/pm/history/${recordId}`
+}
+
+/**
+ * @summary Get one preserved PM record with its inspections and results
+ */
+export const getPmHistoryRecord = async (id: number,
+    recordId: number, options?: RequestInit): Promise<PmRecordDetail> => {
+
+  return customFetch<PmRecordDetail>(getGetPmHistoryRecordUrl(id,recordId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPmHistoryRecordQueryKey = (id: number,
+    recordId: number,) => {
+    return [
+    `/api/machines/${id}/pm/history/${recordId}`
+    ] as const;
+    }
+
+
+export const getGetPmHistoryRecordQueryOptions = <TData = Awaited<ReturnType<typeof getPmHistoryRecord>>, TError = ErrorType<unknown>>(id: number,
+    recordId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPmHistoryRecord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPmHistoryRecordQueryKey(id,recordId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPmHistoryRecord>>> = ({ signal }) => getPmHistoryRecord(id,recordId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && recordId !== null && recordId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPmHistoryRecord>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPmHistoryRecordQueryResult = NonNullable<Awaited<ReturnType<typeof getPmHistoryRecord>>>
+export type GetPmHistoryRecordQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get one preserved PM record with its inspections and results
+ */
+
+export function useGetPmHistoryRecord<TData = Awaited<ReturnType<typeof getPmHistoryRecord>>, TError = ErrorType<unknown>>(
+ id: number,
+    recordId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPmHistoryRecord>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPmHistoryRecordQueryOptions(id,recordId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3310,6 +3985,519 @@ export function useGetMaintenanceRequestTechnicians<TData = Awaited<ReturnType<t
 
 
 
+
+export const getGetClosedCorrectiveMaintenanceLogUrl = () => {
+
+
+
+
+  return `/api/maintenance-requests/closed-log`
+}
+
+/**
+ * @summary List closed corrective maintenance requests for LOG-10-0659-0
+ */
+export const getClosedCorrectiveMaintenanceLog = async ( options?: RequestInit): Promise<ClosedCorrectiveMaintenanceLogRow[]> => {
+
+  return customFetch<ClosedCorrectiveMaintenanceLogRow[]>(getGetClosedCorrectiveMaintenanceLogUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClosedCorrectiveMaintenanceLogQueryKey = () => {
+    return [
+    `/api/maintenance-requests/closed-log`
+    ] as const;
+    }
+
+
+export const getGetClosedCorrectiveMaintenanceLogQueryOptions = <TData = Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLog>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClosedCorrectiveMaintenanceLogQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLog>>> = ({ signal }) => getClosedCorrectiveMaintenanceLog({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClosedCorrectiveMaintenanceLogQueryResult = NonNullable<Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLog>>>
+export type GetClosedCorrectiveMaintenanceLogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List closed corrective maintenance requests for LOG-10-0659-0
+ */
+
+export function useGetClosedCorrectiveMaintenanceLog<TData = Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLog>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClosedCorrectiveMaintenanceLogQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetExternalMaintenanceRequestUrl = (id: number,) => {
+
+
+
+
+  return `/api/maintenance-requests/${id}/external-maintenance`
+}
+
+/**
+ * @summary Get the FORM-00-0077-1 external maintenance request linked to an original request
+ */
+export const getExternalMaintenanceRequest = async (id: number, options?: RequestInit): Promise<ExternalMaintenanceRequestDetail> => {
+
+  return customFetch<ExternalMaintenanceRequestDetail>(getGetExternalMaintenanceRequestUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExternalMaintenanceRequestQueryKey = (id: number,) => {
+    return [
+    `/api/maintenance-requests/${id}/external-maintenance`
+    ] as const;
+    }
+
+
+export const getGetExternalMaintenanceRequestQueryOptions = <TData = Awaited<ReturnType<typeof getExternalMaintenanceRequest>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExternalMaintenanceRequest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExternalMaintenanceRequestQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExternalMaintenanceRequest>>> = ({ signal }) => getExternalMaintenanceRequest(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExternalMaintenanceRequest>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetExternalMaintenanceRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getExternalMaintenanceRequest>>>
+export type GetExternalMaintenanceRequestQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the FORM-00-0077-1 external maintenance request linked to an original request
+ */
+
+export function useGetExternalMaintenanceRequest<TData = Awaited<ReturnType<typeof getExternalMaintenanceRequest>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExternalMaintenanceRequest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetExternalMaintenanceRequestQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getConvertMaintenanceRequestToExternalUrl = (id: number,) => {
+
+
+
+
+  return `/api/maintenance-requests/${id}/external-maintenance`
+}
+
+/**
+ * @summary Convert a corrective maintenance request to external maintenance
+ */
+export const convertMaintenanceRequestToExternal = async (id: number, options?: RequestInit): Promise<ExternalMaintenanceRequestDetail> => {
+
+  return customFetch<ExternalMaintenanceRequestDetail>(getConvertMaintenanceRequestToExternalUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getConvertMaintenanceRequestToExternalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof convertMaintenanceRequestToExternal>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof convertMaintenanceRequestToExternal>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['convertMaintenanceRequestToExternal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof convertMaintenanceRequestToExternal>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  convertMaintenanceRequestToExternal(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConvertMaintenanceRequestToExternalMutationResult = NonNullable<Awaited<ReturnType<typeof convertMaintenanceRequestToExternal>>>
+
+    export type ConvertMaintenanceRequestToExternalMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Convert a corrective maintenance request to external maintenance
+ */
+export const useConvertMaintenanceRequestToExternal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof convertMaintenanceRequestToExternal>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof convertMaintenanceRequestToExternal>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getConvertMaintenanceRequestToExternalMutationOptions(options));
+    }
+
+export const getUpdateExternalMaintenanceRequestUrl = (id: number,) => {
+
+
+
+
+  return `/api/maintenance-requests/${id}/external-maintenance`
+}
+
+/**
+ * @summary Update the editable signatures and recommendations of an external maintenance request
+ */
+export const updateExternalMaintenanceRequest = async (id: number,
+    externalMaintenanceRequestUpdate: ExternalMaintenanceRequestUpdate, options?: RequestInit): Promise<ExternalMaintenanceRequestDetail> => {
+
+  return customFetch<ExternalMaintenanceRequestDetail>(getUpdateExternalMaintenanceRequestUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(externalMaintenanceRequestUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateExternalMaintenanceRequestMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExternalMaintenanceRequest>>, TError,{id: number;data: BodyType<ExternalMaintenanceRequestUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateExternalMaintenanceRequest>>, TError,{id: number;data: BodyType<ExternalMaintenanceRequestUpdate>}, TContext> => {
+
+const mutationKey = ['updateExternalMaintenanceRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateExternalMaintenanceRequest>>, {id: number;data: BodyType<ExternalMaintenanceRequestUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateExternalMaintenanceRequest(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateExternalMaintenanceRequestMutationResult = NonNullable<Awaited<ReturnType<typeof updateExternalMaintenanceRequest>>>
+    export type UpdateExternalMaintenanceRequestMutationBody = BodyType<ExternalMaintenanceRequestUpdate>
+    export type UpdateExternalMaintenanceRequestMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update the editable signatures and recommendations of an external maintenance request
+ */
+export const useUpdateExternalMaintenanceRequest = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExternalMaintenanceRequest>>, TError,{id: number;data: BodyType<ExternalMaintenanceRequestUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateExternalMaintenanceRequest>>,
+        TError,
+        {id: number;data: BodyType<ExternalMaintenanceRequestUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateExternalMaintenanceRequestMutationOptions(options));
+    }
+
+export const getGetExternalMaintenanceReceiptUrl = (id: number,) => {
+
+
+
+
+  return `/api/maintenance-requests/${id}/external-maintenance-receipt`
+}
+
+/**
+ * @summary Get FORM-10-0240-1 external maintenance receipt
+ */
+export const getExternalMaintenanceReceipt = async (id: number, options?: RequestInit): Promise<ExternalMaintenanceReceiptDetail> => {
+
+  return customFetch<ExternalMaintenanceReceiptDetail>(getGetExternalMaintenanceReceiptUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExternalMaintenanceReceiptQueryKey = (id: number,) => {
+    return [
+    `/api/maintenance-requests/${id}/external-maintenance-receipt`
+    ] as const;
+    }
+
+
+export const getGetExternalMaintenanceReceiptQueryOptions = <TData = Awaited<ReturnType<typeof getExternalMaintenanceReceipt>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExternalMaintenanceReceipt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExternalMaintenanceReceiptQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExternalMaintenanceReceipt>>> = ({ signal }) => getExternalMaintenanceReceipt(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExternalMaintenanceReceipt>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetExternalMaintenanceReceiptQueryResult = NonNullable<Awaited<ReturnType<typeof getExternalMaintenanceReceipt>>>
+export type GetExternalMaintenanceReceiptQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get FORM-10-0240-1 external maintenance receipt
+ */
+
+export function useGetExternalMaintenanceReceipt<TData = Awaited<ReturnType<typeof getExternalMaintenanceReceipt>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExternalMaintenanceReceipt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetExternalMaintenanceReceiptQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateExternalMaintenanceReceiptUrl = (id: number,) => {
+
+
+
+
+  return `/api/maintenance-requests/${id}/external-maintenance-receipt`
+}
+
+/**
+ * @summary Create an external maintenance receipt after external work is completed
+ */
+export const createExternalMaintenanceReceipt = async (id: number, options?: RequestInit): Promise<ExternalMaintenanceReceiptDetail> => {
+
+  return customFetch<ExternalMaintenanceReceiptDetail>(getCreateExternalMaintenanceReceiptUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCreateExternalMaintenanceReceiptMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExternalMaintenanceReceipt>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createExternalMaintenanceReceipt>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['createExternalMaintenanceReceipt'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createExternalMaintenanceReceipt>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  createExternalMaintenanceReceipt(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateExternalMaintenanceReceiptMutationResult = NonNullable<Awaited<ReturnType<typeof createExternalMaintenanceReceipt>>>
+
+    export type CreateExternalMaintenanceReceiptMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create an external maintenance receipt after external work is completed
+ */
+export const useCreateExternalMaintenanceReceipt = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExternalMaintenanceReceipt>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createExternalMaintenanceReceipt>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getCreateExternalMaintenanceReceiptMutationOptions(options));
+    }
+
+export const getUpdateExternalMaintenanceReceiptUrl = (id: number,) => {
+
+
+
+
+  return `/api/maintenance-requests/${id}/external-maintenance-receipt`
+}
+
+/**
+ * @summary Update FORM-10-0240-1 receipt fields
+ */
+export const updateExternalMaintenanceReceipt = async (id: number,
+    externalMaintenanceReceiptUpdate: ExternalMaintenanceReceiptUpdate, options?: RequestInit): Promise<ExternalMaintenanceReceiptDetail> => {
+
+  return customFetch<ExternalMaintenanceReceiptDetail>(getUpdateExternalMaintenanceReceiptUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(externalMaintenanceReceiptUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateExternalMaintenanceReceiptMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExternalMaintenanceReceipt>>, TError,{id: number;data: BodyType<ExternalMaintenanceReceiptUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateExternalMaintenanceReceipt>>, TError,{id: number;data: BodyType<ExternalMaintenanceReceiptUpdate>}, TContext> => {
+
+const mutationKey = ['updateExternalMaintenanceReceipt'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateExternalMaintenanceReceipt>>, {id: number;data: BodyType<ExternalMaintenanceReceiptUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateExternalMaintenanceReceipt(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateExternalMaintenanceReceiptMutationResult = NonNullable<Awaited<ReturnType<typeof updateExternalMaintenanceReceipt>>>
+    export type UpdateExternalMaintenanceReceiptMutationBody = BodyType<ExternalMaintenanceReceiptUpdate>
+    export type UpdateExternalMaintenanceReceiptMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update FORM-10-0240-1 receipt fields
+ */
+export const useUpdateExternalMaintenanceReceipt = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExternalMaintenanceReceipt>>, TError,{id: number;data: BodyType<ExternalMaintenanceReceiptUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateExternalMaintenanceReceipt>>,
+        TError,
+        {id: number;data: BodyType<ExternalMaintenanceReceiptUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateExternalMaintenanceReceiptMutationOptions(options));
+    }
 
 export const getGetMaintenanceRequestUrl = (id: number,) => {
 
@@ -4322,6 +5510,77 @@ export function useGetMachineCorrectiveMaintenance<TData = Awaited<ReturnType<ty
 
 
 
+export const getUpdateCorrectiveMaintenanceHeaderUrl = (id: number,) => {
+
+
+
+
+  return `/api/machines/${id}/corrective-maintenance/header`
+}
+
+/**
+ * @summary Update the active Corrective Maintenance record header
+ */
+export const updateCorrectiveMaintenanceHeader = async (id: number,
+    correctiveMaintenanceHeaderInput: CorrectiveMaintenanceHeaderInput, options?: RequestInit): Promise<CorrectiveMaintenanceRecordDetail> => {
+
+  return customFetch<CorrectiveMaintenanceRecordDetail>(getUpdateCorrectiveMaintenanceHeaderUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(correctiveMaintenanceHeaderInput)
+  }
+);}
+
+
+
+
+export const getUpdateCorrectiveMaintenanceHeaderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCorrectiveMaintenanceHeader>>, TError,{id: number;data: BodyType<CorrectiveMaintenanceHeaderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCorrectiveMaintenanceHeader>>, TError,{id: number;data: BodyType<CorrectiveMaintenanceHeaderInput>}, TContext> => {
+
+const mutationKey = ['updateCorrectiveMaintenanceHeader'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCorrectiveMaintenanceHeader>>, {id: number;data: BodyType<CorrectiveMaintenanceHeaderInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateCorrectiveMaintenanceHeader(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCorrectiveMaintenanceHeaderMutationResult = NonNullable<Awaited<ReturnType<typeof updateCorrectiveMaintenanceHeader>>>
+    export type UpdateCorrectiveMaintenanceHeaderMutationBody = BodyType<CorrectiveMaintenanceHeaderInput>
+    export type UpdateCorrectiveMaintenanceHeaderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update the active Corrective Maintenance record header
+ */
+export const useUpdateCorrectiveMaintenanceHeader = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCorrectiveMaintenanceHeader>>, TError,{id: number;data: BodyType<CorrectiveMaintenanceHeaderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCorrectiveMaintenanceHeader>>,
+        TError,
+        {id: number;data: BodyType<CorrectiveMaintenanceHeaderInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateCorrectiveMaintenanceHeaderMutationOptions(options));
+    }
+
 export const getGetMachineCorrectiveMaintenanceHistoryUrl = (id: number,) => {
 
 
@@ -4398,6 +5657,150 @@ export function useGetMachineCorrectiveMaintenanceHistory<TData = Awaited<Return
 
 
 
+
+export const getUpdateCorrectiveMaintenanceLogRowUrl = (id: number,
+    eventId: number,) => {
+
+
+
+
+  return `/api/machines/${id}/corrective-maintenance/events/${eventId}`
+}
+
+/**
+ * @summary Manually update an automatically linked corrective maintenance log row
+ */
+export const updateCorrectiveMaintenanceLogRow = async (id: number,
+    eventId: number,
+    correctiveMaintenanceLogRowInput: CorrectiveMaintenanceLogRowInput, options?: RequestInit): Promise<CorrectiveMaintenanceEvent> => {
+
+  return customFetch<CorrectiveMaintenanceEvent>(getUpdateCorrectiveMaintenanceLogRowUrl(id,eventId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(correctiveMaintenanceLogRowInput)
+  }
+);}
+
+
+
+
+export const getUpdateCorrectiveMaintenanceLogRowMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCorrectiveMaintenanceLogRow>>, TError,{id: number;eventId: number;data: BodyType<CorrectiveMaintenanceLogRowInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCorrectiveMaintenanceLogRow>>, TError,{id: number;eventId: number;data: BodyType<CorrectiveMaintenanceLogRowInput>}, TContext> => {
+
+const mutationKey = ['updateCorrectiveMaintenanceLogRow'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCorrectiveMaintenanceLogRow>>, {id: number;eventId: number;data: BodyType<CorrectiveMaintenanceLogRowInput>}> = (props) => {
+          const {id,eventId,data} = props ?? {};
+
+          return  updateCorrectiveMaintenanceLogRow(id,eventId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCorrectiveMaintenanceLogRowMutationResult = NonNullable<Awaited<ReturnType<typeof updateCorrectiveMaintenanceLogRow>>>
+    export type UpdateCorrectiveMaintenanceLogRowMutationBody = BodyType<CorrectiveMaintenanceLogRowInput>
+    export type UpdateCorrectiveMaintenanceLogRowMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Manually update an automatically linked corrective maintenance log row
+ */
+export const useUpdateCorrectiveMaintenanceLogRow = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCorrectiveMaintenanceLogRow>>, TError,{id: number;eventId: number;data: BodyType<CorrectiveMaintenanceLogRowInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCorrectiveMaintenanceLogRow>>,
+        TError,
+        {id: number;eventId: number;data: BodyType<CorrectiveMaintenanceLogRowInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateCorrectiveMaintenanceLogRowMutationOptions(options));
+    }
+
+export const getCreateCorrectiveMaintenanceLogRowUrl = (id: number,) => {
+
+
+
+
+  return `/api/machines/${id}/corrective-maintenance/events`
+}
+
+/**
+ * @summary Add a manually editable Corrective Maintenance log row
+ */
+export const createCorrectiveMaintenanceLogRow = async (id: number,
+    correctiveMaintenanceLogRowInput?: CorrectiveMaintenanceLogRowInput, options?: RequestInit): Promise<CorrectiveMaintenanceEvent> => {
+
+  return customFetch<CorrectiveMaintenanceEvent>(getCreateCorrectiveMaintenanceLogRowUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(correctiveMaintenanceLogRowInput)
+  }
+);}
+
+
+
+
+export const getCreateCorrectiveMaintenanceLogRowMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCorrectiveMaintenanceLogRow>>, TError,{id: number;data?: BodyType<CorrectiveMaintenanceLogRowInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCorrectiveMaintenanceLogRow>>, TError,{id: number;data?: BodyType<CorrectiveMaintenanceLogRowInput>}, TContext> => {
+
+const mutationKey = ['createCorrectiveMaintenanceLogRow'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCorrectiveMaintenanceLogRow>>, {id: number;data?: BodyType<CorrectiveMaintenanceLogRowInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createCorrectiveMaintenanceLogRow(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCorrectiveMaintenanceLogRowMutationResult = NonNullable<Awaited<ReturnType<typeof createCorrectiveMaintenanceLogRow>>>
+    export type CreateCorrectiveMaintenanceLogRowMutationBody = BodyType<CorrectiveMaintenanceLogRowInput> | undefined
+    export type CreateCorrectiveMaintenanceLogRowMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a manually editable Corrective Maintenance log row
+ */
+export const useCreateCorrectiveMaintenanceLogRow = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCorrectiveMaintenanceLogRow>>, TError,{id: number;data?: BodyType<CorrectiveMaintenanceLogRowInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCorrectiveMaintenanceLogRow>>,
+        TError,
+        {id: number;data?: BodyType<CorrectiveMaintenanceLogRowInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCorrectiveMaintenanceLogRowMutationOptions(options));
+    }
 
 export const getGetSparePartsUrl = (params?: GetSparePartsParams,) => {
   const normalizedParams = new URLSearchParams();

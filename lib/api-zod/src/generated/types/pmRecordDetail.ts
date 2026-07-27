@@ -8,10 +8,12 @@
 import type { PmChecklistPoint } from './pmChecklistPoint';
 import type { PmHeader } from './pmHeader';
 import type { PmInspection } from './pmInspection';
+import type { PmRecordDetailMachine } from './pmRecordDetailMachine';
 import type { PmRecordSummary } from './pmRecordSummary';
 
 export interface PmRecordDetail {
   record: PmRecordSummary;
+  machine: PmRecordDetailMachine;
   header: PmHeader;
   checklistPoints: PmChecklistPoint[];
   inspections: PmInspection[];

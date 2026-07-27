@@ -46,7 +46,11 @@ export interface EquipmentInformation {
   /** @nullable */
   others?: string | null;
   /** @nullable */
+  othersDetails?: string | null;
+  /** @nullable */
   safetyIssues?: string | null;
+  /** @nullable */
+  safetyIssuesDetails?: string | null;
   /** @nullable */
   preparedByName?: string | null;
   /** @nullable */
