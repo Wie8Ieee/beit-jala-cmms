@@ -23,22 +23,21 @@ export default function PmChecklistPage({ params }: { params: { id: string } }) 
   const queryClient = useQueryClient();
   const [pointText, setPointText] = useState("");
   const [resultType, setResultType] = useState<"yes_no" | "value" | "text">("yes_no");
-  const [sortOrder, setSortOrder] = useState(1);
 
   const { data = [] } = useQuery({
     queryKey: ["pm-checklist", machineId],
     queryFn: () => apiRequest<Point[]>(`/machines/${machineId}/pm/checklist`),
   });
+  const activePoints = data.filter((point) => point.isActive);
 
   const createPoint = useMutation({
     mutationFn: () =>
       apiRequest<Point>(`/machines/${machineId}/pm/checklist`, {
         method: "POST",
-        body: JSON.stringify({ pointText, resultType, sortOrder }),
+        body: JSON.stringify({ pointText, resultType }),
       }),
     onSuccess: () => {
       setPointText("");
-      setSortOrder((value) => value + 1);
       queryClient.invalidateQueries({ queryKey: ["pm-checklist", machineId] });
     },
   });
@@ -73,7 +72,7 @@ export default function PmChecklistPage({ params }: { params: { id: string } }) 
           <CardHeader>
             <CardTitle>Add Checklist Point</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-[1fr_180px_120px_auto] md:items-end">
+          <CardContent className="grid gap-4 md:grid-cols-[1fr_180px_auto] md:items-end">
             <div>
               <Label>Checklist point</Label>
               <Input value={pointText} onChange={(event) => setPointText(event.target.value)} required />
@@ -85,15 +84,10 @@ export default function PmChecklistPage({ params }: { params: { id: string } }) 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="yes_no">Yes / No</SelectItem>
-                  <SelectItem value="value">Numeric / Value</SelectItem>
-                  <SelectItem value="text">Text</SelectItem>
+                  <SelectItem value="yes_no">نعم / لا (Yes / No)</SelectItem>
+                  <SelectItem value="text">Text / Value</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label>Order</Label>
-              <Input type="number" value={sortOrder} onChange={(event) => setSortOrder(Number(event.target.value))} />
             </div>
             <Button type="submit" disabled={createPoint.isPending || !pointText.trim()}>
               <Plus className="mr-2 h-4 w-4" />
@@ -116,7 +110,7 @@ export default function PmChecklistPage({ params }: { params: { id: string } }) 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((point) => (
+              {activePoints.map((point) => (
                 <TableRow key={point.id}>
                   <TableCell>{point.sortOrder}</TableCell>
                   <TableCell>{point.pointText}</TableCell>

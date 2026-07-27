@@ -14,6 +14,23 @@ export const eligibleSignerAssignmentsTable = pgTable("eligible_signer_assignmen
   revokedAt: timestamp("revoked_at"),
 });
 
+/**
+ * Permanent signer permissions. Unlike eligibleSignerAssignmentsTable, these
+ * apply to every current and future document of the selected form and field.
+ * A revoked rule is retained for audit history.
+ */
+export const signatureFieldPermissionsTable = pgTable("signature_field_permissions", {
+  id: serial("id").primaryKey(),
+  documentType: text("document_type").notNull(),
+  fieldName: text("field_name").notNull(),
+  eligibleUserId: integer("eligible_user_id")
+    .notNull()
+    .references(() => usersTable.id),
+  grantedBy: integer("granted_by").references(() => usersTable.id),
+  grantedAt: timestamp("granted_at").defaultNow().notNull(),
+  revokedAt: timestamp("revoked_at"),
+});
+
 export const signaturesTable = pgTable("signatures", {
   id: serial("id").primaryKey(),
   documentType: text("document_type").notNull(),
@@ -24,6 +41,7 @@ export const signaturesTable = pgTable("signatures", {
     .notNull()
     .references(() => usersTable.id),
   userName: text("user_name").notNull(),
+  signatureData: text("signature_data"),
   eligibleSignerAssignmentId: integer("eligible_signer_assignment_id").references(
     () => eligibleSignerAssignmentsTable.id,
   ),
@@ -32,4 +50,6 @@ export const signaturesTable = pgTable("signatures", {
 
 export type EligibleSignerAssignment =
   typeof eligibleSignerAssignmentsTable.$inferSelect;
+export type SignatureFieldPermission =
+  typeof signatureFieldPermissionsTable.$inferSelect;
 export type Signature = typeof signaturesTable.$inferSelect;

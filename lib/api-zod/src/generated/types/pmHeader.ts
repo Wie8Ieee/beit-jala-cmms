@@ -15,6 +15,7 @@ export interface PmHeader {
   /** @nullable */
   department?: string | null;
   columnsPerRecord: number;
+  inspectionColumnsPerPrintPage: number;
   createdAt: string;
   updatedAt: string;
 }

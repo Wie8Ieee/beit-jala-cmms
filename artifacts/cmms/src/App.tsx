@@ -11,6 +11,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 // Pages
 import LoginPage from './pages/login';
 import DashboardPage from './pages/dashboard';
+import ReportsPage from './pages/reports';
 import MachinesList from './pages/machines/list';
 import MachineForm from './pages/machines/form';
 import MachineProfile from './pages/machines/profile';
@@ -20,6 +21,7 @@ import PmChecklistPage from './pages/machines/pm-checklist';
 import PmHeaderPage from './pages/machines/pm-header';
 import PmHistoryPage from './pages/machines/pm-history';
 import MachineCorrectiveMaintenancePage from './pages/machines/corrective-maintenance';
+import CmHistoryPage from './pages/machines/cm-history';
 import MaintenancePlansPage from './pages/maintenance-plans';
 import AnnualPlanPage from './pages/maintenance-plans/annual';
 import MonthlyPlansIndexPage from './pages/maintenance-plans/monthly-index';
@@ -27,14 +29,21 @@ import MonthlyPlanPage from './pages/maintenance-plans/monthly';
 import MaintenanceRequestsListPage from './pages/maintenance-requests/list';
 import NewMaintenanceRequestPage from './pages/maintenance-requests/new';
 import MaintenanceRequestDetailPage from './pages/maintenance-requests/detail';
+import ClosedCorrectiveMaintenanceLogPage from './pages/maintenance-requests/closed-log';
+import ExternalMaintenanceRequestPage from './pages/maintenance-requests/external-maintenance';
+import ExternalMaintenanceReceiptPage from './pages/maintenance-requests/external-maintenance-receipt';
 import SparePartsListPage from './pages/spare-parts/list';
 import SparePartDetailPage from './pages/spare-parts/detail';
 import SparePartFormPage from './pages/spare-parts/form';
 import SparePartMovementFormPage from './pages/spare-parts/movement-form';
 import UsersList from './pages/admin/users/list';
 import UserForm from './pages/admin/users/form';
+import SignaturePermissionsPage from './pages/admin/signature-permissions';
 import EquipmentInformationPrintPage from './pages/print/equipment-information';
 import MaintenanceRequestPrintPage from './pages/print/maintenance-request';
+import ClosedCorrectiveMaintenanceLogPrintPage from './pages/print/closed-corrective-maintenance-log';
+import ExternalMaintenancePrintPage from './pages/print/external-maintenance';
+import ExternalMaintenanceReceiptPrintPage from './pages/print/external-maintenance-receipt';
 import CorrectiveMaintenancePrintPage from './pages/print/corrective-maintenance';
 import PmRecordPrintPage from './pages/print/pm-record';
 import AnnualPlanPrintPage from './pages/print/annual-plan';
@@ -157,6 +166,54 @@ function Router() {
         )}
       </Route>
 
+      <Route path="/reports">
+        <ProtectedRoute>
+          <ReportsPage />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/print/closed-corrective-maintenance-log">
+        <ProtectedRoute permission="print_forms">
+          <ClosedCorrectiveMaintenanceLogPrintPage />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/print/external-maintenance/:id">
+        {(params) => <ProtectedRoute permission="print_forms"><ExternalMaintenancePrintPage params={params} /></ProtectedRoute>}
+      </Route>
+
+      <Route path="/print/external-maintenance-receipt/:id">
+        {(params) => <ProtectedRoute permission="print_forms"><ExternalMaintenanceReceiptPrintPage params={params} /></ProtectedRoute>}
+      </Route>
+
+      <Route path="/print/corrective-maintenance/:id/history/:recordId">
+        {(params) => <ProtectedRoute permission="print_forms"><CorrectiveMaintenancePrintPage params={params} /></ProtectedRoute>}
+      </Route>
+
+      <Route path="/print/annual-plan/:year/schedule">
+        {(params) => (
+          <ProtectedRoute permission="print_forms">
+            <AnnualPlanPrintPage params={{ ...params, schedule: "true" }} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/print/pm-record/:id/history/:recordId">
+        {(params) => (
+          <ProtectedRoute permission="print_forms">
+            <PmRecordPrintPage params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
+      <Route path="/machines/:id/pm/history/:recordId">
+        {(params) => (
+          <ProtectedRoute permission="view_machines">
+            <PmRecordPage params={params} />
+          </ProtectedRoute>
+        )}
+      </Route>
+
       <Route path="/machines/:id/pm">
         {(params) => (
           <ProtectedRoute permission="view_machines">
@@ -171,6 +228,12 @@ function Router() {
             <MachineCorrectiveMaintenancePage params={params} />
           </ProtectedRoute>
         )}
+      </Route>
+      <Route path="/machines/:id/corrective-maintenance/history">
+        {(params) => <ProtectedRoute permission="view_machines"><CmHistoryPage params={params} /></ProtectedRoute>}
+      </Route>
+      <Route path="/machines/:id/corrective-maintenance/history/:recordId">
+        {(params) => <ProtectedRoute permission="view_machines"><MachineCorrectiveMaintenancePage params={params} /></ProtectedRoute>}
       </Route>
 
       <Route path="/maintenance-plans/annual/:year">
@@ -241,6 +304,20 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
+      <Route path="/maintenance-requests/closed-log">
+        <ProtectedRoute permission="manage_maintenance_requests">
+          <ClosedCorrectiveMaintenanceLogPage />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/maintenance-requests/:id/external-maintenance">
+        {(params) => <ProtectedRoute><ExternalMaintenanceRequestPage params={params} /></ProtectedRoute>}
+      </Route>
+
+      <Route path="/maintenance-requests/:id/external-maintenance-receipt">
+        {(params) => <ProtectedRoute><ExternalMaintenanceReceiptPage params={params} /></ProtectedRoute>}
+      </Route>
+
       <Route path="/maintenance-requests/:id">
         {(params) => (
           <ProtectedRoute>
@@ -294,6 +371,12 @@ function Router() {
       <Route path="/admin/users">
         <ProtectedRoute permission="manage_users">
           <UsersList />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/admin/signature-permissions">
+        <ProtectedRoute permission="manage_signatures">
+          <SignaturePermissionsPage />
         </ProtectedRoute>
       </Route>
 

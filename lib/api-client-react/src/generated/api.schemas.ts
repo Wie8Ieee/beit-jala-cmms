@@ -48,8 +48,33 @@ export interface Signature {
   userId: number;
   userName: string;
   /** @nullable */
+  signatureData?: string | null;
+  /** @nullable */
   eligibleSignerAssignmentId?: number | null;
   signedAt: string;
+}
+
+export interface SignatureProfile {
+  /** @nullable */
+  signatureData: string | null;
+}
+
+export interface SignatureFieldPermission {
+  id: number;
+  documentType: string;
+  fieldName: string;
+  eligibleUserId: number;
+  /** @nullable */
+  eligibleUserName?: string | null;
+  grantedAt: string;
+  /** @nullable */
+  revokedAt?: string | null;
+}
+
+export interface SignatureFieldPermissionInput {
+  documentType: string;
+  fieldName: string;
+  employeeNumber: string;
 }
 
 export interface SignatureInput {
@@ -61,6 +86,8 @@ export interface SignatureInput {
 
 export interface LoginCredentials {
   username: string;
+  /** @nullable */
+  employeeNumber?: string | null;
   password: string;
 }
 
@@ -82,6 +109,8 @@ export interface AuthUser {
   id: number;
   username: string;
   /** @nullable */
+  employeeNumber?: string | null;
+  /** @nullable */
   fullName?: string | null;
   /** @nullable */
   email?: string | null;
@@ -98,6 +127,8 @@ export interface User {
   fullName?: string | null;
   /** @nullable */
   email?: string | null;
+  /** @nullable */
+  signatureData?: string | null;
   roleId: number;
   roleName: string;
   /** @nullable */
@@ -112,6 +143,7 @@ export interface User {
 export interface UserInput {
   /** @minLength 2 */
   username: string;
+  employeeNumber: string;
   /** @minLength 4 */
   password: string;
   fullName?: string;
@@ -228,7 +260,11 @@ export interface EquipmentInformation {
   /** @nullable */
   others?: string | null;
   /** @nullable */
+  othersDetails?: string | null;
+  /** @nullable */
   safetyIssues?: string | null;
+  /** @nullable */
+  safetyIssuesDetails?: string | null;
   /** @nullable */
   preparedByName?: string | null;
   /** @nullable */
@@ -264,7 +300,9 @@ export interface EquipmentInformationInput {
   utilitiesWater?: string;
   utilitiesOther?: string;
   others?: string;
+  othersDetails?: string;
   safetyIssues?: string;
+  safetyIssuesDetails?: string;
   preparedByName?: string;
   preparedByDate?: string;
   approvedByName?: string;
@@ -300,6 +338,7 @@ export interface PmHeader {
   /** @nullable */
   department?: string | null;
   columnsPerRecord: number;
+  inspectionColumnsPerPrintPage: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -315,6 +354,11 @@ export interface PmHeaderInput {
      * @maximum 10
      */
   columnsPerRecord?: number;
+  /**
+     * @minimum 1
+     * @maximum 10
+     */
+  inspectionColumnsPerPrintPage?: number;
 }
 
 export type PmChecklistPointResultType = typeof PmChecklistPointResultType[keyof typeof PmChecklistPointResultType];
@@ -352,7 +396,6 @@ export interface PmChecklistPointInput {
   /** @minLength 1 */
   pointText: string;
   resultType: PmChecklistPointInputResultType;
-  sortOrder: number;
 }
 
 export interface PmInspectionResultInput {
@@ -362,6 +405,9 @@ export interface PmInspectionResultInput {
 }
 
 export interface PmInspectionInput {
+  employeeNumber?: string;
+  /** @nullable */
+  executionMonthYear?: string | null;
   inspectionDate: string;
   inspectionTime: string;
   actionTaken?: string;
@@ -385,6 +431,8 @@ export interface PmInspection {
   recordId: number;
   machineId: number;
   columnNumber: number;
+  /** @nullable */
+  executionMonthYear?: string | null;
   inspectionDate: string;
   inspectionTime: string;
   /** @nullable */
@@ -401,6 +449,11 @@ export interface PmInspection {
   results: PmInspectionResult[];
 }
 
+export type PmRecordDetailMachine = {
+  name: string;
+  number: string;
+};
+
 export interface PmRecordSummary {
   id: number;
   machineId: number;
@@ -415,6 +468,7 @@ export interface PmRecordSummary {
 
 export interface PmRecordDetail {
   record: PmRecordSummary;
+  machine: PmRecordDetailMachine;
   header: PmHeader;
   checklistPoints: PmChecklistPoint[];
   inspections: PmInspection[];
@@ -584,6 +638,7 @@ export const MaintenanceRequestStatus = {
   In_Progress: 'In Progress',
   Completed: 'Completed',
   Closed: 'Closed',
+  External_Maintenance: 'External Maintenance',
 } as const;
 
 export type MaintenanceRequestInputPriority = typeof MaintenanceRequestInputPriority[keyof typeof MaintenanceRequestInputPriority];
@@ -703,12 +758,111 @@ export interface MaintenanceRequestSummary {
   updatedAt?: string;
 }
 
+export interface ClosedCorrectiveMaintenanceLogRow {
+  id: number;
+  machineName: string;
+  machineNumber: string;
+  requestDate: string;
+  requestReportNumber: string;
+  priority: string;
+  closedDate: string;
+  remarks: string;
+}
+
+export interface ExternalMaintenanceRequest {
+  id: number;
+  maintenanceRequestId: number;
+  externalRequestNumber: string;
+  requestDate: string;
+  /** @nullable */
+  departmentSection?: string | null;
+  /** @nullable */
+  requiredMaintenance?: string | null;
+  /** @nullable */
+  preliminaryFindings?: string | null;
+  /** @nullable */
+  technicianSuggestions?: string | null;
+  /** @nullable */
+  maintenanceTechnicianSignature?: string | null;
+  /** @nullable */
+  maintenanceTechnicianDate?: string | null;
+  /** @nullable */
+  departmentManagerSignature?: string | null;
+  /** @nullable */
+  departmentManagerDate?: string | null;
+  /** @nullable */
+  generalManagerSignature?: string | null;
+  /** @nullable */
+  generalManagerDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExternalMaintenanceRequestDetail {
+  request: MaintenanceRequestSummary;
+  externalRequest: ExternalMaintenanceRequest;
+}
+
+export interface ExternalMaintenanceRequestUpdate {
+  technicianSuggestions?: string;
+  maintenanceTechnicianSignature?: string;
+  maintenanceTechnicianDate?: string;
+  departmentManagerSignature?: string;
+  departmentManagerDate?: string;
+  generalManagerSignature?: string;
+  generalManagerDate?: string;
+}
+
+export interface ExternalMaintenanceReceipt {
+  id: number;
+  externalMaintenanceRequestId: number;
+  maintenanceType: string;
+  /** @nullable */
+  requestingDepartment?: string | null;
+  /** @nullable */
+  receiptDate?: string | null;
+  /** @nullable */
+  performingEntity?: string | null;
+  /** @nullable */
+  workAcceptanceReport?: string | null;
+  /** @nullable */
+  workFailureCause?: string | null;
+  /** @nullable */
+  examinerName?: string | null;
+  /** @nullable */
+  examinerSignature?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExternalMaintenanceReceiptDetail {
+  request: MaintenanceRequestSummary;
+  externalRequest: ExternalMaintenanceRequest;
+  receipt: ExternalMaintenanceReceipt;
+}
+
+export interface ExternalMaintenanceReceiptUpdate {
+  maintenanceType?: string;
+  receiptDate?: string;
+  performingEntity?: string;
+  workAcceptanceReport?: string;
+  workFailureCause?: string;
+  examinerName?: string;
+  examinerSignature?: string;
+}
+
 export interface CorrectiveMaintenanceEvent {
   id: number;
   recordId: number;
-  requestId: number;
+  /** @nullable */
+  requestId?: number | null;
   machineId: number;
-  requestReportNumber: string;
+  /** @nullable */
+  requestReportNumber?: string | null;
+  /** @nullable */
+  requestDate?: string | null;
+  /** @nullable */
+  priority?: string | null;
   rowNumber: number;
   /** @nullable */
   preliminaryCheckResults?: string | null;
@@ -806,6 +960,30 @@ export interface CorrectiveMaintenanceRecordDetail {
   maxRows?: number;
   status: string;
   events: CorrectiveMaintenanceEvent[];
+}
+
+export interface CorrectiveMaintenanceLogRowInput {
+  /** @nullable */
+  requestReportNumber?: string | null;
+  /** @nullable */
+  preliminaryCheckResults?: string | null;
+  /** @nullable */
+  expectedWorkTimeFrom?: string | null;
+  /** @nullable */
+  expectedWorkTimeTo?: string | null;
+  /** @nullable */
+  actionsTaken?: string | null;
+  /** @nullable */
+  receiverName?: string | null;
+  /** @nullable */
+  handoverDate?: string | null;
+}
+
+export interface CorrectiveMaintenanceHeaderInput {
+  documentNumber: string;
+  /** @nullable */
+  executionDate?: string | null;
+  pageCount: string;
 }
 
 export interface SparePart {
@@ -948,6 +1126,15 @@ export interface DashboardRecentMaintenanceRequest {
   requestDate: string;
 }
 
+export type DashboardStatsCompletedCorrectiveThisMonthItem = {
+  id?: number;
+  requestReportNumber?: string;
+  machineId?: number;
+  machineName?: string;
+  machineNumber?: string;
+  completedDate?: string;
+};
+
 export interface CountByLabel {
   label: string;
   count: number;
@@ -966,6 +1153,7 @@ export interface DashboardStats {
   maintenanceRequests?: DashboardMaintenanceRequestSummary;
   recentMaintenanceRequests?: DashboardRecentMaintenanceRequest[];
   lowStockSpareParts?: DashboardLowStockSparePart[];
+  completedCorrectiveThisMonth?: DashboardStatsCompletedCorrectiveThisMonthItem[];
 }
 
 export type ListSignaturesParams = {

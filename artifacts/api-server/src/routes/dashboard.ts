@@ -159,6 +159,11 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
       status: row.status,
       requestDate: row.requestDate,
     }));
+  const currentMonthKey = isoDate(new Date()).slice(0, 7);
+  const completedCorrectiveThisMonth = requestRows
+    .filter((row) => (row.status === "Completed" || row.status === "Closed") && (row.closedAt ?? row.updatedAt).toISOString().slice(0, 7) === currentMonthKey)
+    .sort((a, b) => (b.closedAt ?? b.updatedAt).getTime() - (a.closedAt ?? a.updatedAt).getTime())
+    .map((row) => ({ id: row.id, requestReportNumber: row.requestReportNumber, machineId: row.machineId, machineName: row.machineName, machineNumber: row.machineNumber, completedDate: isoDate(row.closedAt ?? row.updatedAt) }));
 
   const lowStockParts = await db
     .select()
@@ -189,6 +194,7 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
     maintenanceRequests: requestSummary,
     maintenanceRequestNotifications: requestNotifications,
     recentMaintenanceRequests: recentRequests,
+    completedCorrectiveThisMonth,
     monthlyPmCompletionMachines,
     lowStockSpareParts: lowStockParts.map((part) => ({
       id: part.id,

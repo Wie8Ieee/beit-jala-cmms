@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, KeyRound, Lock, UserPlus, X } from "lucide-react";
+import { CheckCircle2, KeyRound, Lock } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { SignaturePad } from "@/components/signature-pad";
 
 type Signature = {
   id: number;
@@ -18,6 +20,7 @@ type Signature = {
   userId: number;
   userName: string;
   signedAt: string;
+  signatureData: string | null;
 };
 
 type EligibleSignerAssignment = {
@@ -28,6 +31,14 @@ type EligibleSignerAssignment = {
   eligibleUserId: number;
   eligibleUserName: string | null;
   revokedAt: string | null;
+};
+
+type SignatureFieldPermission = {
+  id: number;
+  documentType: string;
+  fieldName: string;
+  eligibleUserId: number;
+  eligibleUserName: string | null;
 };
 
 type ElectronicSignatureFieldProps = {
@@ -48,11 +59,13 @@ export function ElectronicSignatureField({
   const { user, hasPermission } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [eligibleUserId, setEligibleUserId] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [drawnSignature, setDrawnSignature] = useState("");
   const normalizedDocumentType = documentType.toUpperCase();
   const query = `documentType=${encodeURIComponent(normalizedDocumentType)}&documentId=${documentId}`;
   const signaturesKey = ["signatures", normalizedDocumentType, documentId];
   const eligibleKey = ["eligible-signers", normalizedDocumentType, documentId];
+  const permanentKey = ["signature-field-permissions", normalizedDocumentType, fieldName];
 
   const { data: signatures = [] } = useQuery({
     queryKey: signaturesKey,
@@ -65,22 +78,28 @@ export function ElectronicSignatureField({
     queryFn: () => apiRequest<EligibleSignerAssignment[]>(`/signatures/eligible?${query}`),
     enabled: Number.isFinite(documentId) && documentId > 0,
   });
+  const { data: permanentPermissions = [] } = useQuery({
+    queryKey: permanentKey,
+    queryFn: () => apiRequest<SignatureFieldPermission[]>(`/signatures/field-permissions?documentType=${encodeURIComponent(normalizedDocumentType)}&fieldName=${encodeURIComponent(fieldName)}`),
+    enabled: Number.isFinite(documentId) && documentId > 0,
+  });
+  const { data: profile } = useQuery({ queryKey: ["signature-profile"], queryFn: () => apiRequest<{ signatureData: string | null }>("/signatures/profile") });
 
   const signature = signatures.find((item) => item.fieldName === fieldName);
   const activeAssignments = assignments.filter((item) => item.fieldName === fieldName && !item.revokedAt);
-  const canManage = hasPermission("manage_signatures");
   const canSign = useMemo(
     () =>
       !signature &&
       hasPermission("sign_assigned_fields") &&
-      activeAssignments.some((item) => item.eligibleUserId === user?.id),
-    [activeAssignments, hasPermission, signature, user?.id],
+      (activeAssignments.some((item) => item.eligibleUserId === user?.id) || permanentPermissions.some((item) => item.eligibleUserId === user?.id)),
+    [activeAssignments, hasPermission, permanentPermissions, signature, user?.id],
   );
 
   const invalidate = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: signaturesKey }),
       queryClient.invalidateQueries({ queryKey: eligibleKey }),
+      queryClient.invalidateQueries({ queryKey: permanentKey }),
     ]);
   };
 
@@ -103,34 +122,9 @@ export function ElectronicSignatureField({
       toast({ variant: "destructive", title: "Signature failed", description: error instanceof Error ? error.message : "Unable to sign field." });
     },
   });
-
-  const assignMutation = useMutation({
-    mutationFn: () =>
-      apiRequest<EligibleSignerAssignment>("/signatures/eligible", {
-        method: "POST",
-        body: JSON.stringify({
-          documentType: normalizedDocumentType,
-          documentId,
-          fieldName,
-          eligibleUserId: Number(eligibleUserId),
-        }),
-      }),
-    onSuccess: async () => {
-      setEligibleUserId("");
-      await invalidate();
-      toast({ title: "Eligible signer assigned", description: "The user can now sign this field." });
-    },
-    onError: (error) => {
-      toast({ variant: "destructive", title: "Assignment failed", description: error instanceof Error ? error.message : "Unable to assign signer." });
-    },
-  });
-
-  const revokeMutation = useMutation({
-    mutationFn: (assignmentId: number) =>
-      apiRequest<EligibleSignerAssignment>(`/signatures/eligible/${assignmentId}/revoke`, {
-        method: "PATCH",
-      }),
-    onSuccess: invalidate,
+  const saveProfileMutation = useMutation({
+    mutationFn: () => apiRequest<{ signatureData: string }>("/signatures/profile", { method: "PUT", body: JSON.stringify({ signatureData: drawnSignature }) }),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["signature-profile"] }); setProfileOpen(false); signMutation.mutate(); },
   });
 
   return (
@@ -144,6 +138,7 @@ export function ElectronicSignatureField({
                 <CheckCircle2 className="h-4 w-4 text-green-700" />
                 {signature.userName}
               </div>
+              {signature.signatureData && <img src={signature.signatureData} alt="Signature" className="mt-2 h-12 max-w-40 object-contain object-left" />}
               <div className="mt-1 text-xs text-muted-foreground print:text-black">
                 Signed {new Date(signature.signedAt).toLocaleString()} · Immutable
               </div>
@@ -157,51 +152,14 @@ export function ElectronicSignatureField({
         </div>
         {signature && <Badge variant="secondary">Signed</Badge>}
         {!signature && canSign && (
-          <Button type="button" size="sm" onClick={() => signMutation.mutate()} disabled={signMutation.isPending} className="print:hidden">
+          <Button type="button" size="sm" onClick={() => profile?.signatureData ? signMutation.mutate() : setProfileOpen(true)} disabled={signMutation.isPending} className="print:hidden">
             <KeyRound className="mr-2 h-4 w-4" />
             Sign
           </Button>
         )}
       </div>
 
-      {canManage && !signature && (
-        <div className="mt-3 space-y-2 border-t pt-3 print:hidden">
-          <div className="flex gap-2">
-            <Input
-              value={eligibleUserId}
-              onChange={(event) => setEligibleUserId(event.target.value)}
-              placeholder="Eligible user ID"
-              inputMode="numeric"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => assignMutation.mutate()}
-              disabled={!Number(eligibleUserId) || assignMutation.isPending}
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Assign
-            </Button>
-          </div>
-          {activeAssignments.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {activeAssignments.map((assignment) => (
-                <Badge key={assignment.id} variant="outline" className="gap-1">
-                  {assignment.eligibleUserName ?? `User #${assignment.eligibleUserId}`}
-                  <button
-                    type="button"
-                    onClick={() => revokeMutation.mutate(assignment.id)}
-                    aria-label="Revoke eligible signer"
-                    className="ml-1"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <Dialog open={profileOpen} onOpenChange={setProfileOpen}><DialogContent><DialogHeader><DialogTitle>ارسم توقيعك الإلكتروني</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">يُحفظ التوقيع في حسابك ويُستخدم عند اعتماد التوقيعات الإلكترونية.</p><SignaturePad onChange={setDrawnSignature} /><Button onClick={() => saveProfileMutation.mutate()} disabled={!drawnSignature || saveProfileMutation.isPending}>حفظ التوقيع والاعتماد</Button></DialogContent></Dialog>
     </div>
   );
 }

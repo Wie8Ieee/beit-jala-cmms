@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 650 190" role="img" aria-label="Beit Jala Pharmaceutical Company">
+  <path fill="#efa407" d="M25 18h82v62H25C11 80 0 69 0 55V43C0 29 11 18 25 18Z"/>
+  <path fill="#efa407" d="M25 93h82v62H25C11 155 0 144 0 130v-12C0 104 11 93 25 93Z"/>
+  <path fill="#03467d" d="M115 18h32v116c0 28-18 45-43 50l-10-25c14-4 21-12 21-28V18Z"/>
+  <path fill="#a9001e" d="M156 18h55c19 0 29 14 29 31v18c0 17-10 31-29 31h-55V18Z"/>
+  <text x="155" y="116" fill="#03467d" font-family="Georgia, 'Times New Roman', serif" font-size="37" font-weight="700">Beit Jala Pharmaceutical Co</text>
+  <text x="155" y="158" fill="#03467d" font-family="Arial, sans-serif" font-size="34" font-weight="700">شركة بيت جالا لصناعة الأدوية</text>
+</svg>

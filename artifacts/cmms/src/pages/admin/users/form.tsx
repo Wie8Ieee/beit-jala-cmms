@@ -51,9 +51,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Loader2, Save, UserX, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { SignaturePad } from "@/components/signature-pad";
+import { apiRequest } from "@/lib/api";
 
 // Base schema for both create and edit
 const baseUserSchema = z.object({
+  employeeNumber: z.string().min(1, "Employee number is required"),
   fullName: z.string().optional(),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   roleId: z.coerce.number().min(1, "Role is required"),
@@ -107,12 +110,14 @@ export default function UserForm({ params }: { params?: { id: string } }) {
 
   // Selected permissions state for the edit form
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [signatureData, setSignatureData] = useState("");
 
   const formSchema = isEditing ? editUserSchema : createUserSchema;
   const form = useForm<any>({
     resolver: zodResolver(formSchema),
     defaultValues: isEditing ? {
       fullName: "",
+      employeeNumber: "",
       email: "",
       roleId: "",
       departmentId: null,
@@ -120,6 +125,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
     } : {
       username: "",
       fullName: "",
+      employeeNumber: "",
       email: "",
       roleId: "",
       departmentId: null,
@@ -131,12 +137,14 @@ export default function UserForm({ params }: { params?: { id: string } }) {
     if (isEditing && userData) {
       form.reset({
         fullName: userData.fullName || "",
+        employeeNumber: userData.employeeNumber || "",
         email: userData.email || "",
         roleId: userData.roleId,
         departmentId: userData.departmentId,
         password: "", // don't prefill password
       });
       setSelectedPermissions(userData.permissions || []);
+      setSignatureData(userData.signatureData || "");
     }
   }, [isEditing, userData, form]);
 
@@ -245,6 +253,11 @@ export default function UserForm({ params }: { params?: { id: string } }) {
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+  const signatureMutation = useMutation({
+    mutationFn: () => apiRequest(`/signatures/users/${userId}/profile`, { method: "PUT", body: JSON.stringify({ signatureData }) }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(userId!) }); toast({ title: "Signature saved", description: "The user's saved signature was updated." }); },
+    onError: (error) => toast({ variant: "destructive", title: "Signature failed", description: getErrorMessage(error, "Unable to save signature.") }),
+  });
 
   if (isEditing && isLoadingUser) {
     return (
@@ -357,6 +370,10 @@ export default function UserForm({ params }: { params?: { id: string } }) {
                     )}
                   />
 
+                  <FormField control={form.control} name="employeeNumber" render={({ field }) => (
+                    <FormItem><FormLabel>Employee Number <span className="text-destructive">*</span></FormLabel><FormControl><Input placeholder="EMP-0001" {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+
                   <FormField
                     control={form.control}
                     name="email"
@@ -370,6 +387,8 @@ export default function UserForm({ params }: { params?: { id: string } }) {
                       </FormItem>
                     )}
                   />
+
+                  {isEditing && <div className="space-y-3 rounded-md border p-3"><p className="text-sm font-medium leading-none">Saved drawn signature</p><SignaturePad value={signatureData} onChange={setSignatureData} /><Button type="button" variant="outline" onClick={() => signatureMutation.mutate()} disabled={!signatureData || signatureMutation.isPending}>Save / Replace Signature</Button></div>}
 
                   <FormField
                     control={form.control}

@@ -4,7 +4,7 @@ import { apiRequest } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
 
 type RecordSummary = {
   id: number;
@@ -46,6 +46,7 @@ export default function PmHistoryPage({ params }: { params: { id: string } }) {
                 <TableHead>Inspections</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead>Updated</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -56,6 +57,14 @@ export default function PmHistoryPage({ params }: { params: { id: string } }) {
                   <TableCell>{record.inspectionCount}</TableCell>
                   <TableCell>{new Date(record.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell>{new Date(record.updatedAt).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-right">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/machines/${machineId}/pm/history/${record.id}`}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Open
+                      </Link>
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -7,6 +7,7 @@ import {
   machinesTable,
   monthlyPmPlanRowsTable,
   monthlyPmPlansTable,
+  formHeadersTable,
 } from "@workspace/db";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { requireAuth, requirePermission } from "../lib/auth.js";
@@ -47,6 +48,24 @@ function parseMonths(value: string) {
   } catch {
     return [];
   }
+}
+
+const MONTHLY_PLAN_HEADER_ID = 0;
+
+async function getMonthlyPlanHeader() {
+  const [existing] = await db.select().from(formHeadersTable).where(and(eq(formHeadersTable.documentType, "MONTHLY_PM_PLAN"), eq(formHeadersTable.documentId, MONTHLY_PLAN_HEADER_ID)));
+  if (existing) return existing;
+  const [created] = await db.insert(formHeadersTable).values({
+    documentType: "MONTHLY_PM_PLAN",
+    documentId: MONTHLY_PLAN_HEADER_ID,
+    companyName: "Beit Jala Pharmaceutical Co.",
+    documentName: "Monthly Preventive Maintenance Program",
+    documentNumber: "FORM-10-0117-3",
+    effectiveOrExecutionDate: "18/3/2023",
+    pageNumber: 1,
+    totalPages: 1,
+  }).returning();
+  return created!;
 }
 
 function formatAnnualRow(row: typeof annualPmPlanRowsTable.$inferSelect) {
@@ -159,6 +178,29 @@ async function getOrCreateMonthlyPlan(year: number, month: number) {
   }
   return plan!;
 }
+
+router.get("/monthly/header", requireAuth, requirePermission("view_maintenance_plans"), async (_req, res, next) => {
+  try {
+    res.json(await getMonthlyPlanHeader());
+  } catch (err) { next(err); }
+});
+
+router.put("/monthly/header", requireAuth, requirePermission("edit_header"), async (req, res, next) => {
+  try {
+    const current = await getMonthlyPlanHeader();
+    const body = req.body as Partial<typeof formHeadersTable.$inferInsert>;
+    const [saved] = await db.update(formHeadersTable).set({
+      companyName: body.companyName?.trim() || current.companyName,
+      documentName: body.documentName?.trim() || current.documentName,
+      documentNumber: body.documentNumber?.trim() || current.documentNumber,
+      effectiveOrExecutionDate: body.effectiveOrExecutionDate?.trim() || null,
+      pageNumber: Math.max(1, Number(body.pageNumber ?? current.pageNumber)),
+      totalPages: Math.max(1, Number(body.totalPages ?? current.totalPages)),
+      updatedAt: new Date(),
+    }).where(eq(formHeadersTable.id, current.id)).returning();
+    res.json(saved!);
+  } catch (err) { next(err); }
+});
 
 router.get("/annual/:year", requireAuth, requirePermission("view_maintenance_plans"), async (req, res, next) => {
   try {

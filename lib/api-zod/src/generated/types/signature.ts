@@ -15,6 +15,8 @@ export interface Signature {
   userId: number;
   userName: string;
   /** @nullable */
+  signatureData?: string | null;
+  /** @nullable */
   eligibleSignerAssignmentId?: number | null;
   signedAt: string;
 }

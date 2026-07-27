@@ -64,7 +64,7 @@ export const correctiveMaintenanceRecordsTable = pgTable("corrective_maintenance
   machineNumber: text("machine_number").notNull(),
   machineLocation: text("machine_location"),
   startupDate: text("startup_date"),
-  maxRows: integer("max_rows").notNull().default(10),
+  maxRows: integer("max_rows").notNull().default(3),
   status: text("status").notNull().default("active"),
   previousRecordId: integer("previous_record_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -79,18 +79,21 @@ export const correctiveMaintenanceEventsTable = pgTable(
       .notNull()
       .references(() => correctiveMaintenanceRecordsTable.id),
     requestId: integer("request_id")
-      .notNull()
       .unique()
       .references(() => maintenanceRequestsTable.id),
     machineId: integer("machine_id")
       .notNull()
       .references(() => machinesTable.id),
-    requestReportNumber: text("request_report_number").notNull(),
+    requestReportNumber: text("request_report_number"),
+    requestDate: text("request_date"),
+    maintenanceType: text("maintenance_type"),
     rowNumber: integer("row_number").notNull(),
     preliminaryCheckResults: text("preliminary_check_results"),
     expectedWorkTimeFrom: text("expected_work_time_from"),
     expectedWorkTimeTo: text("expected_work_time_to"),
+    repairTimeSlots: text("repair_time_slots").notNull().default("[]"),
     technicianName: text("technician_name"),
+    sparePartsUsed: text("spare_parts_used"),
     maintenanceTechnicianSignature: text("maintenance_technician_signature"),
     concernedSectionSupervisorSignature: text("concerned_section_supervisor_signature"),
     actionsTaken: text("actions_taken"),
@@ -121,6 +124,48 @@ export const maintenanceRequestStatusHistoryTable = pgTable("maintenance_request
   changedByUserId: integer("changed_by_user_id").references(() => usersTable.id),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+/** FORM-00-0077-1. One external-maintenance conversion may exist per original request. */
+export const externalMaintenanceRequestsTable = pgTable("external_maintenance_requests", {
+  id: serial("id").primaryKey(),
+  maintenanceRequestId: integer("maintenance_request_id")
+    .notNull()
+    .unique()
+    .references(() => maintenanceRequestsTable.id),
+  externalRequestNumber: text("external_request_number").notNull().unique(),
+  requestDate: text("request_date").notNull(),
+  departmentSection: text("department_section"),
+  requiredMaintenance: text("required_maintenance"),
+  preliminaryFindings: text("preliminary_findings"),
+  technicianSuggestions: text("technician_suggestions"),
+  maintenanceTechnicianSignature: text("maintenance_technician_signature"),
+  maintenanceTechnicianDate: text("maintenance_technician_date"),
+  departmentManagerSignature: text("department_manager_signature"),
+  departmentManagerDate: text("department_manager_date"),
+  generalManagerSignature: text("general_manager_signature"),
+  generalManagerDate: text("general_manager_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/** FORM-10-0240-1 — receipt of completed external maintenance work. */
+export const externalMaintenanceReceiptsTable = pgTable("external_maintenance_receipts", {
+  id: serial("id").primaryKey(),
+  externalMaintenanceRequestId: integer("external_maintenance_request_id")
+    .notNull()
+    .unique()
+    .references(() => externalMaintenanceRequestsTable.id),
+  maintenanceType: text("maintenance_type").notNull().default("صيانة خارجية"),
+  requestingDepartment: text("requesting_department"),
+  receiptDate: text("receipt_date"),
+  performingEntity: text("performing_entity"),
+  workAcceptanceReport: text("work_acceptance_report"),
+  workFailureCause: text("work_failure_cause"),
+  examinerName: text("examiner_name"),
+  examinerSignature: text("examiner_signature"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const correctiveMaintenanceStaffTable = pgTable("corrective_maintenance_staff", {
@@ -157,5 +202,7 @@ export type MaintenanceRequest = typeof maintenanceRequestsTable.$inferSelect;
 export type CorrectiveMaintenanceRecord = typeof correctiveMaintenanceRecordsTable.$inferSelect;
 export type CorrectiveMaintenanceEvent = typeof correctiveMaintenanceEventsTable.$inferSelect;
 export type MaintenanceRequestStatusHistory = typeof maintenanceRequestStatusHistoryTable.$inferSelect;
+export type ExternalMaintenanceRequest = typeof externalMaintenanceRequestsTable.$inferSelect;
+export type ExternalMaintenanceReceipt = typeof externalMaintenanceReceiptsTable.$inferSelect;
 export type CorrectiveMaintenanceStaff = typeof correctiveMaintenanceStaffTable.$inferSelect;
 export type CorrectiveMaintenanceHandover = typeof correctiveMaintenanceHandoverTable.$inferSelect;

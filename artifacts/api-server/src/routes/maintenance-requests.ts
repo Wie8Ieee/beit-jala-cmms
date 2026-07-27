@@ -5,13 +5,17 @@ import {
   correctiveMaintenanceEventsTable,
   correctiveMaintenanceRecordsTable,
   departmentsTable,
+  eligibleSignerAssignmentsTable,
+  externalMaintenanceRequestsTable,
+  externalMaintenanceReceiptsTable,
   machinesTable,
   maintenanceRequestsTable,
   maintenanceRequestStatusHistoryTable,
   rolesTable,
+  signatureFieldPermissionsTable,
   usersTable,
 } from "@workspace/db";
-import { and, asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
 import { parseIdParam, requireAuth, requirePermission } from "../lib/auth.js";
 
 const router = Router();
@@ -26,10 +30,15 @@ const STATUS = {
   IN_PROGRESS: "In Progress",
   COMPLETED: "Completed",
   CLOSED: "Closed",
+  EXTERNAL_MAINTENANCE: "External Maintenance",
 } as const;
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function monthKey(date: string | null | undefined) {
+  return date && /^\d{4}-\d{2}/.test(date) ? date.slice(0, 7) : null;
 }
 
 function firstParam(value: string | string[] | undefined) {
@@ -138,6 +147,7 @@ function hasPermission(req: Request, permission: string) {
 }
 
 function ensureCanView(req: Request, request: typeof maintenanceRequestsTable.$inferSelect) {
+  if (req.session.roleName === "Admin") return true;
   if (hasPermission(req, "manage_maintenance_requests") || hasPermission(req, "review_qa_requests") || hasPermission(req, "review_engineering_requests")) return true;
   if (
     hasPermission(req, "fill_corrective_maintenance") &&
@@ -149,7 +159,37 @@ function ensureCanView(req: Request, request: typeof maintenanceRequestsTable.$i
 }
 
 function isAssignedTechnician(req: Request, request: typeof maintenanceRequestsTable.$inferSelect) {
-  return !!request.assignedTechnicianUserId && request.assignedTechnicianUserId === req.session.userId;
+  // Administrators can complete or close a corrective request when needed,
+  // while all other users remain limited to their assigned request.
+  return req.session.roleName === "Admin" || (!!request.assignedTechnicianUserId && request.assignedTechnicianUserId === req.session.userId);
+}
+
+async function hasAssignedSignatureAccess(userId: number | undefined, requestId: number) {
+  if (!userId) return false;
+  const [assignment] = await db.select({ id: eligibleSignerAssignmentsTable.id }).from(eligibleSignerAssignmentsTable).where(and(
+    eq(eligibleSignerAssignmentsTable.documentType, "MAINTENANCE_REQUEST"),
+    eq(eligibleSignerAssignmentsTable.documentId, requestId),
+    eq(eligibleSignerAssignmentsTable.eligibleUserId, userId),
+    isNull(eligibleSignerAssignmentsTable.revokedAt),
+  )).limit(1);
+  if (assignment) return true;
+  const [permanentPermission] = await db.select({ id: signatureFieldPermissionsTable.id }).from(signatureFieldPermissionsTable).where(and(
+    eq(signatureFieldPermissionsTable.eligibleUserId, userId),
+    isNull(signatureFieldPermissionsTable.revokedAt),
+  )).limit(1);
+  return !!permanentPermission;
+}
+
+function formatExternalMaintenanceRequest(row: typeof externalMaintenanceRequestsTable.$inferSelect) {
+  return {
+    ...row,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function formatExternalMaintenanceReceipt(row: typeof externalMaintenanceReceiptsTable.$inferSelect) {
+  return { ...row, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
 }
 
 async function nextRequestNumber() {
@@ -176,7 +216,7 @@ async function getMachine(machineId: number) {
   return machine ?? null;
 }
 
-async function getOrCreateCmRecord(machineId: number) {
+async function getOrCreateCmRecord(machineId: number, executionDate = todayString()) {
   const [active] = await db
     .select()
     .from(correctiveMaintenanceRecordsTable)
@@ -185,15 +225,12 @@ async function getOrCreateCmRecord(machineId: number) {
     .limit(1);
 
   if (active) {
-    const [eventStats] = await db
-      .select({ total: count() })
-      .from(correctiveMaintenanceEventsTable)
-      .where(eq(correctiveMaintenanceEventsTable.recordId, active.id));
-    if (Number(eventStats?.total ?? 0) < active.maxRows) return active;
-    await db
-      .update(correctiveMaintenanceRecordsTable)
-      .set({ status: "archived", updatedAt: new Date() })
-      .where(eq(correctiveMaintenanceRecordsTable.id, active.id));
+    const [eventStats] = await db.select({ total: count() }).from(correctiveMaintenanceEventsTable).where(eq(correctiveMaintenanceEventsTable.recordId, active.id));
+    // A record belongs to one calendar month. A request dated in a new month
+    // therefore starts a new chained record, even when the prior page still
+    // has unused lines.
+    if (Number(eventStats?.total ?? 0) < active.maxRows && monthKey(active.executionDate) === monthKey(executionDate)) return active;
+    await db.update(correctiveMaintenanceRecordsTable).set({ status: "archived", updatedAt: new Date() }).where(eq(correctiveMaintenanceRecordsTable.id, active.id));
   }
 
   const machine = await getMachine(machineId);
@@ -212,7 +249,7 @@ async function getOrCreateCmRecord(machineId: number) {
       machineId,
       sequenceNumber: latest ? latest.sequenceNumber + 1 : 1,
       previousRecordId: latest?.id ?? null,
-      executionDate: todayString(),
+      executionDate,
       machineName: machine.machineName,
       machineNumber: machine.machineNumber,
       machineLocation: machine.location ?? null,
@@ -222,6 +259,39 @@ async function getOrCreateCmRecord(machineId: number) {
   return created!;
 }
 
+// Summary used by the Reports screen.  Request data is intentionally read from
+// the immutable maintenance-request rows, so historical reports remain stable.
+router.get("/reports/corrective-maintenance", requireAuth, async (req, res, next) => {
+  try {
+    const requestedYear = Number(firstParam(req.query.year));
+    const year = Number.isInteger(requestedYear) && requestedYear >= 2000 && requestedYear <= 2100
+      ? requestedYear
+      : new Date().getFullYear();
+    const requests = (await db.select().from(maintenanceRequestsTable))
+      .filter((item) => item.requestDate?.startsWith(`${year}-`))
+      .sort((a, b) => (a.requestDate ?? "").localeCompare(b.requestDate ?? ""));
+    const completedStatuses = new Set([STATUS.COMPLETED, STATUS.CLOSED]);
+    const months = Array.from({ length: 12 }, (_, index) => {
+      const month = index + 1;
+      const rows = requests.filter((item) => Number(item.requestDate?.slice(5, 7)) === month);
+      return {
+        month,
+        total: rows.length,
+        completed: rows.filter((item) => completedStatuses.has(item.status as typeof STATUS.COMPLETED | typeof STATUS.CLOSED)).length,
+        requests: rows.map((item) => ({
+          id: item.id,
+          requestReportNumber: item.requestReportNumber,
+          machineName: item.machineName,
+          machineNumber: item.machineNumber,
+          requestDate: item.requestDate,
+          status: item.status,
+        })),
+      };
+    });
+    res.json({ year, annualTotal: requests.length, completedAnnualTotal: months.reduce((total, month) => total + month.completed, 0), months });
+  } catch (error) { next(error); }
+});
+
 async function ensureEventForRequest(request: typeof maintenanceRequestsTable.$inferSelect) {
   const [existing] = await db
     .select()
@@ -229,7 +299,7 @@ async function ensureEventForRequest(request: typeof maintenanceRequestsTable.$i
     .where(eq(correctiveMaintenanceEventsTable.requestId, request.id));
   if (existing) return existing;
 
-  const record = await getOrCreateCmRecord(request.machineId);
+  const record = await getOrCreateCmRecord(request.machineId, request.requestDate);
   const [eventStats] = await db
     .select({ total: count() })
     .from(correctiveMaintenanceEventsTable)
@@ -245,6 +315,7 @@ async function ensureEventForRequest(request: typeof maintenanceRequestsTable.$i
       rowNumber: Number(eventStats?.total ?? 0) + 1,
     })
     .returning();
+
   return created!;
 }
 
@@ -266,10 +337,21 @@ router.get("/", requireAuth, async (req, res, next) => {
     }
 
     let rows = await db.select().from(maintenanceRequestsTable).orderBy(desc(maintenanceRequestsTable.createdAt));
-    if (ownOnly) rows = rows.filter((row) => row.requestedByUserId === req.session.userId);
+    const signatureAssignments = req.session.userId ? await db.select({ documentId: eligibleSignerAssignmentsTable.documentId }).from(eligibleSignerAssignmentsTable).where(and(
+      eq(eligibleSignerAssignmentsTable.documentType, "MAINTENANCE_REQUEST"),
+      eq(eligibleSignerAssignmentsTable.eligibleUserId, req.session.userId),
+      isNull(eligibleSignerAssignmentsTable.revokedAt),
+    )) : [];
+    const signatureRequestIds = new Set(signatureAssignments.map((assignment) => assignment.documentId));
+    const permanentSignaturePermissions = req.session.userId ? await db.select({ id: signatureFieldPermissionsTable.id }).from(signatureFieldPermissionsTable).where(and(
+      eq(signatureFieldPermissionsTable.eligibleUserId, req.session.userId),
+      isNull(signatureFieldPermissionsTable.revokedAt),
+    )).limit(1) : [];
+    const hasPermanentSignatureAccess = permanentSignaturePermissions.length > 0;
+    if (ownOnly) rows = rows.filter((row) => row.requestedByUserId === req.session.userId || signatureRequestIds.has(row.id) || hasPermanentSignatureAccess);
     if (allowedStatuses) rows = rows.filter((row) => allowedStatuses.includes(row.status));
     if (scope === "technician") rows = rows.filter((row) => row.assignedTechnicianUserId === req.session.userId);
-    rows = rows.filter((row) => ensureCanView(req, row));
+    rows = rows.filter((row) => ensureCanView(req, row) || signatureRequestIds.has(row.id) || hasPermanentSignatureAccess);
     res.json(rows.map(formatRequestSummary));
   } catch (err) {
     next(err);
@@ -307,6 +389,37 @@ router.get("/machines", requireAuth, requirePermission("submit_maintenance_reque
       .leftJoin(departmentsTable, eq(machinesTable.departmentId, departmentsTable.id))
       .orderBy(asc(machinesTable.machineName));
     res.json(machines);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// LOG-10-0659-0: this register is derived from the permanent corrective
+// maintenance workflow.  A row exists only after the request is closed, so
+// there is no separate editable copy that can drift from the source record.
+router.get("/closed-log", requireAuth, requirePermission("manage_maintenance_requests"), async (_req, res, next) => {
+  try {
+    const rows = await db
+      .select({
+        id: maintenanceRequestsTable.id,
+        machineName: maintenanceRequestsTable.machineName,
+        machineNumber: maintenanceRequestsTable.machineNumber,
+        requestDate: maintenanceRequestsTable.requestDate,
+        requestReportNumber: maintenanceRequestsTable.requestReportNumber,
+        priority: maintenanceRequestsTable.priority,
+        closedAt: maintenanceRequestsTable.closedAt,
+        remarks: correctiveMaintenanceEventsTable.remarksRecommendations,
+      })
+      .from(maintenanceRequestsTable)
+      .leftJoin(correctiveMaintenanceEventsTable, eq(correctiveMaintenanceEventsTable.requestId, maintenanceRequestsTable.id))
+      .where(eq(maintenanceRequestsTable.status, STATUS.CLOSED))
+      .orderBy(desc(maintenanceRequestsTable.closedAt), desc(maintenanceRequestsTable.id));
+
+    res.json(rows.map((row) => ({
+      ...row,
+      closedDate: row.closedAt ? row.closedAt.toISOString().slice(0, 10) : "",
+      remarks: row.remarks ?? "",
+    })));
   } catch (err) {
     next(err);
   }
@@ -384,11 +497,203 @@ router.get("/by-number/:requestNumber", requireAuth, async (req, res, next) => {
   }
 });
 
+router.get("/:id/external-maintenance", requireAuth, async (req, res, next) => {
+  try {
+    const request = await getRequest(parseIdParam(req.params.id));
+    if (!request || (!ensureCanView(req, request) && !(await hasAssignedSignatureAccess(req.session.userId, request.id)))) {
+      res.status(404).json({ error: "Maintenance request not found" });
+      return;
+    }
+    const [externalRequest] = await db
+      .select()
+      .from(externalMaintenanceRequestsTable)
+      .where(eq(externalMaintenanceRequestsTable.maintenanceRequestId, request.id));
+    if (!externalRequest) {
+      res.status(404).json({ error: "External maintenance request has not been created" });
+      return;
+    }
+    res.json({ request: formatRequestSummary(request), externalRequest: formatExternalMaintenanceRequest(externalRequest) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/:id/external-maintenance", requireAuth, requirePermission("manage_maintenance_requests"), async (req, res, next) => {
+  try {
+    const request = await getRequest(parseIdParam(req.params.id));
+    if (!request || request.status === STATUS.CLOSED || request.status === STATUS.REJECTED || request.status === STATUS.QA_REJECTED) {
+      res.status(400).json({ error: "This maintenance request cannot be converted to external maintenance" });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(externalMaintenanceRequestsTable)
+      .where(eq(externalMaintenanceRequestsTable.maintenanceRequestId, request.id));
+    if (existing) {
+      res.json({ request: formatRequestSummary(request), externalRequest: formatExternalMaintenanceRequest(existing) });
+      return;
+    }
+
+    const [event] = await db
+      .select()
+      .from(correctiveMaintenanceEventsTable)
+      .where(eq(correctiveMaintenanceEventsTable.requestId, request.id));
+    const [created] = await db
+      .insert(externalMaintenanceRequestsTable)
+      .values({
+        maintenanceRequestId: request.id,
+        // FORM-00-0077-1 uses the original maintenance request number; it does
+        // not create a second, unrelated request number.
+        externalRequestNumber: request.requestReportNumber,
+        requestDate: request.requestDate,
+        departmentSection: request.departmentSection,
+        requiredMaintenance: request.failureDescription,
+        preliminaryFindings: event?.preliminaryCheckResults ?? null,
+      })
+      .returning();
+    const [updatedRequest] = await db
+      .update(maintenanceRequestsTable)
+      .set({ status: STATUS.EXTERNAL_MAINTENANCE, updatedAt: new Date() })
+      .where(eq(maintenanceRequestsTable.id, request.id))
+      .returning();
+    await addStatusHistory(request.id, request.status, STATUS.EXTERNAL_MAINTENANCE, req.session.userId, `Converted to external maintenance: ${created!.externalRequestNumber}`);
+    res.status(201).json({ request: formatRequestSummary(updatedRequest!), externalRequest: formatExternalMaintenanceRequest(created!) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/:id/external-maintenance", requireAuth, requirePermission("manage_maintenance_requests"), async (req, res, next) => {
+  try {
+    const request = await getRequest(parseIdParam(req.params.id));
+    if (!request) {
+      res.status(404).json({ error: "Maintenance request not found" });
+      return;
+    }
+    const body = req.body as Partial<{
+      technicianSuggestions: string; maintenanceTechnicianSignature: string; maintenanceTechnicianDate: string;
+      departmentManagerSignature: string; departmentManagerDate: string; generalManagerSignature: string; generalManagerDate: string;
+    }>;
+    const [updated] = await db
+      .update(externalMaintenanceRequestsTable)
+      .set({
+        technicianSuggestions: body.technicianSuggestions ?? null,
+        maintenanceTechnicianSignature: body.maintenanceTechnicianSignature ?? null,
+        maintenanceTechnicianDate: body.maintenanceTechnicianDate ?? null,
+        departmentManagerSignature: body.departmentManagerSignature ?? null,
+        departmentManagerDate: body.departmentManagerDate ?? null,
+        generalManagerSignature: body.generalManagerSignature ?? null,
+        generalManagerDate: body.generalManagerDate ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(externalMaintenanceRequestsTable.maintenanceRequestId, request.id))
+      .returning();
+    if (!updated) {
+      res.status(404).json({ error: "External maintenance request has not been created" });
+      return;
+    }
+    res.json({ request: formatRequestSummary(request), externalRequest: formatExternalMaintenanceRequest(updated) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/:id/external-maintenance-receipt", requireAuth, async (req, res, next) => {
+  try {
+    const request = await getRequest(parseIdParam(req.params.id));
+    if (!request || (!ensureCanView(req, request) && !(await hasAssignedSignatureAccess(req.session.userId, request.id)))) {
+      res.status(404).json({ error: "Maintenance request not found" });
+      return;
+    }
+    const [externalRequest] = await db.select().from(externalMaintenanceRequestsTable)
+      .where(eq(externalMaintenanceRequestsTable.maintenanceRequestId, request.id));
+    if (!externalRequest) {
+      res.status(404).json({ error: "External maintenance request has not been created" });
+      return;
+    }
+    const [receipt] = await db.select().from(externalMaintenanceReceiptsTable)
+      .where(eq(externalMaintenanceReceiptsTable.externalMaintenanceRequestId, externalRequest.id));
+    if (!receipt) {
+      res.status(404).json({ error: "External maintenance receipt has not been created" });
+      return;
+    }
+    res.json({ request: formatRequestSummary(request), externalRequest: formatExternalMaintenanceRequest(externalRequest), receipt: formatExternalMaintenanceReceipt(receipt) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/:id/external-maintenance-receipt", requireAuth, requirePermission("manage_maintenance_requests"), async (req, res, next) => {
+  try {
+    const request = await getRequest(parseIdParam(req.params.id));
+    if (!request || request.status !== STATUS.EXTERNAL_MAINTENANCE) {
+      res.status(400).json({ error: "Request is not in external maintenance" });
+      return;
+    }
+    const [externalRequest] = await db.select().from(externalMaintenanceRequestsTable)
+      .where(eq(externalMaintenanceRequestsTable.maintenanceRequestId, request.id));
+    if (!externalRequest) {
+      res.status(404).json({ error: "External maintenance request has not been created" });
+      return;
+    }
+    const [existing] = await db.select().from(externalMaintenanceReceiptsTable)
+      .where(eq(externalMaintenanceReceiptsTable.externalMaintenanceRequestId, externalRequest.id));
+    if (existing) {
+      res.json({ request: formatRequestSummary(request), externalRequest: formatExternalMaintenanceRequest(externalRequest), receipt: formatExternalMaintenanceReceipt(existing) });
+      return;
+    }
+    const [created] = await db.insert(externalMaintenanceReceiptsTable).values({
+      externalMaintenanceRequestId: externalRequest.id,
+      maintenanceType: "صيانة خارجية",
+      requestingDepartment: externalRequest.departmentSection,
+      receiptDate: todayString(),
+    }).returning();
+    res.status(201).json({ request: formatRequestSummary(request), externalRequest: formatExternalMaintenanceRequest(externalRequest), receipt: formatExternalMaintenanceReceipt(created!) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch("/:id/external-maintenance-receipt", requireAuth, requirePermission("manage_maintenance_requests"), async (req, res, next) => {
+  try {
+    const request = await getRequest(parseIdParam(req.params.id));
+    if (!request) {
+      res.status(404).json({ error: "Maintenance request not found" });
+      return;
+    }
+    const [externalRequest] = await db.select().from(externalMaintenanceRequestsTable)
+      .where(eq(externalMaintenanceRequestsTable.maintenanceRequestId, request.id));
+    if (!externalRequest) {
+      res.status(404).json({ error: "External maintenance request has not been created" });
+      return;
+    }
+    const body = req.body as Partial<{ maintenanceType: string; receiptDate: string; performingEntity: string; workAcceptanceReport: string; workFailureCause: string; examinerName: string; examinerSignature: string }>;
+    const [updated] = await db.update(externalMaintenanceReceiptsTable).set({
+      maintenanceType: body.maintenanceType ?? "صيانة خارجية",
+      receiptDate: body.receiptDate ?? null,
+      performingEntity: body.performingEntity ?? null,
+      workAcceptanceReport: body.workAcceptanceReport ?? null,
+      workFailureCause: body.workFailureCause ?? null,
+      examinerName: body.examinerName ?? null,
+      examinerSignature: body.examinerSignature ?? null,
+      updatedAt: new Date(),
+    }).where(eq(externalMaintenanceReceiptsTable.externalMaintenanceRequestId, externalRequest.id)).returning();
+    if (!updated) {
+      res.status(404).json({ error: "External maintenance receipt has not been created" });
+      return;
+    }
+    res.json({ request: formatRequestSummary(request), externalRequest: formatExternalMaintenanceRequest(externalRequest), receipt: formatExternalMaintenanceReceipt(updated) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/:id", requireAuth, async (req, res, next) => {
   try {
     const id = parseIdParam(req.params.id);
     const request = await getRequest(id);
-    if (!request || !ensureCanView(req, request)) {
+    if (!request || (!ensureCanView(req, request) && !(await hasAssignedSignatureAccess(req.session.userId, request.id)))) {
       res.status(404).json({ error: "Maintenance request not found" });
       return;
     }

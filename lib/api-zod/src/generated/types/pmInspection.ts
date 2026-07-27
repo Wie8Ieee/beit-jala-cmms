@@ -12,6 +12,8 @@ export interface PmInspection {
   recordId: number;
   machineId: number;
   columnNumber: number;
+  /** @nullable */
+  executionMonthYear?: string | null;
   inspectionDate: string;
   inspectionTime: string;
   /** @nullable */

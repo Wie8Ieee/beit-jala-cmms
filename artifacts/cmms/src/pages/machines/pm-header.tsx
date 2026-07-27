@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
@@ -13,17 +13,21 @@ type Header = {
   effectiveDate: string | null;
   department: string | null;
   columnsPerRecord: number;
+  inspectionColumnsPerPrintPage: number;
 };
 
 export default function PmHeaderPage({ params }: { params: { id: string } }) {
   const machineId = Number(params.id);
   const queryClient = useQueryClient();
+  const initializedForMachine = useRef<number | null>(null);
   const [form, setForm] = useState<Header>({
     procedureFormNumber: "",
     effectiveDate: "",
     department: "",
     columnsPerRecord: 5,
+    inspectionColumnsPerPrintPage: 2,
   });
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const { data } = useQuery({
     queryKey: ["pm-header", machineId],
@@ -31,8 +35,10 @@ export default function PmHeaderPage({ params }: { params: { id: string } }) {
   });
 
   useEffect(() => {
-    if (data) setForm(data);
-  }, [data]);
+    if (!data || initializedForMachine.current === machineId) return;
+    setForm(data);
+    initializedForMachine.current = machineId;
+  }, [data, machineId]);
 
   const save = useMutation({
     mutationFn: () =>
@@ -40,10 +46,13 @@ export default function PmHeaderPage({ params }: { params: { id: string } }) {
         method: "PUT",
         body: JSON.stringify(form),
       }),
-    onSuccess: () => {
+    onSuccess: (savedHeader) => {
+      setForm(savedHeader);
+      setSaveMessage("Header saved successfully.");
       queryClient.invalidateQueries({ queryKey: ["pm-header", machineId] });
       queryClient.invalidateQueries({ queryKey: ["pm-current", machineId] });
     },
+    onError: () => setSaveMessage("Unable to save the header. Check your permission and try again."),
   });
 
   function submit(event: FormEvent) {
@@ -93,19 +102,20 @@ export default function PmHeaderPage({ params }: { params: { id: string } }) {
             />
           </div>
           <div>
-            <Label>Inspection columns per record</Label>
+            <Label>Inspections per PM record / print page</Label>
             <Input
               type="number"
               min={1}
               max={10}
-              value={form.columnsPerRecord}
-              onChange={(event) => setForm((current) => ({ ...current, columnsPerRecord: Number(event.target.value) }))}
+              value={form.inspectionColumnsPerPrintPage}
+              onChange={(event) => setForm((current) => ({ ...current, inspectionColumnsPerPrintPage: Number(event.target.value) }))}
             />
           </div>
           <Button type="submit" disabled={save.isPending} className="w-fit">
             <Save className="mr-2 h-4 w-4" />
-            Save Header
+            {save.isPending ? "Saving..." : "Save Header"}
           </Button>
+          {saveMessage && <p className={save.isError ? "self-center text-sm text-destructive" : "self-center text-sm text-green-700"}>{saveMessage}</p>}
         </CardContent>
       </Card>
     </form>

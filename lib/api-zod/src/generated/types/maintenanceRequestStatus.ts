@@ -19,4 +19,5 @@ export const MaintenanceRequestStatus = {
   In_Progress: 'In Progress',
   Completed: 'Completed',
   Closed: 'Closed',
+  External_Maintenance: 'External Maintenance',
 } as const;

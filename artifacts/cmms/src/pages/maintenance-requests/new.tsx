@@ -28,9 +28,7 @@ export default function NewMaintenanceRequestPage() {
   const [requestDate, setRequestDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [failureDescription, setFailureDescription] = useState("");
   const [reportingName, setReportingName] = useState("");
-  const [reportingSignature, setReportingSignature] = useState("");
   const [supervisorName, setSupervisorName] = useState("");
-  const [supervisorSignature, setSupervisorSignature] = useState("");
 
   const { data: machines = [] } = useQuery({
     queryKey: ["request-machine-options"],
@@ -48,9 +46,7 @@ export default function NewMaintenanceRequestPage() {
           requestDate,
           failureDescription,
           reportingPersonName: reportingName,
-          reportingPersonSignature: reportingSignature,
           departmentSupervisorName: supervisorName,
-          departmentSupervisorSignature: supervisorSignature,
         }),
       }),
     onSuccess: (data) => setLocation(`/maintenance-requests/${data.request.id}`),
@@ -135,17 +131,10 @@ export default function NewMaintenanceRequestPage() {
             <Input value={reportingName} onChange={(event) => setReportingName(event.target.value)} />
           </div>
           <div>
-            <Label>Person reporting failure signature placeholder</Label>
-            <Input value={reportingSignature} onChange={(event) => setReportingSignature(event.target.value)} placeholder="Placeholder signature name" />
-          </div>
-          <div>
             <Label>Department supervisor name</Label>
             <Input value={supervisorName} onChange={(event) => setSupervisorName(event.target.value)} />
           </div>
-          <div>
-            <Label>Department supervisor signature placeholder</Label>
-            <Input value={supervisorSignature} onChange={(event) => setSupervisorSignature(event.target.value)} placeholder="Placeholder signature name" />
-          </div>
+          <p className="md:col-span-2 text-sm text-muted-foreground">تُضاف التواقيع الإلكترونية بعد إنشاء الطلب من خلال خانة التوقيع الخاصة بكل اسم.</p>
           <Button type="submit" disabled={createRequest.isPending || !machineId || !failureDescription.trim()} className="w-fit">
             <Save className="mr-2 h-4 w-4" />
             Submit Request

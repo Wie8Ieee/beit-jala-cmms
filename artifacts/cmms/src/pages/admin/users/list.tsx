@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, UserCircle, Edit } from "lucide-react";
+import { Search, Plus, UserCircle, Edit, PenLine } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UsersList() {
@@ -38,12 +38,17 @@ export default function UsersList() {
           <p className="text-muted-foreground">{t('users.subtitle')}</p>
         </div>
         
-        <Button asChild>
-          <Link href="/admin/users/new">
-            <Plus className="mr-2 h-4 w-4" />
-            {t('users.addUser')}
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href="/admin/signature-permissions"><PenLine className="mr-2 h-4 w-4" />Signature permissions</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/users/new">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('users.addUser')}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center space-x-2 bg-card p-4 rounded-lg border shadow-sm">
@@ -65,6 +70,7 @@ export default function UsersList() {
             <TableRow className="bg-muted/50">
               <TableHead>{t('users.username')}</TableHead>
               <TableHead>{t('users.fullName')}</TableHead>
+              <TableHead>Employee No.</TableHead>
               <TableHead>{t('users.role')}</TableHead>
               <TableHead>{t('users.department')}</TableHead>
               <TableHead>{t('users.status')}</TableHead>
@@ -85,7 +91,7 @@ export default function UsersList() {
               ))
             ) : filteredUsers?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-48 text-center">
+                <TableCell colSpan={7} className="h-48 text-center">
                   <div className="flex flex-col items-center justify-center text-muted-foreground">
                     <UserCircle className="h-10 w-10 mb-3 opacity-20" />
                     <p className="text-lg font-medium text-foreground">{t('users.noUsersFound')}</p>
@@ -98,6 +104,7 @@ export default function UsersList() {
                 <TableRow key={user.id} className="group hover:bg-muted/30 transition-colors">
                   <TableCell className="font-medium">{user.username}</TableCell>
                   <TableCell>{user.fullName || "—"}</TableCell>
+                  <TableCell className="font-mono">{user.employeeNumber || "—"}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
                       {user.roleName}

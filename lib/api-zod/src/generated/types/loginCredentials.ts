@@ -8,5 +8,7 @@
 
 export interface LoginCredentials {
   username: string;
+  /** @nullable */
+  employeeNumber?: string | null;
   password: string;
 }

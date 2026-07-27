@@ -17,9 +17,10 @@ type AnnualPlan = {
   approvedRdDate: string | null;
   approvedQaName: string | null;
   approvedQaDate: string | null;
+  rows: Array<{ id: number; department: string | null; machineName: string; machineCode: string | null; frequencyMonths: number | null; duration: string | null; startDate: string | null; scheduledMonths: number[] }>;
 };
 
-export default function AnnualPlanPrintPage({ params }: { params: { year: string } }) {
+export default function AnnualPlanPrintPage({ params }: { params: { year: string; schedule?: string } }) {
   const year = Number(params.year);
   const { data } = useQuery({
     queryKey: ["print-annual-plan", year],
@@ -34,6 +35,20 @@ export default function AnnualPlanPrintPage({ params }: { params: { year: string
     ["Approved By", "R & D Department Manager", data?.approvedRdName, data?.approvedRdDate],
     ["Approved By", "QA Department Manager", data?.approvedQaName, data?.approvedQaDate],
   ];
+
+  if (params.schedule) {
+    return (
+      <PrintLayout title="Machine Schedule - Print">
+        <PrintPage>
+          <OfficialPrintHeader title="Machine Schedule" documentNumber="FORM-10-1025-0" effectiveDate={String(year)} />
+          <table className="official-print-table mt-8">
+            <thead><tr><th>Department</th><th>Machine / Code</th><th>Frequency</th><th>Duration</th><th>Start</th><th>Months</th></tr></thead>
+            <tbody>{data?.rows.map((row) => <tr key={row.id}><td>{row.department ?? ""}</td><td>{row.machineName}<br />{row.machineCode ?? ""}</td><td>{row.frequencyMonths ? `Every ${row.frequencyMonths} months` : ""}</td><td>{row.duration ?? ""}</td><td>{row.startDate ?? ""}</td><td>{row.scheduledMonths.join(", ")}</td></tr>)}</tbody>
+          </table>
+        </PrintPage>
+      </PrintLayout>
+    );
+  }
 
   return (
     <PrintLayout title="Annual PM Plan - Official Print">

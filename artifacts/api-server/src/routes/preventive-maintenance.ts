@@ -7,6 +7,7 @@ import {
   pmHeadersTable,
   pmInspectionResultsTable,
   pmInspectionsTable,
+  pmRecordChecklistPointsTable,
   pmRecordsTable,
 } from "@workspace/db";
 import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
@@ -35,9 +36,33 @@ function formatPoint(point: typeof pmChecklistPointsTable.$inferSelect) {
   };
 }
 
+async function normalizeChecklistOrder(machineId: number) {
+  const points = await db
+    .select({ id: pmChecklistPointsTable.id })
+    .from(pmChecklistPointsTable)
+    .where(and(eq(pmChecklistPointsTable.machineId, machineId), eq(pmChecklistPointsTable.isActive, true)))
+    .orderBy(asc(pmChecklistPointsTable.sortOrder), asc(pmChecklistPointsTable.createdAt), asc(pmChecklistPointsTable.id));
+
+  await Promise.all(
+    points.map((point, index) =>
+      db
+        .update(pmChecklistPointsTable)
+        .set({ sortOrder: index + 1, updatedAt: new Date() })
+        .where(eq(pmChecklistPointsTable.id, point.id)),
+    ),
+  );
+
+  return points.length + 1;
+}
+
 async function machineExists(machineId: number) {
   const [machine] = await db
-    .select({ id: machinesTable.id, departmentName: departmentsTable.name })
+    .select({
+      id: machinesTable.id,
+      machineName: machinesTable.machineName,
+      machineNumber: machinesTable.machineNumber,
+      departmentName: departmentsTable.name,
+    })
     .from(machinesTable)
     .leftJoin(departmentsTable, eq(machinesTable.departmentId, departmentsTable.id))
     .where(eq(machinesTable.id, machineId));
@@ -58,6 +83,7 @@ async function getOrCreateHeader(machineId: number) {
       machineId,
       department: machine?.departmentName ?? null,
       columnsPerRecord: 5,
+      inspectionColumnsPerPrintPage: 2,
     })
     .returning();
   return created!;
@@ -91,6 +117,58 @@ async function getActiveRecord(machineId: number) {
   return created!;
 }
 
+async function getActiveChecklist(machineId: number) {
+  return db
+    .select()
+    .from(pmChecklistPointsTable)
+    .where(and(eq(pmChecklistPointsTable.machineId, machineId), eq(pmChecklistPointsTable.isActive, true)))
+    .orderBy(asc(pmChecklistPointsTable.sortOrder), asc(pmChecklistPointsTable.id));
+}
+
+async function snapshotChecklist(record: typeof pmRecordsTable.$inferSelect) {
+  const existing = await db
+    .select({ id: pmRecordChecklistPointsTable.id })
+    .from(pmRecordChecklistPointsTable)
+    .where(eq(pmRecordChecklistPointsTable.recordId, record.id));
+  if (existing.length) return;
+
+  const checklist = await getActiveChecklist(record.machineId);
+  if (!checklist.length) return;
+  await db.insert(pmRecordChecklistPointsTable).values(
+    checklist.map((point) => ({
+      recordId: record.id,
+      sourceChecklistPointId: point.id,
+      pointText: point.pointText,
+      resultType: point.resultType,
+      sortOrder: point.sortOrder,
+    })),
+  );
+}
+
+async function getChecklistForRecord(machineId: number, record: typeof pmRecordsTable.$inferSelect) {
+  const snapshots = await db
+    .select()
+    .from(pmRecordChecklistPointsTable)
+    .where(eq(pmRecordChecklistPointsTable.recordId, record.id))
+    .orderBy(asc(pmRecordChecklistPointsTable.sortOrder), asc(pmRecordChecklistPointsTable.id));
+
+  // A checklist is captured as soon as the record reaches its final
+  // inspection.  Read that capture even while the record is waiting to be
+  // rolled over, so later checklist changes cannot alter its official print.
+  if (!snapshots.length) return getActiveChecklist(machineId);
+  return snapshots.map((point) => ({
+    id: point.sourceChecklistPointId,
+    machineId,
+    pointText: point.pointText,
+    resultType: point.resultType,
+    sortOrder: point.sortOrder,
+    isActive: true,
+    deactivatedAt: null,
+    createdAt: point.createdAt,
+    updatedAt: point.createdAt,
+  }));
+}
+
 async function summarizeRecord(record: typeof pmRecordsTable.$inferSelect) {
   const [inspectionStats] = await db
     .select({ total: count() })
@@ -109,14 +187,36 @@ async function summarizeRecord(record: typeof pmRecordsTable.$inferSelect) {
   };
 }
 
+// A PM record remains active until its configured inspection capacity is full.
+// The completed record is then archived and a new one is chained after it.
+async function rolloverCompletedRecord(machineId: number) {
+  const header = await getOrCreateHeader(machineId);
+  const record = await getActiveRecord(machineId);
+  const summary = await summarizeRecord(record);
+  if (summary.inspectionCount < header.inspectionColumnsPerPrintPage) return record;
+
+  await snapshotChecklist(record);
+  await db
+    .update(pmRecordsTable)
+    .set({ status: "archived", updatedAt: new Date() })
+    .where(eq(pmRecordsTable.id, record.id));
+  const [nextRecord] = await db
+    .insert(pmRecordsTable)
+    .values({
+      machineId,
+      sequenceNumber: record.sequenceNumber + 1,
+      previousRecordId: record.id,
+      status: "active",
+    })
+    .returning();
+  return nextRecord!;
+}
+
 async function recordDetail(machineId: number, record = undefined as typeof pmRecordsTable.$inferSelect | undefined) {
+  const machine = await machineExists(machineId);
   const header = await getOrCreateHeader(machineId);
   const activeRecord = record ?? (await getActiveRecord(machineId));
-  const checklist = await db
-    .select()
-    .from(pmChecklistPointsTable)
-    .where(and(eq(pmChecklistPointsTable.machineId, machineId), eq(pmChecklistPointsTable.isActive, true)))
-    .orderBy(asc(pmChecklistPointsTable.sortOrder), asc(pmChecklistPointsTable.id));
+  const checklist = await getChecklistForRecord(machineId, activeRecord);
 
   const inspections = await db
     .select()
@@ -138,10 +238,17 @@ async function recordDetail(machineId: number, record = undefined as typeof pmRe
     results: allResults.filter((result) => result.inspectionId === inspection.id),
   }));
 
-  const pageCount = Math.max(1, Math.ceil(checklist.length / 12));
+  const pageCount = Math.max(
+    1,
+    Math.ceil(checklist.length / 10) * Math.max(1, Math.ceil(inspections.length / header.inspectionColumnsPerPrintPage)),
+  );
 
   return {
     record: await summarizeRecord(activeRecord),
+    machine: {
+      name: machine?.machineName ?? "",
+      number: machine?.machineNumber ?? "",
+    },
     header: formatHeader(header),
     checklistPoints: checklist.map(formatPoint),
     inspections: inspectionPayload,
@@ -174,8 +281,10 @@ router.put("/header", requireAuth, requirePermission("edit_header"), async (req,
       effectiveDate?: string | null;
       department?: string | null;
       columnsPerRecord?: number;
+      inspectionColumnsPerPrintPage?: number;
     };
     const columnsPerRecord = Math.min(10, Math.max(1, Number(body.columnsPerRecord ?? 5)));
+    const inspectionColumnsPerPrintPage = Math.min(10, Math.max(1, Number(body.inspectionColumnsPerPrintPage ?? 2)));
     await getOrCreateHeader(machineId);
     const [updated] = await db
       .update(pmHeadersTable)
@@ -184,6 +293,7 @@ router.put("/header", requireAuth, requirePermission("edit_header"), async (req,
         effectiveDate: body.effectiveDate ?? null,
         department: body.department ?? null,
         columnsPerRecord,
+        inspectionColumnsPerPrintPage,
         updatedAt: new Date(),
       })
       .where(eq(pmHeadersTable.machineId, machineId))
@@ -215,18 +325,20 @@ router.post("/checklist", requireAuth, requirePermission("manage_pm_checklist"),
       res.status(404).json({ error: "Machine not found" });
       return;
     }
-    const body = req.body as { pointText?: string; resultType?: string; sortOrder?: number };
+    const body = req.body as { pointText?: string; resultType?: string };
     if (!body.pointText) {
       res.status(400).json({ error: "pointText is required" });
       return;
     }
+    await rolloverCompletedRecord(machineId);
+    const sortOrder = await normalizeChecklistOrder(machineId);
     const [created] = await db
       .insert(pmChecklistPointsTable)
       .values({
         machineId,
         pointText: body.pointText,
         resultType: body.resultType ?? "yes_no",
-        sortOrder: body.sortOrder ?? 0,
+        sortOrder,
       })
       .returning();
     res.status(201).json(formatPoint(created!));
@@ -240,6 +352,7 @@ router.put("/checklist/:pointId", requireAuth, requirePermission("manage_pm_chec
     const machineId = parseIdParam(req.params.id);
     const pointId = parseIdParam(req.params.pointId);
     const body = req.body as { pointText?: string; resultType?: string; sortOrder?: number };
+    await rolloverCompletedRecord(machineId);
     const [updated] = await db
       .update(pmChecklistPointsTable)
       .set({
@@ -254,6 +367,7 @@ router.put("/checklist/:pointId", requireAuth, requirePermission("manage_pm_chec
       res.status(404).json({ error: "Checklist point not found" });
       return;
     }
+    await normalizeChecklistOrder(machineId);
     res.json(formatPoint(updated));
   } catch (err) {
     next(err);
@@ -264,6 +378,7 @@ router.patch("/checklist/:pointId", requireAuth, requirePermission("manage_pm_ch
   try {
     const machineId = parseIdParam(req.params.id);
     const pointId = parseIdParam(req.params.pointId);
+    await rolloverCompletedRecord(machineId);
     const [updated] = await db
       .update(pmChecklistPointsTable)
       .set({ isActive: false, deactivatedAt: new Date(), updatedAt: new Date() })
@@ -273,6 +388,7 @@ router.patch("/checklist/:pointId", requireAuth, requirePermission("manage_pm_ch
       res.status(404).json({ error: "Checklist point not found" });
       return;
     }
+    await normalizeChecklistOrder(machineId);
     res.json(formatPoint(updated));
   } catch (err) {
     next(err);
@@ -292,6 +408,31 @@ router.get("/current", requireAuth, requirePermission("view_machines"), async (r
   }
 });
 
+// Historical PM records are immutable, but remain available for viewing.
+router.get("/history/:recordId", requireAuth, requirePermission("view_machines"), async (req, res, next) => {
+  try {
+    const machineId = parseIdParam(req.params.id);
+    const recordId = parseIdParam(req.params.recordId);
+    if (Number.isNaN(machineId) || Number.isNaN(recordId) || !(await machineExists(machineId))) {
+      res.status(404).json({ error: "PM record not found" });
+      return;
+    }
+
+    const [record] = await db
+      .select()
+      .from(pmRecordsTable)
+      .where(and(eq(pmRecordsTable.id, recordId), eq(pmRecordsTable.machineId, machineId)));
+    if (!record) {
+      res.status(404).json({ error: "PM record not found" });
+      return;
+    }
+
+    res.json(await recordDetail(machineId, record));
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/inspections", requireAuth, requirePermission("fill_pm_record"), async (req, res, next) => {
   try {
     const machineId = parseIdParam(req.params.id);
@@ -300,26 +441,10 @@ router.post("/inspections", requireAuth, requirePermission("fill_pm_record"), as
       return;
     }
     const header = await getOrCreateHeader(machineId);
-    let record = await getActiveRecord(machineId);
-    const summary = await summarizeRecord(record);
-    if (summary.inspectionCount >= header.columnsPerRecord) {
-      await db
-        .update(pmRecordsTable)
-        .set({ status: "archived", updatedAt: new Date() })
-        .where(eq(pmRecordsTable.id, record.id));
-      const [nextRecord] = await db
-        .insert(pmRecordsTable)
-        .values({
-          machineId,
-          sequenceNumber: record.sequenceNumber + 1,
-          previousRecordId: record.id,
-          status: "active",
-        })
-        .returning();
-      record = nextRecord!;
-    }
+    const record = await rolloverCompletedRecord(machineId);
 
     const body = req.body as {
+      executionMonthYear?: string;
       inspectionDate?: string;
       inspectionTime?: string;
       actionTaken?: string;
@@ -340,6 +465,7 @@ router.post("/inspections", requireAuth, requirePermission("fill_pm_record"), as
         recordId: record.id,
         machineId,
         columnNumber: recordSummary.inspectionCount + 1,
+        executionMonthYear: body.executionMonthYear ?? null,
         inspectionDate: body.inspectionDate,
         inspectionTime: body.inspectionTime,
         actionTaken: body.actionTaken ?? null,
@@ -358,6 +484,11 @@ router.post("/inspections", requireAuth, requirePermission("fill_pm_record"), as
     }));
     if (resultRows.length) {
       await db.insert(pmInspectionResultsTable).values(resultRows);
+    }
+    // Preserve the exact set and order of checklist points for a completed
+    // record.  New points can then be added freely for the next record.
+    if (recordSummary.inspectionCount + 1 >= header.inspectionColumnsPerPrintPage) {
+      await snapshotChecklist(record);
     }
     await db.update(pmRecordsTable).set({ updatedAt: new Date() }).where(eq(pmRecordsTable.id, record.id));
     res.status(201).json(await recordDetail(machineId, record));

@@ -22,6 +22,7 @@ export const pmHeadersTable = pgTable("pm_headers", {
   effectiveDate: text("effective_date"),
   department: text("department"),
   columnsPerRecord: integer("columns_per_record").notNull().default(5),
+  inspectionColumnsPerPrintPage: integer("inspection_columns_per_print_page").notNull().default(2),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -52,6 +53,26 @@ export const pmRecordsTable = pgTable("pm_records", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Immutable checklist snapshot retained when a PM record is closed/archived.
+// The active record continues to use the current machine checklist.
+export const pmRecordChecklistPointsTable = pgTable(
+  "pm_record_checklist_points",
+  {
+    id: serial("id").primaryKey(),
+    recordId: integer("record_id")
+      .notNull()
+      .references(() => pmRecordsTable.id),
+    sourceChecklistPointId: integer("source_checklist_point_id")
+      .notNull()
+      .references(() => pmChecklistPointsTable.id),
+    pointText: text("point_text").notNull(),
+    resultType: text("result_type").notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("pm_record_checklist_point_source_idx").on(table.recordId, table.sourceChecklistPointId)],
+);
+
 export const pmInspectionsTable = pgTable("pm_inspections", {
   id: serial("id").primaryKey(),
   recordId: integer("record_id")
@@ -61,6 +82,7 @@ export const pmInspectionsTable = pgTable("pm_inspections", {
     .notNull()
     .references(() => machinesTable.id),
   columnNumber: integer("column_number").notNull(),
+  executionMonthYear: text("execution_month_year"),
   inspectionDate: text("inspection_date").notNull(),
   inspectionTime: text("inspection_time").notNull(),
   actionTaken: text("action_taken"),
@@ -184,6 +206,7 @@ export type PmHeader = typeof pmHeadersTable.$inferSelect;
 export type InsertPmChecklistPoint = z.infer<typeof insertPmChecklistPointSchema>;
 export type PmChecklistPoint = typeof pmChecklistPointsTable.$inferSelect;
 export type PmRecord = typeof pmRecordsTable.$inferSelect;
+export type PmRecordChecklistPoint = typeof pmRecordChecklistPointsTable.$inferSelect;
 export type PmInspection = typeof pmInspectionsTable.$inferSelect;
 export type PmInspectionResult = typeof pmInspectionResultsTable.$inferSelect;
 export type AnnualPmPlan = typeof annualPmPlansTable.$inferSelect;

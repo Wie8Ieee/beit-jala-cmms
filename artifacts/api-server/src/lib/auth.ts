@@ -55,7 +55,22 @@ export function requirePermission(permission: string) {
       return;
     }
     const permissions: string[] = req.session.permissions ?? [];
-    if (!permissions.includes(permission)) {
+    if (req.session.roleName !== "Admin" && !permissions.includes(permission)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    next();
+  };
+}
+
+export function requireAnyPermission(requiredPermissions: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session?.userId) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+    const permissions: string[] = req.session.permissions ?? [];
+    if (req.session.roleName !== "Admin" && !requiredPermissions.some((permission) => permissions.includes(permission))) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }

@@ -18,7 +18,7 @@ const labels = {
     docNumber: "FORM-10-0118-1",
     effectiveDate: "18/3/2023",
     company: "Beit Jala Pharmaceutical Co.",
-    address: "Beit Jala, Palestine",
+    address: "Beit-Jala, Palestine",
     page: "Page 1 of 1",
     docNo: "Doc. No.:",
     effectiveDateLabel: "Effective Date:",
@@ -93,6 +93,20 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
     queryKey: ["print-equipment-information", machineId],
     queryFn: () => apiRequest<EquipmentInformation>(`/machines/${machineId}/equipment-information`),
   });
+  const otherRows = value(data, "others")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const otherDetailRows = value(data, "othersDetails")
+    .split(/\r?\n/)
+    .map((item) => item.trim());
+  const safetyIssueRows = value(data, "safetyIssues")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const safetyIssueDetailRows = value(data, "safetyIssuesDetails")
+    .split(/\r?\n/)
+    .map((item) => item.trim());
 
   return (
     <div dir={isAr ? "rtl" : "ltr"}>
@@ -107,16 +121,18 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
       <PrintLayout title={L.title}>
         <PrintPage>
           {/* Custom bilingual header */}
-          <table className="official-print-table official-print-header-table">
+          <table className="official-print-table official-print-header-table equipment-information-header">
             <tbody>
               <tr>
                 <td className={`w-[34%] font-semibold ${isAr ? "text-right" : "text-left"}`}>
                   {L.company}
                   <br />
-                  {L.address}
+                  {L.address.split(/[،,]\s*/).map((line, index, lines) => (
+                    <span key={line}>{line}{index < lines.length - 1 && <br />}</span>
+                  ))}
                 </td>
                 <td className="w-[33%] text-center font-semibold">{L.title}</td>
-                <td className={`w-[33%] ${isAr ? "text-right" : "text-left"}`}>
+                <td className={`w-[33%] equipment-header-meta ${isAr ? "text-right" : "text-left"}`}>
                   <div><strong>{L.docNo}</strong> {L.docNumber}</div>
                   <div><strong>{L.effectiveDateLabel}</strong> {L.effectiveDate}</div>
                   <div><strong>{L.page}</strong></div>
@@ -188,18 +204,24 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
           <div className="official-print-section-title">{L.f11}</div>
           <table className="official-print-table">
             <tbody>
-              <tr className="official-print-row-tall">
-                <td>{value(data, "others")}</td>
-              </tr>
+              {(Math.max(otherRows.length, otherDetailRows.length) ? Array.from({ length: Math.max(otherRows.length, otherDetailRows.length) }) : [null]).map((_, index) => (
+                <tr key={`other-${index}`} className="official-print-row-tall">
+                  <td className="w-[48%]">{otherRows[index] ?? ""}</td>
+                  <td>{otherDetailRows[index] ?? ""}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
 
           <div className="official-print-section-title">{L.f12}</div>
           <table className="official-print-table">
             <tbody>
-              <tr className="official-print-row-xl">
-                <td>{value(data, "safetyIssues")}</td>
-              </tr>
+              {(Math.max(safetyIssueRows.length, safetyIssueDetailRows.length) ? Array.from({ length: Math.max(safetyIssueRows.length, safetyIssueDetailRows.length) }) : [null]).map((_, index) => (
+                <tr key={`safety-${index}`} className="official-print-row-tall">
+                  <td className="w-[48%]">{safetyIssueRows[index] ?? ""}</td>
+                  <td>{safetyIssueDetailRows[index] ?? ""}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
 

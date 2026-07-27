@@ -27,6 +27,7 @@ router.post("/login", async (req, res) => {
     .select({
       id: usersTable.id,
       username: usersTable.username,
+      employeeNumber: usersTable.employeeNumber,
       fullName: usersTable.fullName,
       email: usersTable.email,
       passwordHash: usersTable.passwordHash,
@@ -64,7 +65,9 @@ router.post("/login", async (req, res) => {
     )
     .where(eq(userPermissionsTable.userId, user.id));
 
-  const permissionNames = perms.map((p) => p.name);
+  const permissionNames = user.roleName === "Admin"
+    ? (await db.select({ name: permissionsTable.name }).from(permissionsTable)).map((permission) => permission.name)
+    : perms.map((p) => p.name);
 
   req.session.userId = user.id;
   req.session.roleId = user.roleId;
@@ -74,6 +77,7 @@ router.post("/login", async (req, res) => {
   res.json({
     id: user.id,
     username: user.username,
+    employeeNumber: user.employeeNumber ?? null,
     fullName: user.fullName ?? null,
     email: user.email ?? null,
     roleId: user.roleId,
@@ -101,6 +105,7 @@ router.get("/me", requireActiveAuth, async (req, res) => {
     .select({
       id: usersTable.id,
       username: usersTable.username,
+      employeeNumber: usersTable.employeeNumber,
       fullName: usersTable.fullName,
       email: usersTable.email,
       roleId: usersTable.roleId,
@@ -126,14 +131,19 @@ router.get("/me", requireActiveAuth, async (req, res) => {
     )
     .where(eq(userPermissionsTable.userId, user.id));
 
+  const permissionNames = user.roleName === "Admin"
+    ? (await db.select({ name: permissionsTable.name }).from(permissionsTable)).map((permission) => permission.name)
+    : perms.map((p) => p.name);
+
   res.json({
     id: user.id,
     username: user.username,
+    employeeNumber: user.employeeNumber ?? null,
     fullName: user.fullName ?? null,
     email: user.email ?? null,
     roleId: user.roleId,
     roleName: user.roleName,
-    permissions: perms.map((p) => p.name),
+    permissions: permissionNames,
     isActive: user.isActive,
   });
 });

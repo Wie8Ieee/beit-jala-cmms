@@ -21,7 +21,9 @@ if (!isBuild && (Number.isNaN(port) || port <= 0)) {
 }
 
 const basePath = process.env.BASE_PATH ?? '/';
-const apiPort = Number(process.env.API_PORT ?? 5001);
+// The local Express API defaults to PORT=5000.  Keeping this fallback aligned
+// prevents Vite from proxying login requests to a stale or unrelated service.
+const apiPort = Number(process.env.API_PORT ?? 5000);
 
 export default defineConfig({
   base: basePath,
