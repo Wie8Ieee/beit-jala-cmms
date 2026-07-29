@@ -8,6 +8,10 @@
 
 export type GetMachinesParams = {
 /**
+ * Return archived (soft-deleted) machines instead of active machines
+ */
+archived?: boolean;
+/**
  * Search by machine name or machine number
  */
 search?: string;

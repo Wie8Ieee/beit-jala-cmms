@@ -12,6 +12,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import LoginPage from './pages/login';
 import DashboardPage from './pages/dashboard';
 import ReportsPage from './pages/reports';
+import MonthlyMaintenanceEvaluationPage from './pages/reports/monthly-maintenance-evaluation';
 import MachinesList from './pages/machines/list';
 import MachineForm from './pages/machines/form';
 import MachineProfile from './pages/machines/profile';
@@ -48,6 +49,8 @@ import CorrectiveMaintenancePrintPage from './pages/print/corrective-maintenance
 import PmRecordPrintPage from './pages/print/pm-record';
 import AnnualPlanPrintPage from './pages/print/annual-plan';
 import MonthlyPlanPrintPage from './pages/print/monthly-plan';
+import MonthlyMaintenanceEvaluationPrintPage from './pages/print/monthly-maintenance-evaluation';
+import AnnualMaintenanceSummaryPrintPage from './pages/print/annual-maintenance-summary';
 
 const queryClient = new QueryClient();
 
@@ -164,6 +167,20 @@ function Router() {
             <PmHistoryPage params={params} />
           </ProtectedRoute>
         )}
+      </Route>
+
+      <Route path="/print/monthly-maintenance-evaluation/:year/:month">
+        {(params) => <ProtectedRoute permission="print_forms"><MonthlyMaintenanceEvaluationPrintPage params={params} /></ProtectedRoute>}
+      </Route>
+
+      <Route path="/print/annual-maintenance-summary/:type/:year">
+        {(params) => <ProtectedRoute permission="print_forms"><AnnualMaintenanceSummaryPrintPage params={params} /></ProtectedRoute>}
+      </Route>
+
+      <Route path="/reports/monthly-maintenance-evaluation">
+        <ProtectedRoute permission="view_maintenance_plans">
+          <MonthlyMaintenanceEvaluationPage />
+        </ProtectedRoute>
       </Route>
 
       <Route path="/reports">

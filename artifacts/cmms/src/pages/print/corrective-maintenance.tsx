@@ -37,10 +37,10 @@ export default function CorrectiveMaintenancePrintPage({ params }: { params: { i
   const events = record?.events ?? [];
 
   return (
-    <PrintLayout title="Corrective Maintenance Log - Official Print">
+    <PrintLayout title="Corrective Maintenance Log - Official Print" landscape>
       {record && (
         <PrintPage landscape>
-          <div dir="rtl">
+          <div dir="rtl" className="official-print-cm-content">
             <table dir="ltr" className="official-print-table official-print-header-table official-print-cm-header">
               <tbody>
                 <tr>
@@ -62,14 +62,14 @@ export default function CorrectiveMaintenancePrintPage({ params }: { params: { i
               </tbody>
             </table>
 
-            <div className="my-4 grid grid-cols-4 gap-4 text-right font-semibold">
+            <div className="official-print-cm-machine-details my-4 grid grid-cols-4 gap-4 text-right font-semibold">
               <div>اسم الماكينة: <bdi dir="ltr">{record.machineName}</bdi></div>
               <div>رقم الماكينة: <bdi dir="ltr">{record.machineNumber}</bdi></div>
               <div>مكان وجود الماكينة: <bdi dir="ltr">{record.machineLocation}</bdi></div>
               <div>تاريخ بدء التشغيل: <bdi dir="ltr">{record.startupDate}</bdi></div>
             </div>
 
-            <table className="official-print-table text-right">
+            <table className="official-print-table official-print-cm-log text-right">
               <colgroup>
                 <col className="w-[9%]" /><col className="w-[8%]" /><col className="w-[13%]" />
                 <col className="w-[20%]" /><col className="w-[10%]" /><col className="w-[18%]" />

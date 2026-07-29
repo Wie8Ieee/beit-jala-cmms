@@ -2,15 +2,19 @@ import { Router, type NextFunction, type Request, type Response } from "express"
 import { db } from "@workspace/db";
 import {
   auditLogsTable,
+  closedCorrectiveMaintenanceLogExclusionsTable,
+  closedCorrectiveMaintenanceManualEntriesTable,
   correctiveMaintenanceEventsTable,
   correctiveMaintenanceRecordsTable,
   departmentsTable,
   eligibleSignerAssignmentsTable,
   externalMaintenanceRequestsTable,
   externalMaintenanceReceiptsTable,
+  formHeadersTable,
   machinesTable,
   maintenanceRequestsTable,
   maintenanceRequestStatusHistoryTable,
+  monthlyMaintenanceEvaluationReportsTable,
   rolesTable,
   signatureFieldPermissionsTable,
   usersTable,
@@ -32,6 +36,25 @@ const STATUS = {
   CLOSED: "Closed",
   EXTERNAL_MAINTENANCE: "External Maintenance",
 } as const;
+
+const CLOSED_CM_LOG_HEADER_ID = 0;
+
+async function getClosedCorrectiveMaintenanceLogHeader() {
+  const [existing] = await db.select().from(formHeadersTable)
+    .where(and(eq(formHeadersTable.documentType, "CLOSED_CORRECTIVE_MAINTENANCE_LOG"), eq(formHeadersTable.documentId, CLOSED_CM_LOG_HEADER_ID)));
+  if (existing) return existing;
+  const [created] = await db.insert(formHeadersTable).values({
+    documentType: "CLOSED_CORRECTIVE_MAINTENANCE_LOG",
+    documentId: CLOSED_CM_LOG_HEADER_ID,
+    companyName: "Beit Jala Pharmaceutical Co.",
+    documentName: "سجل طلبات الصيانة العلاجية للأجهزة / الماكينات",
+    documentNumber: "LOG-10-0659-0",
+    effectiveOrExecutionDate: "18/03/2023",
+    pageNumber: 1,
+    totalPages: 1,
+  }).returning();
+  return created!;
+}
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);
@@ -292,6 +315,86 @@ router.get("/reports/corrective-maintenance", requireAuth, async (req, res, next
   } catch (error) { next(error); }
 });
 
+// Annual abstract matching the company's Excel "Abstract of monthly Evaluation
+// reports".  PM values come from the approved monthly evaluation records and
+// corrective values come directly from the preserved maintenance requests.
+router.get("/reports/annual-maintenance-summary", requireAuth, async (req, res, next) => {
+  try {
+    const requestedYear = Number(firstParam(req.query.year));
+    const year = Number.isInteger(requestedYear) && requestedYear >= 2000 && requestedYear <= 2100
+      ? requestedYear
+      : new Date().getFullYear();
+
+    const [evaluations, requests] = await Promise.all([
+      db.select().from(monthlyMaintenanceEvaluationReportsTable)
+        .where(eq(monthlyMaintenanceEvaluationReportsTable.year, year)),
+      db.select().from(maintenanceRequestsTable),
+    ]);
+    const evaluationByMonth = new Map(evaluations.map((evaluation) => [evaluation.month, evaluation]));
+    const completedStatuses = new Set([STATUS.COMPLETED, STATUS.CLOSED]);
+
+    const months = Array.from({ length: 12 }, (_, index) => {
+      const month = index + 1;
+      const evaluation = evaluationByMonth.get(month);
+      const correctiveRows = requests.filter((request) => request.requestDate?.startsWith(`${year}-${String(month).padStart(2, "0")}`));
+      return {
+        month,
+        preventive: evaluation ? {
+          planned: evaluation.totalPmActivities,
+          achieved: evaluation.completedPmOnTime,
+        } : null,
+        corrective: correctiveRows.length ? {
+          total: correctiveRows.length,
+          achieved: correctiveRows.filter((request) => completedStatuses.has(request.status as typeof STATUS.COMPLETED | typeof STATUS.CLOSED)).length,
+        } : null,
+      };
+    });
+
+    res.json({ year, months });
+  } catch (error) { next(error); }
+});
+
+// FORM-10-0944-0.  The report is deliberately stored per calendar month so a
+// completed evaluation remains available as part of the controlled record.
+router.get("/reports/monthly-maintenance-evaluation", requireAuth, async (req, res, next) => {
+  try {
+    const year = Number(firstParam(req.query.year)) || new Date().getFullYear();
+    const month = Number(firstParam(req.query.month)) || new Date().getMonth() + 1;
+    const [report] = await db.select().from(monthlyMaintenanceEvaluationReportsTable)
+      .where(and(eq(monthlyMaintenanceEvaluationReportsTable.year, year), eq(monthlyMaintenanceEvaluationReportsTable.month, month)));
+    res.json(report ?? { year, month, delayedActivities: "", delayReason: "", followUpIncluded: "", totalPmActivities: 0, completedPmOnTime: 0, productionImpact: "", sparePartShortage: "", correctiveMaintenanceDetails: "", totalCorrectiveRequests: 0, unclosedCorrectiveRequests: 0, completedCorrectiveRequests: 0, externalMaintenanceDetails: "", totalExternalActivities: 0, completedExternalActivities: 0, employeeDelayImpact: "", workingDays: 0, lostWorkDays: 0, preparedBy: "", preparedDate: "", engineeringManagerSignature: "", engineeringManagerDate: "" });
+  } catch (err) { next(err); }
+});
+
+router.put("/reports/monthly-maintenance-evaluation", requireAuth, requirePermission("edit_maintenance_plans"), async (req, res, next) => {
+  try {
+    const body = req.body as Record<string, unknown>;
+    const year = Number(body.year);
+    const month = Number(body.month);
+    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+      res.status(400).json({ error: "A valid month and year are required" }); return;
+    }
+    const values = {
+      delayedActivities: String(body.delayedActivities ?? ""), delayReason: String(body.delayReason ?? ""), followUpIncluded: String(body.followUpIncluded ?? ""),
+      totalPmActivities: Math.max(0, Number(body.totalPmActivities) || 0), completedPmOnTime: Math.max(0, Number(body.completedPmOnTime) || 0),
+      productionImpact: String(body.productionImpact ?? ""), sparePartShortage: String(body.sparePartShortage ?? ""),
+      correctiveMaintenanceDetails: String(body.correctiveMaintenanceDetails ?? ""),
+      totalCorrectiveRequests: Math.max(0, Number(body.totalCorrectiveRequests) || 0),
+      unclosedCorrectiveRequests: Math.max(0, Number(body.unclosedCorrectiveRequests) || 0),
+      completedCorrectiveRequests: Math.max(0, Number(body.completedCorrectiveRequests) || 0),
+      externalMaintenanceDetails: String(body.externalMaintenanceDetails ?? ""),
+      totalExternalActivities: Math.max(0, Number(body.totalExternalActivities) || 0), completedExternalActivities: Math.max(0, Number(body.completedExternalActivities) || 0),
+      employeeDelayImpact: String(body.employeeDelayImpact ?? ""), workingDays: Math.max(0, Number(body.workingDays) || 0), lostWorkDays: Math.max(0, Number(body.lostWorkDays) || 0),
+      preparedBy: String(body.preparedBy ?? ""), preparedDate: String(body.preparedDate ?? ""), engineeringManagerSignature: String(body.engineeringManagerSignature ?? ""), engineeringManagerDate: String(body.engineeringManagerDate ?? ""), updatedAt: new Date(),
+    };
+    const [existing] = await db.select({ id: monthlyMaintenanceEvaluationReportsTable.id }).from(monthlyMaintenanceEvaluationReportsTable).where(and(eq(monthlyMaintenanceEvaluationReportsTable.year, year), eq(monthlyMaintenanceEvaluationReportsTable.month, month)));
+    const [saved] = existing
+      ? await db.update(monthlyMaintenanceEvaluationReportsTable).set(values).where(eq(monthlyMaintenanceEvaluationReportsTable.id, existing.id)).returning()
+      : await db.insert(monthlyMaintenanceEvaluationReportsTable).values({ ...values, year, month, createdByUserId: req.session.userId ?? null }).returning();
+    res.json(saved);
+  } catch (err) { next(err); }
+});
+
 async function ensureEventForRequest(request: typeof maintenanceRequestsTable.$inferSelect) {
   const [existing] = await db
     .select()
@@ -394,12 +497,34 @@ router.get("/machines", requireAuth, requirePermission("submit_maintenance_reque
   }
 });
 
-// LOG-10-0659-0: this register is derived from the permanent corrective
-// maintenance workflow.  A row exists only after the request is closed, so
-// there is no separate editable copy that can drift from the source record.
+// LOG-10-0659-0: closed requests populate the register automatically. Manual
+// entries are restricted supplemental records for exceptional cases only.
+router.get("/closed-log/header", requireAuth, requirePermission("manage_maintenance_requests"), async (_req, res, next) => {
+  try {
+    res.json(await getClosedCorrectiveMaintenanceLogHeader());
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.put("/closed-log/header", requireAuth, requirePermission("edit_header"), async (req, res, next) => {
+  try {
+    const current = await getClosedCorrectiveMaintenanceLogHeader();
+    const body = req.body as { documentNumber?: string; effectiveOrExecutionDate?: string | null };
+    const [saved] = await db.update(formHeadersTable).set({
+      documentNumber: body.documentNumber?.trim() || current.documentNumber,
+      effectiveOrExecutionDate: body.effectiveOrExecutionDate?.trim() || null,
+      updatedAt: new Date(),
+    }).where(eq(formHeadersTable.id, current.id)).returning();
+    res.json(saved);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/closed-log", requireAuth, requirePermission("manage_maintenance_requests"), async (_req, res, next) => {
   try {
-    const rows = await db
+    const [rows, exclusions] = await Promise.all([db
       .select({
         id: maintenanceRequestsTable.id,
         machineName: maintenanceRequestsTable.machineName,
@@ -413,13 +538,109 @@ router.get("/closed-log", requireAuth, requirePermission("manage_maintenance_req
       .from(maintenanceRequestsTable)
       .leftJoin(correctiveMaintenanceEventsTable, eq(correctiveMaintenanceEventsTable.requestId, maintenanceRequestsTable.id))
       .where(eq(maintenanceRequestsTable.status, STATUS.CLOSED))
-      .orderBy(desc(maintenanceRequestsTable.closedAt), desc(maintenanceRequestsTable.id));
+      .orderBy(desc(maintenanceRequestsTable.closedAt), desc(maintenanceRequestsTable.id)),
+      db.select({ maintenanceRequestId: closedCorrectiveMaintenanceLogExclusionsTable.maintenanceRequestId })
+        .from(closedCorrectiveMaintenanceLogExclusionsTable),
+    ]);
+    const excludedRequestIds = new Set(exclusions.map((row) => row.maintenanceRequestId));
 
-    res.json(rows.map((row) => ({
-      ...row,
+    const manualRows = await db
+      .select()
+      .from(closedCorrectiveMaintenanceManualEntriesTable)
+      .where(isNull(closedCorrectiveMaintenanceManualEntriesTable.deletedAt))
+      .orderBy(desc(closedCorrectiveMaintenanceManualEntriesTable.closedDate), desc(closedCorrectiveMaintenanceManualEntriesTable.id));
+
+    const automaticRows = rows.filter((row) => !excludedRequestIds.has(row.id)).map((row) => ({
+      id: `automatic-${row.id}`,
+      source: "automatic" as const,
       closedDate: row.closedAt ? row.closedAt.toISOString().slice(0, 10) : "",
       remarks: row.remarks ?? "",
-    })));
+      machineName: row.machineName,
+      machineNumber: row.machineNumber,
+      requestDate: row.requestDate,
+      requestReportNumber: row.requestReportNumber,
+      priority: row.priority,
+    }));
+    const manualLogRows = manualRows.map((row) => ({
+      id: `manual-${row.id}`,
+      source: "manual" as const,
+      machineName: row.machineName,
+      machineNumber: row.machineNumber,
+      requestDate: row.requestDate,
+      requestReportNumber: row.requestReportNumber,
+      priority: row.priority,
+      closedDate: row.closedDate,
+      remarks: row.remarks ?? "",
+    }));
+
+    res.json([...automaticRows, ...manualLogRows].sort((a, b) =>
+      b.closedDate.localeCompare(a.closedDate) || b.id.localeCompare(a.id),
+    ));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/closed-log/manual", requireAuth, requirePermission("manage_maintenance_requests"), async (req, res, next) => {
+  try {
+    const body = req.body as {
+      machineName?: string; machineNumber?: string; requestDate?: string;
+      requestReportNumber?: string; priority?: string; closedDate?: string; remarks?: string;
+    };
+    const required = [body.machineName, body.machineNumber, body.requestDate, body.requestReportNumber, body.closedDate];
+    if (required.some((value) => !value?.trim())) {
+      res.status(400).json({ error: "machineName, machineNumber, requestDate, requestReportNumber, and closedDate are required" });
+      return;
+    }
+    const [created] = await db.insert(closedCorrectiveMaintenanceManualEntriesTable).values({
+      machineName: body.machineName!.trim(),
+      machineNumber: body.machineNumber!.trim(),
+      requestDate: body.requestDate!.trim(),
+      requestReportNumber: body.requestReportNumber!.trim(),
+      priority: body.priority === "urgent" ? "urgent" : "normal",
+      closedDate: body.closedDate!.trim(),
+      remarks: body.remarks?.trim() || null,
+      createdByUserId: req.session.userId!,
+    }).returning();
+    res.status(201).json({
+      id: `manual-${created.id}`, source: "manual", machineName: created.machineName,
+      machineNumber: created.machineNumber, requestDate: created.requestDate,
+      requestReportNumber: created.requestReportNumber, priority: created.priority,
+      closedDate: created.closedDate, remarks: created.remarks ?? "",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/closed-log/manual/:id", requireAuth, requirePermission("manage_maintenance_requests"), async (req, res, next) => {
+  try {
+    const id = parseIdParam(req.params.id);
+    if (!id) { res.status(400).json({ error: "Invalid manual log entry id" }); return; }
+    const [deleted] = await db.update(closedCorrectiveMaintenanceManualEntriesTable)
+      .set({ deletedAt: new Date(), deletedByUserId: req.session.userId!, updatedAt: new Date() })
+      .where(and(eq(closedCorrectiveMaintenanceManualEntriesTable.id, id), isNull(closedCorrectiveMaintenanceManualEntriesTable.deletedAt)))
+      .returning({ id: closedCorrectiveMaintenanceManualEntriesTable.id });
+    if (!deleted) { res.status(404).json({ error: "Manual log entry not found" }); return; }
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/closed-log/automatic/:id", requireAuth, requirePermission("manage_maintenance_requests"), async (req, res, next) => {
+  try {
+    const requestId = parseIdParam(req.params.id);
+    if (!requestId) { res.status(400).json({ error: "Invalid maintenance request id" }); return; }
+    const [request] = await db.select({ id: maintenanceRequestsTable.id })
+      .from(maintenanceRequestsTable)
+      .where(and(eq(maintenanceRequestsTable.id, requestId), eq(maintenanceRequestsTable.status, STATUS.CLOSED)));
+    if (!request) { res.status(404).json({ error: "Closed maintenance request not found" }); return; }
+    await db.insert(closedCorrectiveMaintenanceLogExclusionsTable).values({
+      maintenanceRequestId: requestId,
+      excludedByUserId: req.session.userId!,
+    }).onConflictDoNothing();
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }

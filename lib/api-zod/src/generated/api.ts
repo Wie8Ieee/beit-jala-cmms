@@ -458,6 +458,7 @@ export const GetDepartmentsResponse = zod.array(GetDepartmentsResponseItem)
  * @summary List all active machines
  */
 export const GetMachinesQueryParams = zod.object({
+  "archived": zod.coerce.boolean().optional().describe('Return archived (soft-deleted) machines instead of active machines'),
   "search": zod.coerce.string().optional().describe('Search by machine name or machine number')
 })
 
@@ -1494,7 +1495,8 @@ export const GetMaintenanceRequestTechniciansResponse = zod.array(GetMaintenance
  * @summary List closed corrective maintenance requests for LOG-10-0659-0
  */
 export const GetClosedCorrectiveMaintenanceLogResponseItem = zod.object({
-  "id": zod.number(),
+  "id": zod.string(),
+  "source": zod.enum(['automatic', 'manual']),
   "machineName": zod.string(),
   "machineNumber": zod.string(),
   "requestDate": zod.string(),
@@ -1504,6 +1506,75 @@ export const GetClosedCorrectiveMaintenanceLogResponseItem = zod.object({
   "remarks": zod.string()
 })
 export const GetClosedCorrectiveMaintenanceLogResponse = zod.array(GetClosedCorrectiveMaintenanceLogResponseItem)
+
+
+/**
+ * @summary Get shared LOG-10-0659-0 header fields
+ */
+export const GetClosedCorrectiveMaintenanceLogHeaderResponse = zod.object({
+  "documentNumber": zod.string(),
+  "effectiveOrExecutionDate": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update controlled LOG-10-0659-0 header fields
+ */
+export const UpdateClosedCorrectiveMaintenanceLogHeaderBody = zod.object({
+  "documentNumber": zod.string().optional(),
+  "effectiveOrExecutionDate": zod.string().nullish()
+})
+
+export const UpdateClosedCorrectiveMaintenanceLogHeaderResponse = zod.object({
+  "documentNumber": zod.string(),
+  "effectiveOrExecutionDate": zod.string().nullish()
+})
+
+
+/**
+ * @summary Add a supplemental manual row to LOG-10-0659-0
+ */
+export const CreateManualClosedCorrectiveMaintenanceLogEntryBody = zod.object({
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "requestDate": zod.string(),
+  "requestReportNumber": zod.string(),
+  "priority": zod.enum(['normal', 'urgent']).optional(),
+  "closedDate": zod.string(),
+  "remarks": zod.string().optional()
+})
+
+export const CreateManualClosedCorrectiveMaintenanceLogEntryResponse = zod.object({
+  "id": zod.string(),
+  "source": zod.enum(['automatic', 'manual']),
+  "machineName": zod.string(),
+  "machineNumber": zod.string(),
+  "requestDate": zod.string(),
+  "requestReportNumber": zod.string(),
+  "priority": zod.string(),
+  "closedDate": zod.string(),
+  "remarks": zod.string()
+})
+
+
+/**
+ * @summary Soft-delete a manual LOG-10-0659-0 row
+ */
+export const DeleteManualClosedCorrectiveMaintenanceLogEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteManualClosedCorrectiveMaintenanceLogEntryResponse = zod.unknown()
+
+
+/**
+ * @summary Hide an automatically generated LOG-10-0659-0 row without deleting its maintenance request
+ */
+export const ExcludeAutomaticClosedCorrectiveMaintenanceLogEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ExcludeAutomaticClosedCorrectiveMaintenanceLogEntryResponse = zod.unknown()
 
 
 /**

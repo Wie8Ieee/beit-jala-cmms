@@ -1,4 +1,5 @@
 type OfficialFormHeaderProps = {
+  companyName?: string | null;
   documentName: string;
   documentNumber: string;
   effectiveOrExecutionDate?: string | null;
@@ -10,6 +11,7 @@ type OfficialFormHeaderProps = {
 };
 
 export function OfficialFormHeader({
+  companyName,
   documentName,
   documentNumber,
   effectiveOrExecutionDate,
@@ -25,7 +27,7 @@ export function OfficialFormHeader({
     <div className="official-form-header mb-6 border-2 border-black text-black">
       <div className="grid grid-cols-[1fr_2fr_1fr] divide-x-2 divide-black">
         <div className="flex items-center justify-center p-3 text-center font-bold">
-          Beit Jala Pharmaceutical Co.
+          {companyName || "Beit Jala Pharmaceutical Co."}
         </div>
         <div className="p-3 text-center">
           <div className="text-lg font-bold uppercase">{documentName}</div>

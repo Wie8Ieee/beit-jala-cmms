@@ -51,6 +51,7 @@ function parseMonths(value: string) {
 }
 
 const MONTHLY_PLAN_HEADER_ID = 0;
+const ANNUAL_PLAN_HEADER_ID = 0;
 
 async function getMonthlyPlanHeader() {
   const [existing] = await db.select().from(formHeadersTable).where(and(eq(formHeadersTable.documentType, "MONTHLY_PM_PLAN"), eq(formHeadersTable.documentId, MONTHLY_PLAN_HEADER_ID)));
@@ -61,6 +62,29 @@ async function getMonthlyPlanHeader() {
     companyName: "Beit Jala Pharmaceutical Co.",
     documentName: "Monthly Preventive Maintenance Program",
     documentNumber: "FORM-10-0117-3",
+    effectiveOrExecutionDate: "18/3/2023",
+    pageNumber: 1,
+    totalPages: 1,
+  }).returning();
+  return created!;
+}
+
+// FORM-10-1025-0 has one controlled header shared by every annual plan year.
+// Keeping it separate from the plan rows lets authorised users update the
+// document details once without changing any historical plan data.
+async function getAnnualPlanHeader() {
+  const [existing] = await db
+    .select()
+    .from(formHeadersTable)
+    .where(and(eq(formHeadersTable.documentType, "ANNUAL_PM_PLAN"), eq(formHeadersTable.documentId, ANNUAL_PLAN_HEADER_ID)));
+  if (existing) return existing;
+
+  const [created] = await db.insert(formHeadersTable).values({
+    documentType: "ANNUAL_PM_PLAN",
+    documentId: ANNUAL_PLAN_HEADER_ID,
+    companyName: "Beit Jala Pharmaceutical Co.",
+    documentName: "Preventive Maintenance Plan",
+    documentNumber: "FORM-10-1025-0",
     effectiveOrExecutionDate: "18/3/2023",
     pageNumber: 1,
     totalPages: 1,
@@ -202,6 +226,25 @@ router.put("/monthly/header", requireAuth, requirePermission("edit_header"), asy
   } catch (err) { next(err); }
 });
 
+router.get("/annual/header", requireAuth, requirePermission("view_maintenance_plans"), async (_req, res, next) => {
+  try {
+    res.json(await getAnnualPlanHeader());
+  } catch (err) { next(err); }
+});
+
+router.put("/annual/header", requireAuth, requirePermission("edit_header"), async (req, res, next) => {
+  try {
+    const current = await getAnnualPlanHeader();
+    const body = req.body as Partial<typeof formHeadersTable.$inferInsert>;
+    const [saved] = await db.update(formHeadersTable).set({
+      documentNumber: body.documentNumber?.trim() || current.documentNumber,
+      effectiveOrExecutionDate: body.effectiveOrExecutionDate?.trim() || null,
+      updatedAt: new Date(),
+    }).where(eq(formHeadersTable.id, current.id)).returning();
+    res.json(saved!);
+  } catch (err) { next(err); }
+});
+
 router.get("/annual/:year", requireAuth, requirePermission("view_maintenance_plans"), async (req, res, next) => {
   try {
     const year = parseYear(req.params.year);
@@ -258,6 +301,51 @@ router.put("/annual/:year", requireAuth, requirePermission("edit_maintenance_pla
     }
 
     res.json(formatAnnual(updated!, await getAnnualRows(plan.id)));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Adds a machine to one monthly plan only. This is used for a PM activity
+// carried over from another month and intentionally does not alter the annual
+// plan or the source month.
+router.post("/monthly/:year/:month/rows", requireAuth, requirePermission("edit_maintenance_plans"), async (req, res, next) => {
+  try {
+    const year = parseYear(req.params.year);
+    const month = parseMonth(req.params.month);
+    const machineId = Number((req.body as { machineId?: unknown }).machineId);
+    if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12 || !Number.isInteger(machineId)) {
+      res.status(400).json({ error: "Invalid monthly plan row" });
+      return;
+    }
+
+    const machine = await getMachineWithDept(machineId);
+    if (!machine || machine.deletedAt) {
+      res.status(404).json({ error: "Machine not found" });
+      return;
+    }
+
+    const plan = await getOrCreateMonthlyPlan(year, month);
+    const existingRows = await db
+      .select({ rowNumber: monthlyPmPlanRowsTable.rowNumber })
+      .from(monthlyPmPlanRowsTable)
+      .where(eq(monthlyPmPlanRowsTable.planId, plan.id));
+    const nextRowNumber = Math.max(0, ...existingRows.map((row) => row.rowNumber)) + 1;
+    const body = req.body as { plannedDateFrom?: string; plannedDateTo?: string };
+    const defaultDate = `${year}-${String(month).padStart(2, "0")}-01`;
+    const [created] = await db.insert(monthlyPmPlanRowsTable).values({
+      planId: plan.id,
+      machineId: machine.id,
+      rowNumber: nextRowNumber,
+      departmentName: machine.departmentName,
+      sectionName: machine.departmentName,
+      machineName: machine.machineName,
+      identificationNumber: machine.machineNumber,
+      plannedDateFrom: body.plannedDateFrom || defaultDate,
+      plannedDateTo: body.plannedDateTo || body.plannedDateFrom || defaultDate,
+      status: "due",
+    }).returning();
+    res.status(201).json(created!);
   } catch (err) {
     next(err);
   }

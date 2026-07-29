@@ -26,6 +26,8 @@ import type {
   AnnualPmPlanInput,
   AssignTechnicianInput,
   AuthUser,
+  ClosedCorrectiveMaintenanceLogHeader,
+  ClosedCorrectiveMaintenanceLogHeaderInput,
   ClosedCorrectiveMaintenanceLogRow,
   CorrectiveMaintenanceEvent,
   CorrectiveMaintenanceHeaderInput,
@@ -58,6 +60,7 @@ import type {
   MaintenanceRequestMachineOption,
   MaintenanceRequestSummary,
   MaintenanceRequestTechnicianOption,
+  ManualClosedCorrectiveMaintenanceLogEntryInput,
   MessageResponse,
   MonthlyPmPlanDetail,
   MonthlyPmPlanInput,
@@ -4062,6 +4065,363 @@ export function useGetClosedCorrectiveMaintenanceLog<TData = Awaited<ReturnType<
 
 
 
+
+export const getGetClosedCorrectiveMaintenanceLogHeaderUrl = () => {
+
+
+
+
+  return `/api/maintenance-requests/closed-log/header`
+}
+
+/**
+ * @summary Get shared LOG-10-0659-0 header fields
+ */
+export const getClosedCorrectiveMaintenanceLogHeader = async ( options?: RequestInit): Promise<ClosedCorrectiveMaintenanceLogHeader> => {
+
+  return customFetch<ClosedCorrectiveMaintenanceLogHeader>(getGetClosedCorrectiveMaintenanceLogHeaderUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClosedCorrectiveMaintenanceLogHeaderQueryKey = () => {
+    return [
+    `/api/maintenance-requests/closed-log/header`
+    ] as const;
+    }
+
+
+export const getGetClosedCorrectiveMaintenanceLogHeaderQueryOptions = <TData = Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLogHeader>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLogHeader>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClosedCorrectiveMaintenanceLogHeaderQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLogHeader>>> = ({ signal }) => getClosedCorrectiveMaintenanceLogHeader({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLogHeader>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClosedCorrectiveMaintenanceLogHeaderQueryResult = NonNullable<Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLogHeader>>>
+export type GetClosedCorrectiveMaintenanceLogHeaderQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get shared LOG-10-0659-0 header fields
+ */
+
+export function useGetClosedCorrectiveMaintenanceLogHeader<TData = Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLogHeader>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClosedCorrectiveMaintenanceLogHeader>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClosedCorrectiveMaintenanceLogHeaderQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateClosedCorrectiveMaintenanceLogHeaderUrl = () => {
+
+
+
+
+  return `/api/maintenance-requests/closed-log/header`
+}
+
+/**
+ * @summary Update controlled LOG-10-0659-0 header fields
+ */
+export const updateClosedCorrectiveMaintenanceLogHeader = async (closedCorrectiveMaintenanceLogHeaderInput: ClosedCorrectiveMaintenanceLogHeaderInput, options?: RequestInit): Promise<ClosedCorrectiveMaintenanceLogHeader> => {
+
+  return customFetch<ClosedCorrectiveMaintenanceLogHeader>(getUpdateClosedCorrectiveMaintenanceLogHeaderUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(closedCorrectiveMaintenanceLogHeaderInput)
+  }
+);}
+
+
+
+
+export const getUpdateClosedCorrectiveMaintenanceLogHeaderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClosedCorrectiveMaintenanceLogHeader>>, TError,{data: BodyType<ClosedCorrectiveMaintenanceLogHeaderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateClosedCorrectiveMaintenanceLogHeader>>, TError,{data: BodyType<ClosedCorrectiveMaintenanceLogHeaderInput>}, TContext> => {
+
+const mutationKey = ['updateClosedCorrectiveMaintenanceLogHeader'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateClosedCorrectiveMaintenanceLogHeader>>, {data: BodyType<ClosedCorrectiveMaintenanceLogHeaderInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateClosedCorrectiveMaintenanceLogHeader(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateClosedCorrectiveMaintenanceLogHeaderMutationResult = NonNullable<Awaited<ReturnType<typeof updateClosedCorrectiveMaintenanceLogHeader>>>
+    export type UpdateClosedCorrectiveMaintenanceLogHeaderMutationBody = BodyType<ClosedCorrectiveMaintenanceLogHeaderInput>
+    export type UpdateClosedCorrectiveMaintenanceLogHeaderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update controlled LOG-10-0659-0 header fields
+ */
+export const useUpdateClosedCorrectiveMaintenanceLogHeader = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClosedCorrectiveMaintenanceLogHeader>>, TError,{data: BodyType<ClosedCorrectiveMaintenanceLogHeaderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateClosedCorrectiveMaintenanceLogHeader>>,
+        TError,
+        {data: BodyType<ClosedCorrectiveMaintenanceLogHeaderInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateClosedCorrectiveMaintenanceLogHeaderMutationOptions(options));
+    }
+
+export const getCreateManualClosedCorrectiveMaintenanceLogEntryUrl = () => {
+
+
+
+
+  return `/api/maintenance-requests/closed-log/manual`
+}
+
+/**
+ * @summary Add a supplemental manual row to LOG-10-0659-0
+ */
+export const createManualClosedCorrectiveMaintenanceLogEntry = async (manualClosedCorrectiveMaintenanceLogEntryInput: ManualClosedCorrectiveMaintenanceLogEntryInput, options?: RequestInit): Promise<ClosedCorrectiveMaintenanceLogRow> => {
+
+  return customFetch<ClosedCorrectiveMaintenanceLogRow>(getCreateManualClosedCorrectiveMaintenanceLogEntryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(manualClosedCorrectiveMaintenanceLogEntryInput)
+  }
+);}
+
+
+
+
+export const getCreateManualClosedCorrectiveMaintenanceLogEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createManualClosedCorrectiveMaintenanceLogEntry>>, TError,{data: BodyType<ManualClosedCorrectiveMaintenanceLogEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createManualClosedCorrectiveMaintenanceLogEntry>>, TError,{data: BodyType<ManualClosedCorrectiveMaintenanceLogEntryInput>}, TContext> => {
+
+const mutationKey = ['createManualClosedCorrectiveMaintenanceLogEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createManualClosedCorrectiveMaintenanceLogEntry>>, {data: BodyType<ManualClosedCorrectiveMaintenanceLogEntryInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createManualClosedCorrectiveMaintenanceLogEntry(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateManualClosedCorrectiveMaintenanceLogEntryMutationResult = NonNullable<Awaited<ReturnType<typeof createManualClosedCorrectiveMaintenanceLogEntry>>>
+    export type CreateManualClosedCorrectiveMaintenanceLogEntryMutationBody = BodyType<ManualClosedCorrectiveMaintenanceLogEntryInput>
+    export type CreateManualClosedCorrectiveMaintenanceLogEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a supplemental manual row to LOG-10-0659-0
+ */
+export const useCreateManualClosedCorrectiveMaintenanceLogEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createManualClosedCorrectiveMaintenanceLogEntry>>, TError,{data: BodyType<ManualClosedCorrectiveMaintenanceLogEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createManualClosedCorrectiveMaintenanceLogEntry>>,
+        TError,
+        {data: BodyType<ManualClosedCorrectiveMaintenanceLogEntryInput>},
+        TContext
+      > => {
+      return useMutation(getCreateManualClosedCorrectiveMaintenanceLogEntryMutationOptions(options));
+    }
+
+export const getDeleteManualClosedCorrectiveMaintenanceLogEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/maintenance-requests/closed-log/manual/${id}`
+}
+
+/**
+ * @summary Soft-delete a manual LOG-10-0659-0 row
+ */
+export const deleteManualClosedCorrectiveMaintenanceLogEntry = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteManualClosedCorrectiveMaintenanceLogEntryUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteManualClosedCorrectiveMaintenanceLogEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteManualClosedCorrectiveMaintenanceLogEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteManualClosedCorrectiveMaintenanceLogEntry>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteManualClosedCorrectiveMaintenanceLogEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteManualClosedCorrectiveMaintenanceLogEntry>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteManualClosedCorrectiveMaintenanceLogEntry(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteManualClosedCorrectiveMaintenanceLogEntryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteManualClosedCorrectiveMaintenanceLogEntry>>>
+
+    export type DeleteManualClosedCorrectiveMaintenanceLogEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Soft-delete a manual LOG-10-0659-0 row
+ */
+export const useDeleteManualClosedCorrectiveMaintenanceLogEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteManualClosedCorrectiveMaintenanceLogEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteManualClosedCorrectiveMaintenanceLogEntry>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteManualClosedCorrectiveMaintenanceLogEntryMutationOptions(options));
+    }
+
+export const getExcludeAutomaticClosedCorrectiveMaintenanceLogEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/maintenance-requests/closed-log/automatic/${id}`
+}
+
+/**
+ * @summary Hide an automatically generated LOG-10-0659-0 row without deleting its maintenance request
+ */
+export const excludeAutomaticClosedCorrectiveMaintenanceLogEntry = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getExcludeAutomaticClosedCorrectiveMaintenanceLogEntryUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getExcludeAutomaticClosedCorrectiveMaintenanceLogEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof excludeAutomaticClosedCorrectiveMaintenanceLogEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof excludeAutomaticClosedCorrectiveMaintenanceLogEntry>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['excludeAutomaticClosedCorrectiveMaintenanceLogEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof excludeAutomaticClosedCorrectiveMaintenanceLogEntry>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  excludeAutomaticClosedCorrectiveMaintenanceLogEntry(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExcludeAutomaticClosedCorrectiveMaintenanceLogEntryMutationResult = NonNullable<Awaited<ReturnType<typeof excludeAutomaticClosedCorrectiveMaintenanceLogEntry>>>
+
+    export type ExcludeAutomaticClosedCorrectiveMaintenanceLogEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Hide an automatically generated LOG-10-0659-0 row without deleting its maintenance request
+ */
+export const useExcludeAutomaticClosedCorrectiveMaintenanceLogEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof excludeAutomaticClosedCorrectiveMaintenanceLogEntry>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof excludeAutomaticClosedCorrectiveMaintenanceLogEntry>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getExcludeAutomaticClosedCorrectiveMaintenanceLogEntryMutationOptions(options));
+    }
 
 export const getGetExternalMaintenanceRequestUrl = (id: number,) => {
 

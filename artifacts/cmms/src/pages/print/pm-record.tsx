@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import { PrintLayout, PrintPage } from "./print-layout";
@@ -33,6 +33,46 @@ function chunk<T>(items: T[], size: number) {
   return pages.length ? pages : [[]];
 }
 
+function checklistPointHeightUnits(text: string, charactersPerLine: number) {
+  return text
+    .split(/\r?\n/)
+    .reduce((total, line) => total + Math.max(1, Math.ceil(line.trim().length / charactersPerLine)), 0);
+}
+
+function chunkChecklistPoints<T extends { pointText: string }>(
+  points: T[],
+  pageCapacity: number,
+  charactersPerLine: number,
+) {
+  const pages: T[][] = [];
+  let currentPage: T[] = [];
+  let usedCapacity = 0;
+
+  for (const point of points) {
+    const pointUnits = Math.min(pageCapacity, checklistPointHeightUnits(point.pointText, charactersPerLine));
+    if (currentPage.length && usedCapacity + pointUnits > pageCapacity) {
+      pages.push(currentPage);
+      currentPage = [];
+      usedCapacity = 0;
+    }
+    currentPage.push(point);
+    usedCapacity += pointUnits;
+  }
+
+  if (currentPage.length || !pages.length) pages.push(currentPage);
+  return pages;
+}
+
+function checklistRowHeight(pointCount: number, orientation: "portrait" | "landscape") {
+  // Landscape pages safely fit eleven normal-height checklist rows. Keeping this
+  // aligned with the paginator prevents a row from spilling onto a separate,
+  // mostly empty printed page.
+  const normalCapacity = orientation === "landscape" ? 11 : 15;
+  // With a short checklist, use the unused vertical room to make the official
+  // form easier to read. Long text can still expand a row beyond this height.
+  return Math.min(46, 34 + Math.max(0, normalCapacity - pointCount) * 4);
+}
+
 function nameAndSignature(name: string | null, signature: string | null) {
   const normalizedName = name?.trim() ?? "";
   const normalizedSignature = signature?.trim() ?? "";
@@ -55,6 +95,7 @@ function formatInspectionDate(date: string) {
 export default function PmRecordPrintPage({ params }: { params: { id: string; recordId?: string } }) {
   const machineId = Number(params.id);
   const historicalRecordId = params.recordId ? Number(params.recordId) : undefined;
+  const [printOrientation, setPrintOrientation] = useState<"portrait" | "landscape">("portrait");
   const { data } = useQuery({
     queryKey: ["print-pm-record", machineId, historicalRecordId ?? "current"],
     queryFn: () => apiRequest<PmRecordDetail>(
@@ -69,21 +110,42 @@ export default function PmRecordPrintPage({ params }: { params: { id: string; re
     return map;
   }, [data]);
 
-  // A record can have any number of checklist points. Continue in blocks of
-  // ten while preserving the point number across print pages.
-  const checklistPages = useMemo(() => chunk(data?.checklistPoints ?? [], 10), [data?.checklistPoints]);
+  // Portrait has substantially more vertical room than landscape. Use a
+  // content-aware allowance so short or wrapped points stay together on one
+  // sheet whenever they physically fit; a new sheet is created only when the
+  // accumulated text needs it. Landscape stays deliberately tighter because
+  // its shorter page also contains the repeated official header.
+  const checklistPointsPerPage = printOrientation === "landscape" ? 11 : 20;
+  const checklistCharactersPerLine = printOrientation === "landscape" ? 65 : 45;
+  const checklistPages = useMemo(
+    () => chunkChecklistPoints(data?.checklistPoints ?? [], checklistPointsPerPage, checklistCharactersPerLine),
+    [data?.checklistPoints, checklistPointsPerPage, checklistCharactersPerLine],
+  );
   const inspectionColumnsPerPage = Math.min(10, Math.max(1, data?.header.inspectionColumnsPerPrintPage ?? 2));
   const inspectionPages = useMemo(() => chunk(data?.inspections ?? [], inspectionColumnsPerPage), [data?.inspections, inspectionColumnsPerPage]);
   const totalPages = checklistPages.length * inspectionPages.length;
 
   return (
-    <PrintLayout title="Preventive Maintenance Record - Official Print">
+    <PrintLayout
+      title="Preventive Maintenance Record - Official Print"
+      landscape={printOrientation === "landscape"}
+      showOrientationChoice
+      orientation={printOrientation}
+      onOrientationChange={setPrintOrientation}
+    >
       {data && inspectionPages.flatMap((inspectionPage, inspectionPageIndex) =>
         checklistPages.map((checklistPage, checklistPageIndex) => {
           const pageNumber = inspectionPageIndex * checklistPages.length + checklistPageIndex + 1;
           const isFinalChecklistPage = checklistPageIndex === checklistPages.length - 1;
+          const checklistPointOffset = checklistPages
+            .slice(0, checklistPageIndex)
+            .reduce((total, points) => total + points.length, 0);
+          const rowHeight = checklistRowHeight(checklistPage.length, printOrientation);
           return (
-            <PrintPage key={`${inspectionPageIndex}-${checklistPageIndex}`}>
+            <PrintPage
+              key={`${inspectionPageIndex}-${checklistPageIndex}`}
+              className={`official-print-pm-page${pageNumber > 1 ? " official-print-pm-page-continued" : ""}`}
+            >
               <div dir="rtl" className="official-print-pm-content">
                 <table dir="ltr" className="official-print-table official-print-header-table official-print-pm-header">
                   <tbody>
@@ -139,9 +201,9 @@ export default function PmRecordPrintPage({ params }: { params: { id: string; re
                   </thead>
                   <tbody>
                     {checklistPage.map((point, index) => (
-                      <tr key={point.id} className="official-print-row-tall">
-                        <td>{checklistPageIndex * 10 + index + 1}.</td>
-                        <td>{point.pointText}</td>
+                      <tr key={point.id} className="official-print-row-tall" style={{ height: `${rowHeight}px` }}>
+                        <td>{checklistPointOffset + index + 1}.</td>
+                        <td className="official-print-pm-point-text">{point.pointText}</td>
                         {Array.from({ length: inspectionColumnsPerPage }).map((_, inspectionIndex) => {
                           const inspection = inspectionPage[inspectionIndex];
                           return <td key={inspection?.id ?? `empty-${inspectionIndex}`}>{inspection ? resultMap.get(`${inspection.id}-${point.id}`) ?? "" : ""}</td>;

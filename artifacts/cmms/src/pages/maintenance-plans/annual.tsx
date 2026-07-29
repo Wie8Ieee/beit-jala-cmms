@@ -45,6 +45,11 @@ type AnnualPlan = {
   rows: AnnualRow[];
 };
 
+type AnnualPlanHeader = {
+  documentNumber: string;
+  effectiveOrExecutionDate: string | null;
+};
+
 function calculateScheduledMonths(startDate: string | null, frequencyMonths: number | null) {
   if (!startDate || !frequencyMonths || frequencyMonths < 1) return [];
   const month = Number(startDate.slice(5, 7));
@@ -59,7 +64,9 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
   const queryClient = useQueryClient();
   const { hasPermission } = useAuth();
   const canEdit = hasPermission("edit_maintenance_plans");
+  const canEditHeader = hasPermission("edit_header");
   const [form, setForm] = useState<AnnualPlan | null>(null);
+  const [header, setHeader] = useState<AnnualPlanHeader>({ documentNumber: "", effectiveOrExecutionDate: "" });
 
   const { data, isLoading } = useQuery({
     queryKey: ["annual-plan", year],
@@ -69,6 +76,23 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
   useEffect(() => {
     if (data) setForm({ ...data, rows: data.rows.map((row) => ({ ...row, scheduledMonths: calculateScheduledMonths(row.startDate, row.frequencyMonths) })) });
   }, [data]);
+
+  const { data: savedHeader } = useQuery({
+    queryKey: ["annual-pm-header"],
+    queryFn: () => apiRequest<AnnualPlanHeader>("/maintenance-plans/annual/header"),
+  });
+
+  useEffect(() => {
+    if (savedHeader) setHeader(savedHeader);
+  }, [savedHeader]);
+
+  const saveHeader = useMutation({
+    mutationFn: () => apiRequest<AnnualPlanHeader>("/maintenance-plans/annual/header", { method: "PUT", body: JSON.stringify(header) }),
+    onSuccess: (saved) => {
+      setHeader(saved);
+      queryClient.invalidateQueries({ queryKey: ["annual-pm-header"] });
+    },
+  });
 
   const save = useMutation({
     mutationFn: () =>
@@ -131,6 +155,28 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
           effectiveOrExecutionDate={String(year)}
         />
       </div>
+
+      {canEditHeader && (
+        <Card>
+          <CardHeader><CardTitle>Annual Plan Header Settings</CardTitle></CardHeader>
+          <CardContent className="grid max-w-2xl gap-4 md:grid-cols-2">
+            <div>
+              <Label>Document number</Label>
+              <Input value={header.documentNumber} onChange={(event) => setHeader({ ...header, documentNumber: event.target.value })} />
+            </div>
+            <div>
+              <Label>Effective date</Label>
+              <Input value={header.effectiveOrExecutionDate ?? ""} onChange={(event) => setHeader({ ...header, effectiveOrExecutionDate: event.target.value })} />
+            </div>
+            <div className="md:col-span-2">
+              <Button type="button" onClick={() => saveHeader.mutate()} disabled={saveHeader.isPending}>
+                <Save className="mr-2 h-4 w-4" />
+                Save Header for All Annual Plans
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

@@ -527,6 +527,12 @@ paths:
       tags: [machines]
       summary: List all active machines
       parameters:
+        - name: archived
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Return archived (soft-deleted) machines instead of active machines
         - name: search
           in: query
           required: false
@@ -1164,6 +1170,81 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ClosedCorrectiveMaintenanceLogRow"
+  /maintenance-requests/closed-log/header:
+    get:
+      operationId: getClosedCorrectiveMaintenanceLogHeader
+      tags: [maintenance-requests]
+      summary: Get shared LOG-10-0659-0 header fields
+      responses:
+        "200":
+          description: Closed corrective maintenance log header
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClosedCorrectiveMaintenanceLogHeader"
+    put:
+      operationId: updateClosedCorrectiveMaintenanceLogHeader
+      tags: [maintenance-requests]
+      summary: Update controlled LOG-10-0659-0 header fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClosedCorrectiveMaintenanceLogHeaderInput"
+      responses:
+        "200":
+          description: Header updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClosedCorrectiveMaintenanceLogHeader"
+  /maintenance-requests/closed-log/manual:
+    post:
+      operationId: createManualClosedCorrectiveMaintenanceLogEntry
+      tags: [maintenance-requests]
+      summary: Add a supplemental manual row to LOG-10-0659-0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManualClosedCorrectiveMaintenanceLogEntryInput"
+      responses:
+        "201":
+          description: Manual log entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClosedCorrectiveMaintenanceLogRow"
+  /maintenance-requests/closed-log/manual/{id}:
+    delete:
+      operationId: deleteManualClosedCorrectiveMaintenanceLogEntry
+      tags: [maintenance-requests]
+      summary: Soft-delete a manual LOG-10-0659-0 row
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Manual log entry deleted
+  /maintenance-requests/closed-log/automatic/{id}:
+    delete:
+      operationId: excludeAutomaticClosedCorrectiveMaintenanceLogEntry
+      tags: [maintenance-requests]
+      summary: Hide an automatically generated LOG-10-0659-0 row without deleting its maintenance request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Automatic log entry excluded
 
   /maintenance-requests/{id}/external-maintenance:
     get:
@@ -2388,6 +2469,23 @@ components:
         others:
           type: string
 
+    ClosedCorrectiveMaintenanceLogHeader:
+      type: object
+      required: [documentNumber]
+      properties:
+        documentNumber:
+          type: string
+        effectiveOrExecutionDate:
+          type: ["string", "null"]
+
+    ClosedCorrectiveMaintenanceLogHeaderInput:
+      type: object
+      properties:
+        documentNumber:
+          type: string
+        effectiveOrExecutionDate:
+          type: ["string", "null"]
+
     PmHeader:
       type: object
       required: [id, machineId, procedureFormNumber, columnsPerRecord, inspectionColumnsPerPrintPage, createdAt, updatedAt]
@@ -3013,10 +3111,13 @@ components:
 
     ClosedCorrectiveMaintenanceLogRow:
       type: object
-      required: [id, machineName, machineNumber, requestDate, requestReportNumber, priority, closedDate, remarks]
+      required: [id, source, machineName, machineNumber, requestDate, requestReportNumber, priority, closedDate, remarks]
       properties:
         id:
-          type: integer
+          type: string
+        source:
+          type: string
+          enum: [automatic, manual]
         machineName:
           type: string
         machineNumber:
@@ -3027,6 +3128,26 @@ components:
           type: string
         priority:
           type: string
+        closedDate:
+          type: string
+        remarks:
+          type: string
+
+    ManualClosedCorrectiveMaintenanceLogEntryInput:
+      type: object
+      required: [machineName, machineNumber, requestDate, requestReportNumber, closedDate]
+      properties:
+        machineName:
+          type: string
+        machineNumber:
+          type: string
+        requestDate:
+          type: string
+        requestReportNumber:
+          type: string
+        priority:
+          type: string
+          enum: [normal, urgent]
         closedDate:
           type: string
         remarks:

@@ -28,8 +28,14 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
     pageCount: "",
   });
   const { data = [] } = useQuery({
-    queryKey: ["machine-cm-history", machineId],
-    queryFn: () => apiRequest<CorrectiveMaintenanceRecord[]>(`/machines/${machineId}/corrective-maintenance/history`),
+    queryKey: ["machine-cm-record", machineId, historicalRecordId ?? "current"],
+    queryFn: async () => {
+      if (historicalRecordId) {
+        return apiRequest<CorrectiveMaintenanceRecord[]>(`/machines/${machineId}/corrective-maintenance/history`);
+      }
+      const record = await apiRequest<CorrectiveMaintenanceRecord>(`/machines/${machineId}/corrective-maintenance`);
+      return [record];
+    },
   });
 
   const active = historicalRecordId ? data.find((record) => record.id === historicalRecordId) ?? null : data[data.length - 1] ?? null;
@@ -50,7 +56,7 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
     }),
     onSuccess: () => {
       setIsEditingHeader(false);
-      queryClient.invalidateQueries({ queryKey: ["machine-cm-history", machineId] });
+      queryClient.invalidateQueries({ queryKey: ["machine-cm-record", machineId] });
     },
   });
 
@@ -61,13 +67,13 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
     }),
     onSuccess: () => {
       setEditingEventId(null);
-      queryClient.invalidateQueries({ queryKey: ["machine-cm-history", machineId] });
+      queryClient.invalidateQueries({ queryKey: ["machine-cm-record", machineId] });
     },
   });
   const addLogRow = useMutation({
     mutationFn: () => apiRequest(`/machines/${machineId}/corrective-maintenance/events`, { method: "POST", body: JSON.stringify({}) }),
     onSuccess: (event: { id: number; requestReportNumber: string | null; requestDate?: string | null; maintenanceType?: string | null; priority?: string | null; preliminaryCheckResults: string | null; expectedWorkTimeFrom: string | null; expectedWorkTimeTo: string | null; repairTimeSlots?: Array<{ date: string; from: string; to: string }>; actionsTaken: string | null; technicianName?: string | null; sparePartsUsed?: string | null; receiverName: string | null; handoverDate: string | null }) => {
-      queryClient.invalidateQueries({ queryKey: ["machine-cm-history", machineId] });
+      queryClient.invalidateQueries({ queryKey: ["machine-cm-record", machineId] });
       setEditingEventId(event.id);
       setEventDraft({ requestReportNumber: event.requestReportNumber ?? "", requestDate: event.requestDate ?? "", maintenanceType: event.maintenanceType ?? event.priority ?? "", preliminaryCheckResults: event.preliminaryCheckResults ?? "", expectedWorkTimeFrom: event.expectedWorkTimeFrom ?? "", expectedWorkTimeTo: event.expectedWorkTimeTo ?? "", repairTimeSlots: event.repairTimeSlots?.length ? event.repairTimeSlots : [{ date: "", from: event.expectedWorkTimeFrom ?? "", to: event.expectedWorkTimeTo ?? "" }], actionsTaken: event.actionsTaken ?? "", technicianName: event.technicianName ?? "", sparePartsUsed: event.sparePartsUsed ?? "", receiverName: event.receiverName ?? "", handoverDate: event.handoverDate ?? "" });
     },

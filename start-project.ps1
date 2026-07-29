@@ -19,6 +19,7 @@ Get-Content (Join-Path $projectRoot ".env") | ForEach-Object {
 Push-Location $projectRoot
 try {
   pnpm --filter @workspace/api-server run build
+  if ($LASTEXITCODE -ne 0) { throw "API build failed; the project was not started." }
 
   Start-Process -FilePath pnpm.cmd -ArgumentList @("--filter", "@workspace/api-server", "run", "start") -WorkingDirectory $projectRoot -WindowStyle Hidden
   $env:PORT = "5173"

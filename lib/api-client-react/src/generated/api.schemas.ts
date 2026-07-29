@@ -329,6 +329,18 @@ export interface ScannedEquipmentInfo {
   others?: string;
 }
 
+export interface ClosedCorrectiveMaintenanceLogHeader {
+  documentNumber: string;
+  /** @nullable */
+  effectiveOrExecutionDate?: string | null;
+}
+
+export interface ClosedCorrectiveMaintenanceLogHeaderInput {
+  documentNumber?: string;
+  /** @nullable */
+  effectiveOrExecutionDate?: string | null;
+}
+
 export interface PmHeader {
   id: number;
   machineId: number;
@@ -758,8 +770,17 @@ export interface MaintenanceRequestSummary {
   updatedAt?: string;
 }
 
+export type ClosedCorrectiveMaintenanceLogRowSource = typeof ClosedCorrectiveMaintenanceLogRowSource[keyof typeof ClosedCorrectiveMaintenanceLogRowSource];
+
+
+export const ClosedCorrectiveMaintenanceLogRowSource = {
+  automatic: 'automatic',
+  manual: 'manual',
+} as const;
+
 export interface ClosedCorrectiveMaintenanceLogRow {
-  id: number;
+  id: string;
+  source: ClosedCorrectiveMaintenanceLogRowSource;
   machineName: string;
   machineNumber: string;
   requestDate: string;
@@ -767,6 +788,24 @@ export interface ClosedCorrectiveMaintenanceLogRow {
   priority: string;
   closedDate: string;
   remarks: string;
+}
+
+export type ManualClosedCorrectiveMaintenanceLogEntryInputPriority = typeof ManualClosedCorrectiveMaintenanceLogEntryInputPriority[keyof typeof ManualClosedCorrectiveMaintenanceLogEntryInputPriority];
+
+
+export const ManualClosedCorrectiveMaintenanceLogEntryInputPriority = {
+  normal: 'normal',
+  urgent: 'urgent',
+} as const;
+
+export interface ManualClosedCorrectiveMaintenanceLogEntryInput {
+  machineName: string;
+  machineNumber: string;
+  requestDate: string;
+  requestReportNumber: string;
+  priority?: ManualClosedCorrectiveMaintenanceLogEntryInputPriority;
+  closedDate: string;
+  remarks?: string;
 }
 
 export interface ExternalMaintenanceRequest {
@@ -1167,6 +1206,10 @@ documentId: number;
 };
 
 export type GetMachinesParams = {
+/**
+ * Return archived (soft-deleted) machines instead of active machines
+ */
+archived?: boolean;
 /**
  * Search by machine name or machine number
  */

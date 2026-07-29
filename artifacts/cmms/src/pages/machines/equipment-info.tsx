@@ -156,11 +156,11 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
   const { data: equipInfo, isLoading: isLoadingInfo } = useGetEquipmentInformation(machineId, {
     query: { enabled: !!machineId, queryKey: getGetEquipmentInformationQueryKey(machineId) }
   });
-  const { data: equipmentHeader } = useQuery({ queryKey: ["equipment-header", machineId], queryFn: () => apiRequest<EquipmentHeader>(`/machines/${machineId}/equipment-information/header`) });
+  const { data: equipmentHeader } = useQuery({ queryKey: ["equipment-header"], queryFn: () => apiRequest<EquipmentHeader>(`/machines/${machineId}/equipment-information/header`) });
   useEffect(() => { if (equipmentHeader) setHeaderForm(equipmentHeader); }, [equipmentHeader]);
   const saveHeader = useMutation({
     mutationFn: () => apiRequest<EquipmentHeader>(`/machines/${machineId}/equipment-information/header`, { method: "PUT", body: JSON.stringify(headerForm) }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["equipment-header", machineId] }); toast({ title: "Header Saved" }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["equipment-header"] }); toast({ title: "Header Saved", description: "The header was updated for all equipment information records." }); },
     onError: (error) => toast({ variant: "destructive", title: "Header save failed", description: getErrorMessage(error, "Could not save header.") }),
   });
 
@@ -334,6 +334,7 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
       {/* The Form Paper Container */}
       <div className="bg-white dark:bg-card border shadow-xl rounded-sm p-8 md:p-12 print:shadow-none print:border-none print:p-0">
         <OfficialFormHeader
+          companyName={equipmentHeader?.companyName}
           documentName={equipmentHeader?.documentName ?? "Equipment Information Record"}
           documentNumber={equipmentHeader?.documentNumber ?? "FORM-10-0118"}
           effectiveOrExecutionDate={(equipmentHeader?.effectiveOrExecutionDate ?? form.watch("preparedByDate")) || null}
@@ -343,7 +344,9 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
         {canEditHeader && headerForm && (
           <div className="mb-8 rounded-md border bg-muted/30 p-4 print:hidden">
             <div className="mb-3 flex items-center gap-2 font-semibold"><Settings2 className="h-4 w-4" /> Edit Header</div>
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2">
+              <Input value={headerForm.companyName} onChange={(e) => setHeaderForm({ ...headerForm, companyName: e.target.value })} placeholder="Company name" />
+              <Input value={headerForm.documentName} onChange={(e) => setHeaderForm({ ...headerForm, documentName: e.target.value })} placeholder="Document name" />
               <Input value={headerForm.documentNumber} onChange={(e) => setHeaderForm({ ...headerForm, documentNumber: e.target.value })} placeholder="Document number" />
               <Input type="date" value={headerForm.effectiveOrExecutionDate ?? ""} onChange={(e) => setHeaderForm({ ...headerForm, effectiveOrExecutionDate: e.target.value || null })} />
               <Input value={`Page ${headerForm.pageNumber} of ${headerForm.totalPages}`} readOnly />

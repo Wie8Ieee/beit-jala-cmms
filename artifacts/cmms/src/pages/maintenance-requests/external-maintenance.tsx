@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 import type { ExternalMaintenanceRequestDetail } from "./types";
 
 export default function ExternalMaintenanceRequestPage({ params }: { params: { id: string } }) {
@@ -97,12 +98,12 @@ export default function ExternalMaintenanceRequestPage({ params }: { params: { i
           <CardHeader><CardTitle>اعتمادات طلب الصيانة الخارجية</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2"><Label>مقترحات فني الصيانة</Label><Textarea value={suggestions} readOnly={!canEdit} onChange={(event) => setSuggestions(event.target.value)} /></div>
-            <div><Label>توقيع فني الصيانة</Label><Input value={technicianSignature} readOnly={!canEdit} onChange={(event) => setTechnicianSignature(event.target.value)} /></div>
             <div><Label>التاريخ</Label><Input type="date" value={technicianDate} readOnly={!canEdit} onChange={(event) => setTechnicianDate(event.target.value)} /></div>
-            <div><Label>توقيع مدير دائرة الصيانة</Label><Input value={departmentSignature} readOnly={!canEdit} onChange={(event) => setDepartmentSignature(event.target.value)} /></div>
+            <div className="md:col-span-2"><ElectronicSignatureField documentType="EXTERNAL_MAINTENANCE_REQUEST" documentId={requestId} fieldName="maintenance_technician" label="التوقيع الإلكتروني لفني الصيانة" /></div>
             <div><Label>التاريخ</Label><Input type="date" value={departmentDate} readOnly={!canEdit} onChange={(event) => setDepartmentDate(event.target.value)} /></div>
-            <div><Label>توقيع المدير العام</Label><Input value={generalSignature} readOnly={!canEdit} onChange={(event) => setGeneralSignature(event.target.value)} /></div>
+            <div className="md:col-span-2"><ElectronicSignatureField documentType="EXTERNAL_MAINTENANCE_REQUEST" documentId={requestId} fieldName="department_manager" label="التوقيع الإلكتروني لمدير دائرة الصيانة" /></div>
             <div><Label>التاريخ</Label><Input type="date" value={generalDate} readOnly={!canEdit} onChange={(event) => setGeneralDate(event.target.value)} /></div>
+            <div className="md:col-span-2"><ElectronicSignatureField documentType="EXTERNAL_MAINTENANCE_REQUEST" documentId={requestId} fieldName="general_manager" label="التوقيع الإلكتروني للمدير العام" /></div>
             {canEdit && <Button type="submit" className="w-fit"><Save className="ms-2 h-4 w-4" />حفظ الطلب الخارجي</Button>}
           </CardContent>
         </Card>

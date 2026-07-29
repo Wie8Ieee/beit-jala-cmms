@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Save } from "lucide-react";
+import { Plus, Save } from "lucide-react";
 import { OfficialFormHeader } from "@/components/official-form-header";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
@@ -56,6 +56,13 @@ type MonthlyPlan = {
   rows: MonthlyRow[];
 };
 
+type MachineOption = {
+  id: number;
+  machineName: string;
+  machineNumber: string;
+  departmentName: string | null;
+};
+
 export default function MonthlyPlanPage({ params }: { params: { year: string; month: string } }) {
   const year = Number(params.year);
   const month = Number(params.month);
@@ -63,6 +70,8 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
   const { hasPermission } = useAuth();
   const canEdit = hasPermission("edit_maintenance_plans");
   const [form, setForm] = useState<MonthlyPlan | null>(null);
+  const [carryOverMachineId, setCarryOverMachineId] = useState("");
+  const [carryOverDate, setCarryOverDate] = useState(`${year}-${String(month).padStart(2, "0")}-01`);
 
   const { data, isLoading } = useQuery({
     queryKey: ["monthly-plan", year, month],
@@ -83,6 +92,24 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
       setForm(updated);
       queryClient.invalidateQueries({ queryKey: ["monthly-plan", year, month] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+
+  const { data: machines = [] } = useQuery({
+    queryKey: ["monthly-plan-machines"],
+    queryFn: () => apiRequest<MachineOption[]>("/machines"),
+    enabled: canEdit,
+  });
+
+  const addCarryOverRow = useMutation({
+    mutationFn: () => apiRequest<MonthlyRow>(`/maintenance-plans/monthly/${year}/${month}/rows`, {
+      method: "POST",
+      body: JSON.stringify({ machineId: Number(carryOverMachineId), plannedDateFrom: carryOverDate, plannedDateTo: carryOverDate }),
+    }),
+    onSuccess: (created) => {
+      setForm((current) => current ? { ...current, rows: [...current.rows, created] } : current);
+      setCarryOverMachineId("");
+      queryClient.invalidateQueries({ queryKey: ["monthly-plan", year, month] });
     },
   });
 
@@ -185,6 +212,24 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
           <CardTitle>Scheduled Machines</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
+          {canEdit && (
+            <div className="mb-5 grid gap-3 rounded-md border bg-muted/30 p-4 md:grid-cols-[1fr_180px_auto] md:items-end">
+              <div>
+                <Label>Machine to carry over from another month</Label>
+                <select value={carryOverMachineId} onChange={(event) => setCarryOverMachineId(event.target.value)} className="mt-2 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                  <option value="">Select machine</option>
+                  {machines.map((machine) => <option key={machine.id} value={machine.id}>{machine.machineName} / {machine.machineNumber}{machine.departmentName ? ` — ${machine.departmentName}` : ""}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label>Planned date</Label>
+                <Input className="mt-2" type="date" value={carryOverDate} onChange={(event) => setCarryOverDate(event.target.value)} />
+              </div>
+              <Button type="button" onClick={() => addCarryOverRow.mutate()} disabled={!carryOverMachineId || addCarryOverRow.isPending}>
+                <Plus className="mr-2 h-4 w-4" />Add to month
+              </Button>
+            </div>
+          )}
           <Table>
             <TableHeader>
               <TableRow>

@@ -104,7 +104,7 @@ async function getRecordForNewEvent(machineId: number) {
 router.get("/", requireAuth, requirePermission("view_machines"), async (req, res, next) => {
   try {
     const machineId = parseIdParam(req.params.id);
-    const [machine] = await db.select({ id: machinesTable.id }).from(machinesTable).where(eq(machinesTable.id, machineId));
+    const [machine] = await db.select().from(machinesTable).where(eq(machinesTable.id, machineId));
     if (!machine) {
       res.status(404).json({ error: "Machine not found" });
       return;
@@ -117,12 +117,34 @@ router.get("/", requireAuth, requirePermission("view_machines"), async (req, res
       .orderBy(desc(correctiveMaintenanceRecordsTable.sequenceNumber))
       .limit(1);
 
-    if (!record) {
-      res.json(null);
+    if (record) {
+      res.json(await recordDetail(record));
       return;
     }
 
-    res.json(await recordDetail(record));
+    // Every machine has an immediately usable CM form. The first visit creates
+    // its empty active log page; later maintenance rows are added to it by the
+    // normal workflow and historical pages remain untouched.
+    const [latest] = await db
+      .select()
+      .from(correctiveMaintenanceRecordsTable)
+      .where(eq(correctiveMaintenanceRecordsTable.machineId, machineId))
+      .orderBy(desc(correctiveMaintenanceRecordsTable.sequenceNumber))
+      .limit(1);
+    const [created] = await db
+      .insert(correctiveMaintenanceRecordsTable)
+      .values({
+        machineId,
+        sequenceNumber: (latest?.sequenceNumber ?? 0) + 1,
+        previousRecordId: latest?.id ?? null,
+        executionDate: new Date().toISOString().slice(0, 10),
+        machineName: machine.machineName,
+        machineNumber: machine.machineNumber,
+        machineLocation: machine.location,
+        startupDate: machine.pmStartDate,
+      })
+      .returning();
+    res.status(201).json(await recordDetail(created!));
   } catch (err) {
     next(err);
   }

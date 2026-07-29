@@ -19,12 +19,24 @@ const formFields = {
   CORRECTIVE_MAINTENANCE: [
     ["maintenance_technician", "Maintenance technician"],
     ["concerned_section_supervisor", "Concerned section supervisor"],
+    ["performing_staff_1", "Performing staff 1"],
+    ["performing_staff_2", "Performing staff 2"],
+    ["performing_staff_3", "Performing staff 3"],
+    ["performing_staff_4", "Performing staff 4"],
     ["receiver", "Machine receiver"],
     ["engineering_final", "Engineering final approval"],
   ],
   PM_RECORD: [
     ["examiner", "Examiner"],
     ["machine_receiver", "Machine receiver"],
+  ],
+  EXTERNAL_MAINTENANCE_RECEIPT: [
+    ["examiner", "External maintenance receipt examiner"],
+  ],
+  EXTERNAL_MAINTENANCE_REQUEST: [
+    ["maintenance_technician", "External maintenance technician"],
+    ["department_manager", "External maintenance department manager"],
+    ["general_manager", "External maintenance general manager"],
   ],
   EQUIPMENT_INFORMATION: [
     ["prepared_by", "Prepared by"],

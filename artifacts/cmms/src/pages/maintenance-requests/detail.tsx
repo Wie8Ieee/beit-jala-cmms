@@ -349,6 +349,7 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
                   <Input value={item.no ?? ""} readOnly={!canTechnicianWork} onChange={(event) => setStaff((current) => current.map((row, i) => i === index ? { ...row, no: event.target.value } : row))} />
                   <Input value={item.name ?? ""} readOnly={!canTechnicianWork} onChange={(event) => setStaff((current) => current.map((row, i) => i === index ? { ...row, name: event.target.value } : row))} />
                   <Input value={item.signature ?? ""} readOnly={!canTechnicianWork} onChange={(event) => setStaff((current) => current.map((row, i) => i === index ? { ...row, signature: event.target.value } : row))} />
+                  {index < 4 && <div className="md:col-span-3"><ElectronicSignatureField documentType="CORRECTIVE_MAINTENANCE" documentId={requestId} fieldName={`performing_staff_${index + 1}`} label={`Performing Staff ${index + 1} Electronic Signature`} /></div>}
                 </div>
               ))}
               {canTechnicianWork && <Button type="button" variant="outline" onClick={() => setStaff((current) => [...current, { no: String(current.length + 1), name: "", signature: "" }])}>Add Staff Row</Button>}

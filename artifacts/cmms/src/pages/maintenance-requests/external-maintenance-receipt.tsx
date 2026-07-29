@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 import type { ExternalMaintenanceReceiptDetail } from "./types";
 
 export default function ExternalMaintenanceReceiptPage({ params }: { params: { id: string } }) {
@@ -46,7 +47,8 @@ export default function ExternalMaintenanceReceiptPage({ params }: { params: { i
       <div className="md:col-span-2"><Label>الجهة المنفذة للعمل</Label><Input value={entity} readOnly={!canEdit} onChange={(event) => setEntity(event.target.value)} /></div>
       <div className="md:col-span-2"><Label>تقرير استلام أعمال الصيانة</Label><Textarea value={report} readOnly={!canEdit} onChange={(event) => setReport(event.target.value)} /></div>
       <div className="md:col-span-2"><Label>سبب الرفض في حالة وجود خطأ في العمل</Label><Textarea value={failureCause} readOnly={!canEdit} onChange={(event) => setFailureCause(event.target.value)} /></div>
-      <div><Label>اسم الفاحص</Label><Input value={examinerName} readOnly={!canEdit} onChange={(event) => setExaminerName(event.target.value)} /></div><div><Label>توقيع الفاحص</Label><Input value={examinerSignature} readOnly={!canEdit} onChange={(event) => setExaminerSignature(event.target.value)} /></div>
+      <div><Label>اسم الفاحص</Label><Input value={examinerName} readOnly={!canEdit} onChange={(event) => setExaminerName(event.target.value)} /></div>
+      <div className="md:col-span-2"><ElectronicSignatureField documentType="EXTERNAL_MAINTENANCE_RECEIPT" documentId={requestId} fieldName="examiner" label="التوقيع الإلكتروني للفاحص" /></div>
       {canEdit && <Button type="submit" className="w-fit"><Save className="ms-2 h-4 w-4" />حفظ نموذج الاستلام</Button>}
     </CardContent></Card></form>
   </div>;

@@ -14,17 +14,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, Server, AlertCircle } from "lucide-react";
+import { Search, Plus, Server, AlertCircle, Archive, List } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MachinesList() {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
   const debouncedSearch = useDebounce(searchTerm, 300);
   const { hasPermission } = useAuth();
   
-  const machineParams = debouncedSearch ? { search: debouncedSearch } : undefined;
+  const machineParams = debouncedSearch || showArchived
+    ? { ...(debouncedSearch ? { search: debouncedSearch } : {}), ...(showArchived ? { archived: true } : {}) }
+    : undefined;
   const { data: machines, isLoading, isError } = useGetMachines(machineParams, {
     query: {
       queryKey: getGetMachinesQueryKey(machineParams),
@@ -53,14 +56,20 @@ export default function MachinesList() {
           <p className="text-muted-foreground">{t('machines.subtitle')}</p>
         </div>
         
-        {hasPermission("create_machine") && (
-          <Button asChild>
-            <Link href="/machines/new">
-              <Plus className="mr-2 h-4 w-4" />
-              {t('machines.addNew')}
-            </Link>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowArchived((current) => !current)}>
+            {showArchived ? <List className="mr-2 h-4 w-4" /> : <Archive className="mr-2 h-4 w-4" />}
+            {showArchived ? "Active Machines" : "Archived Machines"}
           </Button>
-        )}
+          {hasPermission("create_machine") && (
+            <Button asChild>
+              <Link href="/machines/new">
+                <Plus className="mr-2 h-4 w-4" />
+                {t('machines.addNew')}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center space-x-2 bg-card p-4 rounded-lg border shadow-sm">
@@ -126,7 +135,7 @@ export default function MachinesList() {
                   <TableCell className="font-medium text-primary">{machine.machineName}</TableCell>
                   <TableCell>{machine.departmentName || t('common_extra.unassigned')}</TableCell>
                   <TableCell className="text-muted-foreground">{machine.location || "—"}</TableCell>
-                  <TableCell>{getStatusBadge(machine.status)}</TableCell>
+                  <TableCell>{machine.deletedAt ? <Badge variant="secondary">Archived</Badge> : getStatusBadge(machine.status)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" asChild className="opacity-0 group-hover:opacity-100 transition-opacity">
                       <Link href={`/machines/${machine.id}`}>{t('machines.viewProfile')}</Link>

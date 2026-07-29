@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { CSSProperties } from "react";
 import { apiRequest } from "@/lib/api";
 import { DottedLine, PrintLayout, PrintPage } from "./print-layout";
 
@@ -39,9 +40,13 @@ export default function MonthlyPlanPrintPage({ params }: { params: { year: strin
     queryFn: () => apiRequest<MonthlyPlan>(`/maintenance-plans/monthly/${year}/${month}`),
   });
   const { data: header } = useQuery({ queryKey: ["monthly-pm-header"], queryFn: () => apiRequest<MonthlyPlanHeader>("/maintenance-plans/monthly/header") });
+  // The official form starts with twelve slots, but generated plans can have
+  // more machines. Keep the minimum form capacity while allowing every real
+  // row to print, and let CSS distribute the available page height evenly.
+  const printRows = Array.from({ length: Math.max(12, data?.rows.length ?? 0) }, (_, index) => data?.rows[index]);
 
   return (
-    <PrintLayout title="Monthly PM Program - Official Print">
+    <PrintLayout title="Monthly PM Program - Official Print" landscape>
       <PrintPage landscape>
         <table className="official-print-table official-print-header-table monthly-pm-print-header">
           <tbody>
@@ -57,7 +62,10 @@ export default function MonthlyPlanPrintPage({ params }: { params: { year: strin
           </tbody>
         </table>
         <div className="my-3 text-[12px] font-semibold">Month/Year: <DottedLine text={data ? `${monthNames[month - 1]} / ${year}` : ""} /></div>
-        <table className="official-print-table monthly-pm-print-table">
+        <table
+          className="official-print-table monthly-pm-print-table"
+          style={{ "--monthly-row-count": String(printRows.length) } as CSSProperties}
+        >
           <thead>
             <tr>
               <th rowSpan={2} className="w-[6%]">No.</th>
@@ -71,8 +79,7 @@ export default function MonthlyPlanPrintPage({ params }: { params: { year: strin
             <tr><th>From</th><th>To</th></tr>
           </thead>
           <tbody>
-            {Array.from({ length: 12 }).map((_, index) => {
-              const row = data?.rows[index];
+            {printRows.map((row, index) => {
               return (
                 <tr key={index} className="official-print-row-tall text-[11px]">
                   <td>{row?.rowNumber || index + 1}.</td>

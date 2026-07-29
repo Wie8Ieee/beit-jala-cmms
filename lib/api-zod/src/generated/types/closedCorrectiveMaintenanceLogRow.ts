@@ -5,9 +5,11 @@
  * CMMS API — Beit Jala Pharmaceutical Co.
  * OpenAPI spec version: 0.1.0
  */
+import type { ClosedCorrectiveMaintenanceLogRowSource } from './closedCorrectiveMaintenanceLogRowSource';
 
 export interface ClosedCorrectiveMaintenanceLogRow {
-  id: number;
+  id: string;
+  source: ClosedCorrectiveMaintenanceLogRowSource;
   machineName: string;
   machineNumber: string;
   requestDate: string;

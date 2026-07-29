@@ -126,6 +126,42 @@ export const maintenanceRequestStatusHistoryTable = pgTable("maintenance_request
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+/**
+ * Supplemental rows for LOG-10-0659-0. Closed maintenance requests continue
+ * to populate the register automatically; this table is only for exceptional
+ * entries that need to be recorded manually. Entries are soft-deleted so the
+ * controlled log remains auditable.
+ */
+export const closedCorrectiveMaintenanceManualEntriesTable = pgTable("closed_corrective_maintenance_manual_entries", {
+  id: serial("id").primaryKey(),
+  machineName: text("machine_name").notNull(),
+  machineNumber: text("machine_number").notNull(),
+  requestDate: text("request_date").notNull(),
+  requestReportNumber: text("request_report_number").notNull(),
+  priority: text("priority").notNull().default("normal"),
+  closedDate: text("closed_date").notNull(),
+  remarks: text("remarks"),
+  createdByUserId: integer("created_by_user_id").references(() => usersTable.id),
+  deletedAt: timestamp("deleted_at"),
+  deletedByUserId: integer("deleted_by_user_id").references(() => usersTable.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
+ * Keeps a controlled, auditable exclusion list for automatically generated
+ * LOG-10-0659-0 rows. The underlying maintenance request is never deleted.
+ */
+export const closedCorrectiveMaintenanceLogExclusionsTable = pgTable("closed_corrective_maintenance_log_exclusions", {
+  id: serial("id").primaryKey(),
+  maintenanceRequestId: integer("maintenance_request_id")
+    .notNull()
+    .unique()
+    .references(() => maintenanceRequestsTable.id),
+  excludedAt: timestamp("excluded_at").defaultNow().notNull(),
+  excludedByUserId: integer("excluded_by_user_id").references(() => usersTable.id),
+});
+
 /** FORM-00-0077-1. One external-maintenance conversion may exist per original request. */
 export const externalMaintenanceRequestsTable = pgTable("external_maintenance_requests", {
   id: serial("id").primaryKey(),
@@ -167,6 +203,37 @@ export const externalMaintenanceReceiptsTable = pgTable("external_maintenance_re
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+/** FORM-10-0944-0 — monthly maintenance work evaluation report. */
+export const monthlyMaintenanceEvaluationReportsTable = pgTable("monthly_maintenance_evaluation_reports", {
+  id: serial("id").primaryKey(),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(),
+  delayedActivities: text("delayed_activities"),
+  delayReason: text("delay_reason"),
+  followUpIncluded: text("follow_up_included"),
+  totalPmActivities: integer("total_pm_activities").notNull().default(0),
+  completedPmOnTime: integer("completed_pm_on_time").notNull().default(0),
+  productionImpact: text("production_impact"),
+  sparePartShortage: text("spare_part_shortage"),
+  correctiveMaintenanceDetails: text("corrective_maintenance_details"),
+  totalCorrectiveRequests: integer("total_corrective_requests").notNull().default(0),
+  unclosedCorrectiveRequests: integer("unclosed_corrective_requests").notNull().default(0),
+  completedCorrectiveRequests: integer("completed_corrective_requests").notNull().default(0),
+  externalMaintenanceDetails: text("external_maintenance_details"),
+  totalExternalActivities: integer("total_external_activities").notNull().default(0),
+  completedExternalActivities: integer("completed_external_activities").notNull().default(0),
+  employeeDelayImpact: text("employee_delay_impact"),
+  workingDays: integer("working_days").notNull().default(0),
+  lostWorkDays: integer("lost_work_days").notNull().default(0),
+  preparedBy: text("prepared_by"),
+  preparedDate: text("prepared_date"),
+  engineeringManagerSignature: text("engineering_manager_signature"),
+  engineeringManagerDate: text("engineering_manager_date"),
+  createdByUserId: integer("created_by_user_id").references(() => usersTable.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [uniqueIndex("monthly_maintenance_evaluation_year_month_idx").on(table.year, table.month)]);
 
 export const correctiveMaintenanceStaffTable = pgTable("corrective_maintenance_staff", {
   id: serial("id").primaryKey(),

@@ -12,7 +12,7 @@ import {
   monthlyPmPlanRowsTable,
   monthlyPmPlansTable,
 } from "@workspace/db";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { requireActiveAuth, requirePermission, parseIdParam } from "../lib/auth.js";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -69,6 +69,7 @@ async function getMachineWithDept(id: number) {
 router.get("/", requireActiveAuth, requirePermission("view_machines"), async (req, res, next) => {
   try {
     const search = req.query.search as string | undefined;
+    const archived = req.query.archived === "true";
 
     const results = await db
       .select({
@@ -87,7 +88,7 @@ router.get("/", requireActiveAuth, requirePermission("view_machines"), async (re
       })
       .from(machinesTable)
       .leftJoin(departmentsTable, eq(machinesTable.departmentId, departmentsTable.id))
-      .where(isNull(machinesTable.deletedAt))
+      .where(archived ? isNotNull(machinesTable.deletedAt) : isNull(machinesTable.deletedAt))
       .orderBy(machinesTable.machineName);
 
     if (search) {
@@ -291,12 +292,13 @@ router.get("/:id/equipment-information/header", requireActiveAuth, requirePermis
       res.status(404).json({ error: "Machine not found" });
       return;
     }
-    const [existing] = await db.select().from(formHeadersTable).where(and(eq(formHeadersTable.documentType, "EQUIPMENT_INFORMATION"), eq(formHeadersTable.documentId, machineId)));
+    // FORM-10-0118 has one controlled header shared by every equipment record.
+    const [existing] = await db.select().from(formHeadersTable).where(and(eq(formHeadersTable.documentType, "EQUIPMENT_INFORMATION"), eq(formHeadersTable.documentId, 0)));
     if (existing) {
       res.json(existing);
       return;
     }
-    const [created] = await db.insert(formHeadersTable).values({ documentType: "EQUIPMENT_INFORMATION", documentId: machineId, documentName: "Equipment Information Record", documentNumber: "FORM-10-0118", effectiveOrExecutionDate: null }).returning();
+    const [created] = await db.insert(formHeadersTable).values({ documentType: "EQUIPMENT_INFORMATION", documentId: 0, documentName: "Equipment Information Record", documentNumber: "FORM-10-0118", effectiveOrExecutionDate: null }).returning();
     res.json(created);
   } catch (err) { next(err); }
 });
@@ -318,10 +320,10 @@ router.put("/:id/equipment-information/header", requireActiveAuth, requirePermis
       totalPages: Math.max(1, Number(body.totalPages ?? 1)),
       updatedAt: new Date(),
     };
-    const [existing] = await db.select().from(formHeadersTable).where(and(eq(formHeadersTable.documentType, "EQUIPMENT_INFORMATION"), eq(formHeadersTable.documentId, machineId)));
+    const [existing] = await db.select().from(formHeadersTable).where(and(eq(formHeadersTable.documentType, "EQUIPMENT_INFORMATION"), eq(formHeadersTable.documentId, 0)));
     const [saved] = existing
       ? await db.update(formHeadersTable).set(values).where(eq(formHeadersTable.id, existing.id)).returning()
-      : await db.insert(formHeadersTable).values({ documentType: "EQUIPMENT_INFORMATION", documentId: machineId, ...values }).returning();
+      : await db.insert(formHeadersTable).values({ documentType: "EQUIPMENT_INFORMATION", documentId: 0, ...values }).returning();
     res.json(saved);
   } catch (err) { next(err); }
 });

@@ -312,6 +312,18 @@
   min-height: 210mm;
 }
 
+/* The PM orientation selector changes the preview as well as the actual
+   print page, so the checklist uses the available landscape width. */
+.official-print-layout-landscape .official-print-page {
+  width: 297mm;
+  min-height: 210mm;
+}
+
+.official-print-layout-landscape .official-print-pm-content {
+  width: 260mm;
+  max-width: 100%;
+}
+
 .official-print-table {
   width: 100%;
   border-collapse: collapse;
@@ -363,10 +375,43 @@
   border-bottom: 0;
 }
 
+.official-print-table.monthly-pm-print-table {
+  /* Same single-line grid used by the official paper form. */
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+  border: 0 !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
 .official-print-table.monthly-pm-print-table th,
 .official-print-table.monthly-pm-print-table td {
+  border: 0.8px solid rgb(0, 0, 0) !important;
+  border-color: rgb(0, 0, 0) !important;
+  border-style: solid !important;
+  border-width: 0.8px !important;
   text-align: center !important;
   vertical-align: middle !important;
+}
+
+.official-print-table.monthly-pm-print-table th {
+  background-color: #fff !important;
+  color: #000 !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* FORM-10-0117-3: use the available landscape page height for the schedule.
+   The number of plan rows is supplied by the page, so a short plan remains
+   legible and a larger one continues without losing any machine rows. */
+.official-print-table.monthly-pm-print-table tbody tr {
+  height: max(5.5mm, calc(108mm / var(--monthly-row-count, 12)));
+}
+
+.official-print-table.monthly-pm-print-table tbody td {
+  padding: 1mm 1.5mm;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* FORM-10-0975 is an Arabic, right-to-left form.  The header table keeps its
@@ -410,6 +455,14 @@
 
 .official-print-priority {
   text-align: center !important;
+}
+
+.official-print-priority-box {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+  vertical-align: -1px;
 }
 
 .official-print-request-top-row {
@@ -472,7 +525,7 @@
 /* FORM-10-0975-1 — Arabic Maintenance Request & Corrective Maintenance Report. */
 .official-print-maintenance-request-content {
   max-width: 176mm;
-  font-family: Arial, "Times New Roman", sans-serif;
+  font-family: "Times New Roman", Times, serif;
   font-size: 11px;
   font-weight: 600;
 }
@@ -502,14 +555,16 @@
 .official-print-mr-box,
 .official-print-mr-section,
 .official-print-mr-closing {
-  border: 1.2px solid #000;
+  border: 0;
+  border-inline: 1.6px solid #000;
 }
 
 .official-print-mr-box {
   margin-top: 4px;
-  padding: 4px 9px 0;
-  font-family: "Times New Roman", Arial, sans-serif;
-  font-size: 10px;
+  border-top: 1.6px solid #000;
+  padding: 4px 10px 0;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -527,7 +582,7 @@
 }
 
 .official-print-mr-machine-row {
-  grid-template-columns: minmax(0, 1fr) 125px;
+  grid-template-columns: minmax(0, 1fr) 140px;
 }
 
 .official-print-mr-machine-row > span {
@@ -541,23 +596,37 @@
   min-width: 0;
 }
 
+.official-print-mr-machine-row > span:last-child .official-print-line,
+.official-print-mr-signature-row > .official-print-mr-signature-line:last-child .official-print-line {
+  flex: 1;
+  min-width: 40px;
+}
+
 .official-print-mr-text-area {
   display: flex;
+  /* The failure label belongs beside the first writing line, not the last. */
   align-items: flex-start;
-  gap: 3px;
-  min-height: 55px;
-  padding: 1px 0 0;
+  gap: 4px;
+  min-height: 0;
+  padding: 2px 0 0;
 }
 
 .official-print-mr-failure-lines {
   flex: 1;
-  min-height: 40px;
   margin-top: 0;
-  padding-inline: 0;
-  font-weight: 400;
-  line-height: 19px;
-  white-space: pre-wrap;
-  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 17px, #000 18px, transparent 19px);
+  /* Match the original form's inset failure-description writing lines. */
+  margin-left: 34px;
+  padding-inline: 0 !important;
+  box-sizing: border-box;
+}
+
+/* Align the label with the baseline of the first failure-description line. */
+.official-print-mr-text-area > strong {
+  display: flex;
+  min-height: 6.5mm;
+  align-items: flex-end;
+  padding-bottom: 1px;
+  white-space: nowrap;
 }
 
 .official-print-mr-box .official-print-line {
@@ -567,18 +636,30 @@
   padding-inline: 1px;
 }
 
+/* The left date and QA fields are short, inset fields in the source form. */
+.official-print-mr-machine-row > span:last-child,
+.official-print-mr-signature-row > .official-print-mr-signature-line:last-child {
+  margin-left: 34px;
+}
+
+.official-print-mr-machine-row > span:last-child .official-print-line,
+.official-print-mr-signature-row > .official-print-mr-signature-line:last-child .official-print-line {
+  min-width: 40px;
+}
+
 .official-print-mr-signature-row {
-  display: flex;
+  display: grid;
+  /* The QA signature occupies the same left-side width as the date field. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 140px;
   min-height: 26px;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   padding: 0 0 2px;
 }
 
 .official-print-mr-signature-line {
-  display: inline-flex;
-  min-width: 29%;
+  display: flex;
+  min-width: 0;
   align-items: center;
   white-space: nowrap;
   font-size: 10px;
@@ -588,27 +669,55 @@
 .official-print-mr-closing h3 {
   margin: 0;
   min-height: 20px;
-  border-bottom: 1px solid #000;
+  border-bottom: 0.7px solid #000;
   text-align: center;
   font-size: 11px;
   line-height: 20px;
 }
 
-.official-print-mr-ruled-area {
-  white-space: pre-wrap;
-  padding: 3px 10px;
-  font-weight: 400;
-  line-height: 18px;
-  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 17px, #777 18px, transparent 19px);
+/* The two primary request sections are emphasized without a rule beneath. */
+.official-print-mr-section h3 {
+  min-height: 23px;
+  border-bottom: 0.7px dotted #000;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 23px;
 }
 
-.official-print-mr-findings { min-height: 91px; }
-.official-print-mr-actions { min-height: 190px; }
+.official-print-mr-ruled-area {
+  padding: 0 10px;
+  font-weight: 400;
+}
+
+.official-print-mr-ruled-value,
+.official-print-mr-writing-line {
+  min-height: 6.5mm;
+  border-bottom: 1px dotted #000;
+}
+
+.official-print-mr-ruled-value {
+  display: flex;
+  align-items: flex-end;
+  box-sizing: border-box;
+  padding: 0 0 1px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.official-print-mr-solid-lines .official-print-mr-ruled-value,
+.official-print-mr-solid-lines .official-print-mr-writing-line {
+  border-bottom-style: solid;
+  border-bottom-color: #000;
+}
+
+.official-print-mr-findings { min-height: 0; }
+.official-print-mr-actions { min-height: 0; }
 
 .official-print-mr-worktime {
-  min-height: 25px;
-  padding: 3px 10px;
-  border-top: 1px dotted #555;
+  min-height: 27px;
+  padding: 3px 10px 2px;
+  /* The results area already ends with its own writing line. */
+  border-top: 0;
   text-align: right;
 }
 
@@ -621,8 +730,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 27px;
-  border-top: 1px dotted #555;
-  border-bottom: 1px solid #000;
+  border-top: 1px dotted #000;
+  border-bottom: 0.7px solid #000;
   padding: 2px 10px;
 }
 
@@ -630,15 +739,43 @@
   min-width: 0;
 }
 
+.official-print-mr-technician-signatures .official-print-line {
+  border-bottom: 0;
+}
+
 .official-print-mr-remarks {
-  min-height: 26px;
-  padding: 4px 10px;
-  border-top: 1px solid #000;
+  position: relative;
+  min-height: 46px;
+  padding: 5px 10px 2px;
+  border-top: 0.7px dotted #000;
+  border-bottom: 0.7px solid #000;
+}
+
+.official-print-mr-remarks::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  left: 0;
+  top: 25px;
+  border-top: 0.7px dotted #000;
+}
+
+.official-print-mr-actions .official-print-mr-writing-line:last-child {
+  border-bottom: 0;
+}
+
+/* One thin separator per join — never two adjoining heavy borders. */
+.official-print-mr-box + .official-print-mr-section {
+  border-top: 0.7px solid #000;
 }
 
 .official-print-mr-staff-table {
   margin-top: 0;
   font-size: 11px;
+  border-collapse: collapse;
+  border-top: 0;
+  border-bottom: 0.7px solid #000;
+  border-inline: 1.6px solid #000;
 }
 
 .official-print-mr-staff-table th,
@@ -646,55 +783,397 @@
   height: 20px;
   padding: 2px 6px;
   text-align: center;
+  border: 0.7px solid #000;
+}
+
+.official-print-mr-staff-table thead tr:first-child th {
+  border-top: 0;
 }
 
 .official-print-mr-staff-table th {
   background: #fff;
 }
 
-.official-print-mr-closing { margin-top: 0; }
-.official-print-mr-closing > div { min-height: 23px; padding: 3px 10px; border-bottom: 1px dotted #555; }
+.official-print-mr-closing {
+  margin-top: 0;
+  border-top: 0;
+  border-bottom: 1.6px solid #000;
+}
+.official-print-mr-closing > div {
+  display: flex;
+  min-height: 23px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 3px 10px;
+  border-bottom: 1px dotted #000;
+}
 .official-print-mr-closing > div:last-child { border-bottom: 0; }
-.official-print-mr-closing > div span + span { margin-right: 22px; }
+.official-print-mr-closing > div .official-print-mr-signature-line {
+  flex: 0 1 56%;
+  min-width: 0;
+}
+.official-print-mr-closing > div span + span {
+  display: flex;
+  flex: 0 1 34%;
+  align-items: center;
+  margin-right: 0;
+  white-space: nowrap;
+}
+.official-print-mr-closing > div .official-print-line {
+  flex: 1;
+  min-width: 60px;
+  border-bottom: 0;
+}
 
 /* LOG-10-0659-0 — closed corrective maintenance request register. */
 .official-print-closed-cm-log {
-  width: 100%;
+  width: 190mm;
+  max-width: 100%;
+  margin-inline: auto;
   direction: rtl;
+  font-family: "Times New Roman", serif;
+  color: #000;
 }
 
 .official-print-closed-cm-log-header td {
-  height: 54px;
-  padding: 3px 6px;
-  font-weight: 700;
-  line-height: 1.35;
+  height: 21mm;
+  padding: 0;
+  border: 1px solid #000 !important;
+  color: #000;
+  vertical-align: middle;
+  font-weight: 700 !important;
+  line-height: 1.25;
+}
+
+.official-print-closed-cm-log-document-cell {
+  font-size: 13.5px;
+  text-align: right !important;
+}
+
+.official-print-closed-cm-log-document-cell > div {
+  display: flex;
+  min-height: 6.7mm;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 5px;
+  white-space: nowrap;
+}
+
+.official-print-closed-cm-log-document-cell > div:not(:last-child) {
+  border-bottom: 1px solid #000;
+}
+
+.official-print-closed-cm-log-title-cell {
+  padding: 2px 8px !important;
+  text-align: center !important;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.official-print-closed-cm-log-company-cell {
+  padding: 2px 7px !important;
+  text-align: center !important;
+  font-size: 13.5px;
 }
 
 .official-print-closed-cm-log-table {
+  width: 100%;
+  margin-top: 4mm;
   text-align: right;
+  border: 1px solid #000;
 }
 
 .official-print-closed-cm-log-table th,
 .official-print-closed-cm-log-table td {
-  padding: 3px 4px;
+  border: 1px solid #000 !important;
+  padding: 2px 4px;
   text-align: right;
   vertical-align: middle;
+  color: #000;
+  font-size: 12.5px;
+  line-height: 1.15;
 }
 
 .official-print-closed-cm-log-table th {
-  height: 34px;
+  height: 14mm;
+  background: #d9d9d9 !important;
+  text-align: center;
+  font-weight: 700;
 }
 
 .official-print-closed-cm-log-table td {
-  height: 22px;
+  height: 10mm;
+  font-weight: 400;
+  text-align: center;
+}
+
+.official-print-page.official-print-closed-cm-log-page {
+  padding: 12mm 10mm;
+}
+
+@media print {
+  .official-print-page.official-print-closed-cm-log-page {
+    min-height: 0 !important;
+    padding: 10mm !important;
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  .official-print-page.official-print-closed-cm-log-page + .official-print-closed-cm-log-page {
+    page-break-before: always;
+    break-before: page;
+  }
+}
+
+/* FORM-10-0944 — Monthly Maintenance Evaluation Report */
+.evaluation-print-page {
+  box-sizing: border-box;
+  padding: 8mm 18mm;
+  font-family: "Times New Roman", serif;
+  color: #000;
+}
+
+.evaluation-form {
+  width: 160mm;
+  margin: 0 auto;
+  font-family: "Times New Roman", serif;
+  font-size: 12.5px;
+  line-height: 1.42;
+  color: #000;
+}
+
+.evaluation-header,
+.evaluation-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.evaluation-header td,
+.evaluation-table th,
+.evaluation-table td {
+  border: 0.8px solid #000;
+}
+
+.evaluation-header td {
+  padding: 3px 5px;
+  vertical-align: middle;
+  text-align: right;
+}
+
+.evaluation-header td:first-child,
+.evaluation-header td:last-child {
+  width: 31%;
+}
+
+.evaluation-title {
+  width: 38%;
+  text-align: center !important;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.evaluation-company {
+  line-height: 1.55;
+  font-size: 12px;
+}
+
+.evaluation-month {
+  margin: 5mm 0 4mm;
+  font-size: 13px;
+}
+
+.evaluation-question {
+  margin: 3.25mm 0 2mm;
+  text-align: right;
+}
+
+.evaluation-question > p {
+  margin: 0;
+}
+
+.evaluation-question-two {
+  margin-top: 6mm;
+}
+
+/* Keep each numbered item visually separate, like the paper form. */
+.evaluation-question + .evaluation-question {
+  margin-top: 5mm;
+}
+
+.evaluation-page-two {
+  margin-top: 12mm;
+}
+
+.evaluation-table th,
+.evaluation-table td {
+  min-height: 6mm;
+  padding: 2.5px 4px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.evaluation-table th {
+  font-weight: 700;
+  font-size: 12px;
+  background: #e2e2e2;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.evaluation-table tbody tr {
+  height: 9mm;
+}
+
+.evaluation-external {
+  margin-top: 2mm;
+}
+
+.evaluation-section-six {
+  margin-top: 6mm;
+}
+
+.evaluation-section-six .evaluation-question {
+  margin-top: 1.25mm;
+  margin-bottom: 0;
+}
+
+.evaluation-section-six .evaluation-question:first-child {
+  margin-top: 3.25mm;
+}
+
+.evaluation-impact .evaluation-question {
+  margin-top: 1.25mm;
+  margin-bottom: 0;
+}
+
+.evaluation-impact .evaluation-question:first-child {
+  margin-top: 3.25mm;
+}
+
+.evaluation-delay-table {
+  margin-top: 2mm;
+}
+
+.evaluation-section-six + .evaluation-question {
+  margin-top: 5mm;
+}
+
+.evaluation-delay-table tbody tr {
+  height: 8mm;
+}
+
+.evaluation-external th {
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.evaluation-formula {
+  display: inline-block;
+  margin-top: 1mm;
+  font-size: 11.5px;
+}
+
+.evaluation-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 8mm;
+  white-space: nowrap;
+}
+
+.evaluation-choice i {
+  display: inline-flex;
+  width: 4.2mm;
+  height: 4.2mm;
+  align-items: center;
+  justify-content: center;
+  border: 0.8px solid #000;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.evaluation-answer {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10mm;
+  direction: rtl;
+  margin: 2.25mm 0 0 50%;
+}
+
+.evaluation-lines {
+  margin-top: 2mm;
+}
+
+.evaluation-lines > div {
+  height: 5.25mm;
+  border-bottom: 0.8px dotted #000;
+}
+
+.evaluation-signatures {
+  width: 66%;
+  margin: 43mm 0 0 auto;
+  display: grid;
+  gap: 10mm;
+  text-align: right;
+}
+
+.evaluation-signature-row {
+  display: grid;
+  grid-template-columns: 1fr 0.46fr;
+  align-items: center;
+  gap: 18mm;
+  white-space: nowrap;
+}
+
+.evaluation-electronic-signature {
+  display: inline-block;
+  width: 34mm;
+  height: 10mm;
+  margin-inline-start: 2mm;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.evaluation-impact {
+  margin-top: 7mm;
+}
+
+@media print {
+  .evaluation-print-page {
+    /* The printable area already excludes the browser's A4 margins. Keeping
+       this sheet inside that area prevents Chromium from shrinking it. */
+    width: auto !important;
+    height: 273mm !important;
+    min-height: 273mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  .evaluation-print-page:last-child {
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+
+  .evaluation-print-page .evaluation-form {
+    width: 160mm !important;
+    margin: 4mm auto 0 !important;
+  }
 }
 
 /* FORM-00-0077-1 — external maintenance request. */
 .official-print-external-maintenance {
   direction: rtl;
   font-family: "Times New Roman", Arial, sans-serif;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .official-print-external-sheet {
@@ -703,12 +1182,12 @@
 }
 
 .official-print-external-header td {
-  height: 21mm;
+  height: 22mm;
   padding: 2px 5px;
-  line-height: 1.5;
+  line-height: 1.35;
   vertical-align: middle;
   font-weight: 700 !important;
-  color: #777;
+  color: #111;
 }
 
 .official-print-external-header td:first-child {
@@ -721,7 +1200,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  min-height: 7mm;
+  min-height: 7.2mm;
   padding: 0 5px;
   text-align: right;
   direction: rtl;
@@ -729,19 +1208,30 @@
 }
 
 .official-print-external-header td:first-child > div:not(:last-child) {
-  border-bottom: 1px solid #777;
+  border-bottom: 0.7px solid #555;
 }
 
 .official-print-external-header td:nth-child(2) { font-size: 15px; font-weight: 700 !important; text-align: center !important; }
 .official-print-external-header td:nth-child(3) {
   font-size: 11px;
   line-height: 1.65;
+  text-align: center !important;
+}
+
+.official-print-external-maintenance:not(.official-print-external-english) .official-print-external-header td:nth-child(3) {
+  font-size: 13.5px;
+  line-height: 1.55;
   text-align: right !important;
+  padding-right: 8px;
+}
+
+.official-print-external-maintenance:not(.official-print-external-english) .official-print-external-header td:first-child {
+  font-size: 13px;
 }
 
 .official-print-external-content {
-  margin-top: 3mm;
-  padding-inline: 7mm;
+  margin-top: 7mm;
+  padding-inline: 5mm;
 }
 
 .official-print-external-field {
@@ -753,20 +1243,23 @@
   white-space: nowrap;
 }
 
-.official-print-external-order .official-print-external-fill { flex: 0 0 70mm; }
-.official-print-external-department .official-print-external-fill { flex: 0 0 90mm; }
+.official-print-external-order { min-height: 10mm; }
+.official-print-external-department { min-height: 14mm; }
+.official-print-external-order .official-print-external-fill { flex: 0 0 55mm; }
+.official-print-external-department .official-print-external-fill { flex: 0 0 82mm; }
 
 .official-print-external-fill {
   display: inline-block;
   min-width: 68mm;
-  border-bottom: 1px solid black;
+  border-bottom: 0.7px solid #222 !important;
+  background: none;
   min-height: 4mm;
   padding-inline: 2px;
   vertical-align: bottom;
   font-weight: 400;
 }
 
-.official-print-external-wide { min-width: 135mm; }
+.official-print-external-wide { min-width: 132mm; }
 
 .official-print-external-field .official-print-external-wide {
   flex: 1;
@@ -774,11 +1267,11 @@
 }
 
 .official-print-external-notes {
-  margin-top: 3mm;
+  margin-top: 6mm;
 }
 
 .official-print-external-field + .official-print-external-notes {
-  margin-top: 8mm;
+  margin-top: 9mm;
 }
 
 .official-print-external-notes > div:first-child {
@@ -787,7 +1280,7 @@
 }
 
 .official-print-external-suggestions-section {
-  margin-top: 9mm;
+  margin-top: 10mm;
 }
 
 .official-print-external-ruled {
@@ -796,10 +1289,14 @@
 }
 
 .official-print-external-writing-line {
-  height: 6mm;
+  display: flex;
+  align-items: flex-end;
+  height: 8.8mm;
   padding-inline: 1mm;
-  border-bottom: 1px solid #333;
-  line-height: 5mm;
+  padding-bottom: 0.35mm;
+  border-bottom: 0.7px solid #222 !important;
+  background: none;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
 }
@@ -809,7 +1306,7 @@
   grid-template-columns: max-content minmax(48mm, 1fr) max-content 46mm;
   align-items: end;
   gap: 3mm;
-  margin-top: 7mm;
+  margin-top: 10mm;
   white-space: nowrap;
 }
 
@@ -819,55 +1316,153 @@
 
 .official-print-external-signature-label,
 .official-print-external-date-label { white-space: nowrap; }
+.official-print-external-static-label,
+.official-print-external-signature-label,
+.official-print-external-date-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+.official-print-external-signature-image { display: block; height: 7mm; max-width: 44mm; object-fit: contain; object-position: right bottom; }
+
+/* The same official form can be printed in English without changing its data. */
+.official-print-external-english .official-print-external-header td:first-child,
+.official-print-external-english .official-print-external-header td:first-child > div,
+.official-print-external-english .official-print-external-field,
+.official-print-external-english .official-print-external-notes > div:first-child {
+  text-align: left !important;
+}
+
+.official-print-external-english,
+.official-print-external-english .official-print-external-content,
+.official-print-external-english .official-print-external-field,
+.official-print-external-english .official-print-external-notes,
+.official-print-external-english .official-print-external-signatures {
+  direction: ltr;
+}
+
+.official-print-external-english .official-print-external-notes > div:first-child,
+.official-print-external-english .official-print-external-writing-line {
+  text-align: left;
+}
+
+.official-print-external-english .official-print-external-header td:first-child > div {
+  justify-content: flex-start;
+  direction: ltr;
+}
+
+.official-print-external-english .official-print-external-header td:last-child {
+  padding: 0;
+  font-size: 11px;
+  text-align: left !important;
+}
+
+.official-print-external-english .official-print-external-header td:last-child > div {
+  display: flex;
+  align-items: center;
+  min-height: 7.2mm;
+  padding: 0 5px;
+  text-align: left;
+  direction: ltr;
+}
+
+.official-print-external-english .official-print-external-header td:last-child > div:not(:last-child) {
+  border-bottom: 0.7px solid #555;
+}
+
+/* Compact English header to match the original FORM-00-0077-1 layout. */
+.official-print-external-english .official-print-external-header td {
+  height: 14mm;
+  padding: 1px 3px;
+  line-height: 1.2;
+}
+
+.official-print-external-english .official-print-external-header td:first-child {
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+
+.official-print-external-english .official-print-external-header td:first-child > div {
+  min-height: 4.3mm;
+  padding: 0 3px;
+}
+
+.official-print-external-english .official-print-external-header td:nth-child(2) {
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.official-print-external-english .official-print-external-header td:last-child {
+  font-size: 9.5px;
+}
+
+.official-print-external-english .official-print-external-header td:last-child > div {
+  min-height: 4.3mm;
+  padding: 0 3px;
+}
+
+.official-print-external-english .official-print-external-signature-image {
+  object-position: left bottom;
+}
 
 /* FORM-10-0240-1 — external maintenance work receipt. Kept separate from
    FORM-00-0077-1 so edits to one official form never affect the other. */
 .official-print-external-receipt {
   direction: rtl;
   font-family: "Times New Roman", Arial, sans-serif;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 10.5px;
+  font-weight: 400;
 }
 
-.official-print-external-receipt-sheet { width: 154mm; margin-inline: auto; }
-.official-print-external-receipt-header td { height: 21mm; padding: 2px 5px; line-height: 1.5; vertical-align: middle; color: #777; font-weight: 700 !important; }
-.official-print-external-receipt-header td:first-child { padding: 0; font-size: 10px; text-align: right !important; }
+.official-print-external-receipt-sheet { width: 174mm; max-width: 100%; margin-inline: auto; }
+.official-print-external-receipt-header td { height: 21mm; padding: 1px 5px; line-height: 1.35; vertical-align: middle; color: #555; font-weight: 700 !important; border-color: #777; }
+.official-print-external-receipt-header td:first-child { padding: 0; font-size: 13px; text-align: right !important; }
 .official-print-external-receipt-header td:first-child > div { display: flex; align-items: center; justify-content: flex-start; min-height: 7mm; padding: 0 5px; direction: rtl; text-align: right; }
-.official-print-external-receipt-header td:first-child > div:not(:last-child) { border-bottom: 1px solid #888; }
-.official-print-external-receipt-header td:nth-child(2) { font-size: 13px; text-align: center !important; }
-.official-print-external-receipt-header td:nth-child(3) { font-size: 12px; text-align: center !important; }
+.official-print-external-receipt-header td:first-child > div:not(:last-child) { border-bottom: .6px solid #777; }
+.official-print-external-receipt-header td:nth-child(2) { font-size: 14.5px; text-align: center !important; }
+.official-print-external-receipt-header td:nth-child(3) { font-size: 13.5px; text-align: center !important; }
 
-.official-print-external-receipt-content { margin: 1.5mm 5mm 0; }
-.official-print-receipt-top-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20mm; min-height: 13mm; align-items: end; white-space: nowrap; }
+.official-print-external-receipt-content { margin: 4mm 4mm 0; }
+.official-print-receipt-top-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20mm; min-height: 12mm; align-items: end; white-space: nowrap; }
 .official-print-receipt-top-row > span { display: flex; align-items: end; gap: 2px; }
-.official-print-receipt-fill { display: inline-block; flex: 1; min-width: 0; min-height: 4mm; padding-inline: 1px; border-bottom: 1px dotted #333; font-weight: 400; vertical-align: bottom; }
+/* The left-side fields follow the offset of the original Arabic form. */
+.official-print-receipt-top-row > span:nth-child(2) { transform: translateX(-1.5mm); }
+.official-print-receipt-fill { display: inline-flex; align-items: flex-end; flex: 1; min-width: 0; min-height: 4mm; padding: 0 1px .35mm; border-bottom: .7px dotted #333; font-weight: 400; line-height: 1.1; vertical-align: bottom; }
+.official-print-receipt-static-label { font-size: 11px; font-weight: 700; }
 .official-print-receipt-performer {
   display: flex;
   align-items: end;
   gap: 2px;
-  min-height: 15mm;
-  /* Reserve the left side so this field starts from the right, as on FORM-10-0240-1. */
-  padding-left: 62mm;
+  min-height: 14mm;
+  /* Match the right-hand column above it exactly. */
+  width: calc((100% - 20mm) / 2);
+  margin-right: 0;
+  margin-left: auto;
+  padding-left: 0;
   white-space: nowrap;
-  margin-bottom: 7mm;
+  margin-bottom: 10mm;
 }
 .official-print-receipt-performer .official-print-receipt-fill { flex: 1; }
 
-.official-print-receipt-ruled-section { margin-top: 3mm; }
-.official-print-receipt-ruled-section > div:first-child { height: 4mm; text-align: right; }
+.official-print-receipt-ruled-section { margin-top: 4mm; }
+.official-print-receipt-ruled-section > div:first-child { height: 4.5mm; text-align: right; }
 .official-print-receipt-ruled { padding-inline: 1mm; font-weight: 400; }
-.official-print-receipt-writing-line { height: 7mm; padding-inline: 1mm; border-bottom: 1px dotted #333; line-height: 6mm; white-space: nowrap; overflow: hidden; }
-.official-print-receipt-rejection { margin-top: 5mm; }
+.official-print-receipt-ruled-section:not(.official-print-receipt-rejection) .official-print-receipt-ruled { margin-top: -2.5mm; }
+.official-print-receipt-writing-line { height: 7mm; padding: 0 1mm .4mm; border-bottom: .7px dotted #333; line-height: 1.15; white-space: nowrap; overflow: hidden; display: flex; align-items: flex-end; }
+.official-print-receipt-rejection { margin-top: 11mm; }
 .official-print-receipt-examiner {
-  margin-top: 6mm;
+  margin-top: 7mm;
   /* Keep the two examiner lines in the lower-right area of the official form. */
   padding-left: 88mm;
 }
-.official-print-receipt-examiner > div { display: flex; align-items: end; gap: 2px; min-height: 13mm; white-space: nowrap; }
+.official-print-receipt-examiner > div { display: flex; align-items: end; gap: 2px; min-height: 12mm; white-space: nowrap; }
 .official-print-receipt-examiner .official-print-receipt-fill { flex: 1; }
+.official-print-receipt-signature-image { display: block; height: 9mm; max-width: 42mm; object-fit: contain; object-position: right bottom; }
 
 .equipment-information-header td {
   font-weight: 700;
+  height: 13mm;
+  padding: 2px 6px;
+  line-height: 1.12;
 }
 
 .equipment-header-meta {
@@ -881,6 +1476,129 @@
 
 .equipment-header-meta > div:not(:last-child) {
   border-bottom: 1px solid black;
+}
+
+/* FORM-10-0118: centre the labels in the left column, except the two
+   multi-line company fields which follow the original left-aligned form. */
+.equipment-information-print-content .official-print-table:not(.equipment-information-header) td:first-child {
+  text-align: left;
+  vertical-align: top;
+}
+
+.equipment-information-print-content .equipment-information-multiline-label td:first-child {
+  text-align: left;
+  vertical-align: top;
+}
+
+/* FORM-10-0118: one continuous double outer frame, with a single uniform
+   line for every row and column inside it. */
+.equipment-information-form-grid {
+  border: 3px double #000;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.equipment-information-form-grid .font-semibold,
+.equipment-information-form-grid .official-print-section-title {
+  font-weight: 400 !important;
+}
+
+.equipment-information-form-grid .official-print-table {
+  border: 0;
+  border-collapse: collapse;
+}
+
+.equipment-information-form-grid .official-print-table td {
+  border: 0;
+  border-right: 1px solid #000;
+  border-bottom: 1px solid #000;
+}
+
+.equipment-information-form-grid .official-print-table td:last-child {
+  border-right: 0;
+}
+
+.equipment-information-form-grid .equipment-information-safety tr:last-child td {
+  border-bottom: 0;
+}
+
+.equipment-information-form-grid .official-print-section-title {
+  border: 0;
+  border-bottom: 1px solid #000;
+  min-height: 7mm;
+  padding: 2px 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* FORM-10-0118: a centred, full-width form area inside the A4 print margins. */
+.equipment-information-print-content {
+  width: 100%;
+  margin-inline: auto;
+}
+
+@media print {
+  /* Start each logical PM page on a fresh sheet. Using a break before the
+     following sheet avoids the blank trailing sheet produced by break-after. */
+  .official-print-page.official-print-pm-page {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .official-print-page.official-print-pm-page-continued {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .official-print-layout {
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .official-print-page.equipment-information-print-page {
+    page-break-after: avoid !important;
+    break-after: avoid-page !important;
+  }
+
+  .official-print-page:has(.equipment-information-print-content) {
+    page-break-after: avoid !important;
+    break-after: avoid-page !important;
+  }
+
+  /* FORM-10-0240-1 is an official single-sheet portrait form. */
+  .official-print-page:has(.official-print-external-receipt) {
+    page-break-after: avoid !important;
+    break-after: avoid-page !important;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .official-print-external-receipt-sheet {
+    width: 174mm;
+    max-width: 100%;
+    margin-inline: auto;
+  }
+
+  .equipment-information-print-content {
+    width: 186mm;
+    max-width: 100%;
+    margin: 12mm auto 0;
+    font-size: 12px;
+    line-height: 1.15;
+  }
+
+  /* FORM-10-0118 row proportions match the controlled paper form. */
+  .equipment-information-details tr { height: 6mm; }
+  .equipment-information-details tr:nth-child(6),
+  .equipment-information-details tr:nth-child(7),
+  .equipment-information-details tr:nth-child(8) { height: 14mm; }
+  .equipment-information-details tr:nth-child(9) { height: 9mm; }
+  .equipment-information-utilities tr { height: 13mm; }
+  .equipment-information-others tr,
+  .equipment-information-safety tr { height: var(--equipment-extra-row-height, 6mm); }
 }
 
 .official-print-pm-header td {
@@ -930,6 +1648,119 @@
 
 .official-print-cm-header td:nth-child(3) {
   text-align: center !important;
+}
+
+/* LOG-00-0102-3 is a fixed single-sheet landscape form. */
+.official-print-cm-content {
+  width: 270mm;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.official-print-cm-log,
+.official-print-cm-log th,
+.official-print-cm-log td {
+  border: 2px solid #000 !important;
+}
+
+.official-print-cm-log tbody tr {
+  height: 28px !important;
+}
+
+/* Dates deliberately span repeated repair-time rows; keep that merge while
+   retaining the same dark vertical borders as every other table cell. */
+.official-print-cm-log td.cm-repair-date {
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+}
+
+.official-print-cm-log td.cm-repair-date.cm-repair-date-final {
+  border-bottom-width: 2px !important;
+}
+
+/* FORM-10-1025-0 — annual PM plan. The original form uses the whole A4
+   sheet, with its approval blocks distributed down the page. */
+.official-print-annual-plan-content {
+  min-height: 277mm;
+  display: flex;
+  flex-direction: column;
+}
+
+.official-print-annual-approvals {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  padding: 12mm 18mm 8mm;
+}
+
+.official-print-annual-approval {
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.official-print-annual-header td {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.28;
+}
+
+.official-print-annual-header td:nth-child(2) {
+  font-size: 18px;
+  vertical-align: middle;
+}
+
+.official-print-annual-header td:nth-child(3) {
+  padding: 0;
+}
+
+.official-print-annual-header td:nth-child(3) > div {
+  padding: 2px 8px;
+}
+
+.official-print-annual-header td:nth-child(3) > div:not(:last-child) {
+  border-bottom: 1px solid #000;
+}
+
+/* Keep the controlled document number as one line, as on FORM-10-1025. */
+.official-print-annual-header .official-print-annual-document-number {
+  white-space: nowrap;
+}
+
+.official-print-annual-header {
+  border: 1px solid #000 !important;
+  box-sizing: border-box;
+}
+
+.official-print-annual-header td:last-child {
+  border-right: 1px solid #000 !important;
+}
+
+/* Chromium occasionally drops the collapsed outer-right table border in its
+   print preview. Draw it independently so the header frame is always closed. */
+.official-print-annual-header-frame {
+  position: relative;
+  box-sizing: border-box;
+  padding-right: 1px;
+  border-right: 1px solid #000;
+}
+
+.official-print-annual-header-frame::after {
+  display: none;
+}
+
+.official-print-annual-date {
+  display: inline-block;
+  min-width: 112px;
+  white-space: pre;
+}
+
+.official-print-annual-job-title {
+  white-space: nowrap;
+}
+
+.official-print-annual-job-line {
+  white-space: nowrap;
 }
 
 .official-print-table td.cm-repair-date {
@@ -994,6 +1825,16 @@
   text-align: right;
 }
 
+/* Checklist text is user-entered. Preserve manual line breaks and also wrap
+   long uninterrupted text (for example a pasted serial/string) inside its
+   own cell instead of allowing it to escape across the whole table. */
+.official-print-pm-table td.official-print-pm-point-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
 .official-print-pm-data-row td {
   height: 18px;
   min-height: 18px;
@@ -1018,11 +1859,12 @@
 }
 
 .official-print-row-tall td {
-  height: 34px;
+  min-height: 34px;
+  height: auto;
 }
 
 .official-print-row-xl td {
-  height: 70px;
+  height: auto;
 }
 
 .official-print-signatures {
@@ -1033,6 +1875,64 @@
 }
 
 @media print {
+  .official-print-annual-plan-page {
+    page-break-after: avoid !important;
+    break-after: avoid-page !important;
+  }
+
+  .official-print-annual-plan-content {
+    min-height: 245mm;
+  }
+
+  .official-print-annual-plan-content .official-print-header-table {
+    font-size: 16px;
+  }
+
+  .official-print-annual-approvals {
+    padding: 8mm 18mm 5mm;
+  }
+
+  .official-print-annual-approval {
+    font-size: 15px;
+  }
+
+  .official-print-layout-landscape .official-print-cm-content {
+    width: 270mm;
+    max-width: 100%;
+    margin: 8mm auto 0;
+    font-size: 14px;
+  }
+
+  .official-print-layout-landscape .official-print-cm-header {
+    font-size: 16px;
+  }
+
+  .official-print-layout-landscape .official-print-cm-machine-details {
+    font-size: 15px;
+    margin-block: 7mm;
+  }
+
+  .official-print-layout-landscape .official-print-cm-log th,
+  .official-print-layout-landscape .official-print-cm-log td {
+    border: 2px solid #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding: 5px 6px;
+  }
+
+  .official-print-layout-landscape .official-print-cm-log th {
+    font-size: 14px;
+  }
+
+  .official-print-layout-landscape .official-print-cm-log tbody tr {
+    height: 28px !important;
+  }
+
+  .official-print-page:has(.official-print-cm-content) {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
   .official-print-pm-table th {
     background-color: #d9d9d9 !important;
     -webkit-print-color-adjust: exact;
@@ -1042,7 +1942,36 @@
   .official-print-pm-content {
     width: 160mm;
     max-width: 100%;
-    margin-inline: auto;
+    margin: 12mm auto 0;
+  }
+
+  .official-print-page.official-print-landscape .official-print-pm-content {
+    width: 260mm;
+  }
+
+  .official-print-layout-landscape .official-print-pm-content {
+    width: 260mm;
+  }
+
+  .official-print-layout-landscape .official-print-pm-header {
+    font-size: 15px;
+  }
+
+  .official-print-layout-landscape .official-print-pm-header td:nth-child(2) {
+    font-size: 16px !important;
+  }
+
+  .official-print-layout-landscape .official-print-pm-table th,
+  .official-print-layout-landscape .official-print-pm-table tbody td:nth-child(2) {
+    font-size: 13px;
+  }
+
+  /* Screen preview uses a 210mm page height for landscape. It must not carry
+     into printing, because the printable A4 area is shorter after margins and
+     would otherwise create a blank page after every PM sheet. */
+  .official-print-layout-landscape .official-print-page {
+    width: auto !important;
+    min-height: 0 !important;
   }
 
   .official-print-page {
@@ -1051,7 +1980,6 @@
     margin: 0;
     padding: 0;
     box-shadow: none;
-    page-break-after: always;
   }
 
   .official-print-landscape {

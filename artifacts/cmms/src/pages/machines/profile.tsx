@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   useGetMachine, 
   getGetMachineQueryKey 
@@ -8,14 +8,27 @@ import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, FileText, Settings2, Wrench, History, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Edit, FileText, Settings2, Wrench, History, AlertCircle, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function MachineProfile({ params }: { params: { id: string } }) {
   const machineId = parseInt(params.id, 10);
   const { hasPermission } = useAuth();
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   
   const { data: machine, isLoading, isError } = useGetMachine(machineId, {
     query: {
@@ -27,6 +40,14 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
     queryKey: ["machine-next-pm", machineId],
     queryFn: () => apiRequest<{ nextPmDate: string | null; source: "monthly" | "annual" | null }>(`/machines/${machineId}/next-pm`),
     enabled: !!machineId,
+  });
+  const softDeleteMachine = useMutation({
+    mutationFn: () => apiRequest(`/machines/${machineId}/soft-delete`, { method: "PATCH" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/machines"] });
+      queryClient.invalidateQueries({ queryKey: ["machines"] });
+      setLocation("/machines");
+    },
   });
 
   if (isLoading) {
@@ -115,6 +136,34 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
               Edit Details
             </Link>
           </Button>
+        )}
+        {hasPermission("soft_delete_machine") && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="shadow-sm">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Machine
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this machine?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will archive {machine.machineName} ({machine.machineNumber}) and remove it from the active machine list. Its historical records will be preserved.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => softDeleteMachine.mutate()}
+                  disabled={softDeleteMachine.isPending}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {softDeleteMachine.isPending ? "Deleting…" : "Delete Machine"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
 

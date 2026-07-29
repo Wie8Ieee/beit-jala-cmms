@@ -1,11 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { apiRequest } from "@/lib/api";
 import { DottedLine, OfficialPrintHeader, PrintLayout, PrintPage } from "./print-layout";
 import { Button } from "@/components/ui/button";
 import { Languages } from "lucide-react";
 
 type EquipmentInformation = Record<string, string | number | null>;
+type EquipmentHeader = {
+  companyName: string;
+  documentName: string;
+  documentNumber: string;
+  effectiveOrExecutionDate: string | null;
+  pageNumber: number;
+  totalPages: number;
+};
 
 function value(record: EquipmentInformation | undefined, key: string) {
   const item = record?.[key];
@@ -93,6 +102,10 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
     queryKey: ["print-equipment-information", machineId],
     queryFn: () => apiRequest<EquipmentInformation>(`/machines/${machineId}/equipment-information`),
   });
+  const { data: header } = useQuery({
+    queryKey: ["equipment-header"],
+    queryFn: () => apiRequest<EquipmentHeader>(`/machines/${machineId}/equipment-information/header`),
+  });
   const otherRows = value(data, "others")
     .split(/\r?\n/)
     .map((item) => item.trim())
@@ -107,6 +120,13 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
   const safetyIssueDetailRows = value(data, "safetyIssuesDetails")
     .split(/\r?\n/)
     .map((item) => item.trim());
+  const otherRowCount = Math.max(2, otherRows.length, otherDetailRows.length);
+  const safetyRowCount = Math.max(4, safetyIssueRows.length, safetyIssueDetailRows.length);
+  // The controlled form remains a single sheet: extra user-entered rows share
+  // the reserved space of the Others and Safety blocks instead of pushing the
+  // footer onto a second page.
+  const flexibleExtraRowHeight = Math.max(3, Math.min(6, 36 / (otherRowCount + safetyRowCount)));
+  const formGridStyle = { "--equipment-extra-row-height": `${flexibleExtraRowHeight}mm` } as CSSProperties;
 
   return (
     <div dir={isAr ? "rtl" : "ltr"}>
@@ -119,29 +139,31 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
       </div>
 
       <PrintLayout title={L.title}>
-        <PrintPage>
+        <PrintPage className="equipment-information-print-page">
+          <div className="equipment-information-print-content">
           {/* Custom bilingual header */}
           <table className="official-print-table official-print-header-table equipment-information-header">
             <tbody>
               <tr>
                 <td className={`w-[34%] font-semibold ${isAr ? "text-right" : "text-left"}`}>
-                  {L.company}
+                  {isAr ? L.company : (header?.companyName || L.company)}
                   <br />
                   {L.address.split(/[،,]\s*/).map((line, index, lines) => (
                     <span key={line}>{line}{index < lines.length - 1 && <br />}</span>
                   ))}
                 </td>
-                <td className="w-[33%] text-center font-semibold">{L.title}</td>
+                <td className="w-[33%] text-center font-semibold">{isAr ? L.title : (header?.documentName || L.title)}</td>
                 <td className={`w-[33%] equipment-header-meta ${isAr ? "text-right" : "text-left"}`}>
-                  <div><strong>{L.docNo}</strong> {L.docNumber}</div>
-                  <div><strong>{L.effectiveDateLabel}</strong> {L.effectiveDate}</div>
-                  <div><strong>{L.page}</strong></div>
+                  <div><strong>{L.docNo}</strong> {header?.documentNumber || L.docNumber}</div>
+                  <div><strong>{L.effectiveDateLabel}</strong> {header?.effectiveOrExecutionDate || L.effectiveDate}</div>
+                  <div><strong>{header ? `Page ${header.pageNumber} of ${header.totalPages}` : L.page}</strong></div>
                 </td>
               </tr>
             </tbody>
           </table>
 
-          <table className="official-print-table mt-4">
+          <div className="equipment-information-form-grid mt-4" style={formGridStyle}>
+          <table className="official-print-table equipment-information-details">
             <tbody>
               {[
                 [L.f1, value(data, "nameOfEquipment")],
@@ -155,7 +177,7 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
                   <td>{field}</td>
                 </tr>
               ))}
-              <tr className="official-print-row-tall">
+              <tr className="official-print-row-tall equipment-information-multiline-label">
                 <td className="font-semibold">
                   {L.f6a}<br />{L.f6b}<br />{L.f6c}
                 </td>
@@ -163,7 +185,7 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
                   {value(data, "purchasedFromName")}<br />{value(data, "purchasedFromAddress")}
                 </td>
               </tr>
-              <tr className="official-print-row-tall">
+              <tr className="official-print-row-tall equipment-information-multiline-label">
                 <td className="font-semibold">
                   {L.f7a}<br />{L.f7b}<br />{L.f7c}
                 </td>
@@ -172,7 +194,13 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
                 </td>
               </tr>
               <tr>
-                <td className="font-semibold">{L.f8}</td>
+                <td className="font-semibold">
+                  {isAr ? (
+                    <>{L.f8}</>
+                  ) : (
+                    <>8. Equipment Dimensions<br />(in cm):<br />Width (W) X Height (H) X Depth (D)</>
+                  )}
+                </td>
                 <td>
                   {value(data, "dimensionWidthCm")} × {value(data, "dimensionHeightCm")} × {value(data, "dimensionDepthCm")}
                 </td>
@@ -185,7 +213,7 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
           </table>
 
           <div className="official-print-section-title">{L.f10}</div>
-          <table className="official-print-table">
+          <table className="official-print-table equipment-information-utilities">
             <tbody>
               {[
                 [L.f10_1, value(data, "utilitiesPowerSupply")],
@@ -202,9 +230,9 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
           </table>
 
           <div className="official-print-section-title">{L.f11}</div>
-          <table className="official-print-table">
+          <table className="official-print-table equipment-information-others">
             <tbody>
-              {(Math.max(otherRows.length, otherDetailRows.length) ? Array.from({ length: Math.max(otherRows.length, otherDetailRows.length) }) : [null]).map((_, index) => (
+              {Array.from({ length: otherRowCount }).map((_, index) => (
                 <tr key={`other-${index}`} className="official-print-row-tall">
                   <td className="w-[48%]">{otherRows[index] ?? ""}</td>
                   <td>{otherDetailRows[index] ?? ""}</td>
@@ -214,9 +242,9 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
           </table>
 
           <div className="official-print-section-title">{L.f12}</div>
-          <table className="official-print-table">
+          <table className="official-print-table equipment-information-safety">
             <tbody>
-              {(Math.max(safetyIssueRows.length, safetyIssueDetailRows.length) ? Array.from({ length: Math.max(safetyIssueRows.length, safetyIssueDetailRows.length) }) : [null]).map((_, index) => (
+              {Array.from({ length: safetyRowCount }).map((_, index) => (
                 <tr key={`safety-${index}`} className="official-print-row-tall">
                   <td className="w-[48%]">{safetyIssueRows[index] ?? ""}</td>
                   <td>{safetyIssueDetailRows[index] ?? ""}</td>
@@ -224,11 +252,13 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
               ))}
             </tbody>
           </table>
+          </div>
 
           <div className="mt-4">
             {L.preparedBy} <DottedLine text={value(data, "preparedByName")} /> {L.date} <DottedLine text={value(data, "preparedByDate")} />
             <br />
             {L.approvedBy} <DottedLine text={value(data, "approvedByName")} /> {L.date} <DottedLine text={value(data, "approvedByDate")} />
+          </div>
           </div>
         </PrintPage>
       </PrintLayout>
