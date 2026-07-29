@@ -731,37 +731,6 @@ paths:
         "200":
           description: Form header
 
-  /machines/{id}/equipment-information/scan:
-    post:
-      operationId: scanEquipmentNameplate
-      tags: [equipment]
-      summary: Scan a nameplate image and extract equipment information using AI
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: Extracted equipment fields
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ScannedEquipmentInfo"
-        "400":
-          description: No image provided
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "503":
-          description: AI service not configured (OPENAI_API_KEY missing)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
   /machines/{id}/pm/header:
     get:
       operationId: getPmHeader
@@ -2003,7 +1972,8 @@ components:
 
     EligibleSignerAssignment:
       type: object
-      required: [id, documentType, documentId, fieldName, eligibleUserId, grantedAt]
+      required:
+        [id, documentType, documentId, fieldName, eligibleUserId, grantedAt]
       properties:
         id:
           type: integer
@@ -2039,7 +2009,17 @@ components:
 
     Signature:
       type: object
-      required: [id, documentType, documentId, fieldName, signatureType, userId, userName, signedAt]
+      required:
+        [
+          id,
+          documentType,
+          documentId,
+          fieldName,
+          signatureType,
+          userId,
+          userName,
+          signedAt,
+        ]
       properties:
         id:
           type: integer
@@ -2178,6 +2158,8 @@ components:
           type: integer
         username:
           type: string
+        employeeNumber:
+          type: ["string", "null"]
         fullName:
           type: ["string", "null"]
         email:
@@ -2439,36 +2421,6 @@ components:
         approvedByDate:
           type: string
 
-    ScannedEquipmentInfo:
-      type: object
-      properties:
-        nameOfEquipment:
-          type: string
-        modelNumber:
-          type: string
-        serialNumber:
-          type: string
-        manufacturingCompanyName:
-          type: string
-        manufacturingCompanyAddress:
-          type: string
-        purchasedFromName:
-          type: string
-        utilitiesPowerSupply:
-          type: string
-        dimensionWidthCm:
-          type: ["number", "null"]
-        dimensionHeightCm:
-          type: ["number", "null"]
-        dimensionDepthCm:
-          type: ["number", "null"]
-        weightKg:
-          type: ["number", "null"]
-        safetyIssues:
-          type: string
-        others:
-          type: string
-
     ClosedCorrectiveMaintenanceLogHeader:
       type: object
       required: [documentNumber]
@@ -2488,7 +2440,16 @@ components:
 
     PmHeader:
       type: object
-      required: [id, machineId, procedureFormNumber, columnsPerRecord, inspectionColumnsPerPrintPage, createdAt, updatedAt]
+      required:
+        [
+          id,
+          machineId,
+          procedureFormNumber,
+          columnsPerRecord,
+          inspectionColumnsPerPrintPage,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id:
           type: integer
@@ -2529,7 +2490,17 @@ components:
 
     PmChecklistPoint:
       type: object
-      required: [id, machineId, pointText, resultType, sortOrder, isActive, createdAt, updatedAt]
+      required:
+        [
+          id,
+          machineId,
+          pointText,
+          resultType,
+          sortOrder,
+          isActive,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id:
           type: integer
@@ -2613,7 +2584,17 @@ components:
 
     PmInspection:
       type: object
-      required: [id, recordId, machineId, columnNumber, inspectionDate, inspectionTime, completedAt, results]
+      required:
+        [
+          id,
+          recordId,
+          machineId,
+          columnNumber,
+          inspectionDate,
+          inspectionTime,
+          completedAt,
+          results,
+        ]
       properties:
         id:
           type: integer
@@ -2648,7 +2629,8 @@ components:
 
     PmRecordDetail:
       type: object
-      required: [record, machine, header, checklistPoints, inspections, pageCount]
+      required:
+        [record, machine, header, checklistPoints, inspections, pageCount]
       properties:
         record:
           $ref: "#/components/schemas/PmRecordSummary"
@@ -2675,7 +2657,16 @@ components:
 
     PmRecordSummary:
       type: object
-      required: [id, machineId, sequenceNumber, status, inspectionCount, createdAt, updatedAt]
+      required:
+        [
+          id,
+          machineId,
+          sequenceNumber,
+          status,
+          inspectionCount,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id:
           type: integer
@@ -2696,7 +2687,8 @@ components:
 
     AnnualPmPlanRow:
       type: object
-      required: [id, planId, machineId, machineName, scheduledMonths, isOverride]
+      required:
+        [id, planId, machineId, machineName, scheduledMonths, isOverride]
       properties:
         id:
           type: integer
@@ -2936,7 +2928,14 @@ components:
 
     MaintenanceRequestInput:
       type: object
-      required: [machineId, departmentSection, priority, requestDate, failureDescription]
+      required:
+        [
+          machineId,
+          departmentSection,
+          priority,
+          requestDate,
+          failureDescription,
+        ]
       properties:
         machineId:
           type: integer
@@ -3080,7 +3079,18 @@ components:
 
     MaintenanceRequestSummary:
       type: object
-      required: [id, requestReportNumber, machineId, machineName, machineNumber, requestDate, priority, status, createdAt]
+      required:
+        [
+          id,
+          requestReportNumber,
+          machineId,
+          machineName,
+          machineNumber,
+          requestDate,
+          priority,
+          status,
+          createdAt,
+        ]
       properties:
         id:
           type: integer
@@ -3111,7 +3121,18 @@ components:
 
     ClosedCorrectiveMaintenanceLogRow:
       type: object
-      required: [id, source, machineName, machineNumber, requestDate, requestReportNumber, priority, closedDate, remarks]
+      required:
+        [
+          id,
+          source,
+          machineName,
+          machineNumber,
+          requestDate,
+          requestReportNumber,
+          priority,
+          closedDate,
+          remarks,
+        ]
       properties:
         id:
           type: string
@@ -3135,7 +3156,14 @@ components:
 
     ManualClosedCorrectiveMaintenanceLogEntryInput:
       type: object
-      required: [machineName, machineNumber, requestDate, requestReportNumber, closedDate]
+      required:
+        [
+          machineName,
+          machineNumber,
+          requestDate,
+          requestReportNumber,
+          closedDate,
+        ]
       properties:
         machineName:
           type: string
@@ -3155,7 +3183,15 @@ components:
 
     ExternalMaintenanceRequest:
       type: object
-      required: [id, maintenanceRequestId, externalRequestNumber, requestDate, createdAt, updatedAt]
+      required:
+        [
+          id,
+          maintenanceRequestId,
+          externalRequestNumber,
+          requestDate,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id:
           type: integer
@@ -3219,7 +3255,14 @@ components:
 
     ExternalMaintenanceReceipt:
       type: object
-      required: [id, externalMaintenanceRequestId, maintenanceType, createdAt, updatedAt]
+      required:
+        [
+          id,
+          externalMaintenanceRequestId,
+          maintenanceType,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id:
           type: integer
@@ -3394,7 +3437,20 @@ components:
 
     CorrectiveMaintenanceRecordDetail:
       type: object
-      required: [id, machineId, sequenceNumber, documentNumber, pageCount, machineName, machineNumber, status, events]
+      required:
+        [
+          id,
+          machineId,
+          sequenceNumber,
+          documentNumber,
+          pageCount,
+          machineName,
+          machineNumber,
+          status,
+          createdAt,
+          updatedAt,
+          events,
+        ]
       properties:
         id:
           type: integer
@@ -3420,6 +3476,10 @@ components:
           type: integer
         status:
           type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
         events:
           type: array
           items:
@@ -3443,7 +3503,6 @@ components:
         handoverDate:
           type: ["string", "null"]
 
-
     CorrectiveMaintenanceHeaderInput:
       type: object
       required: [documentNumber, pageCount]
@@ -3457,7 +3516,19 @@ components:
 
     SparePart:
       type: object
-      required: [id, partName, partCode, unit, minimumQuantity, currentQuantity, status, isLowStock, createdAt, updatedAt]
+      required:
+        [
+          id,
+          partName,
+          partCode,
+          unit,
+          minimumQuantity,
+          currentQuantity,
+          status,
+          isLowStock,
+          createdAt,
+          updatedAt,
+        ]
       properties:
         id:
           type: integer
@@ -3511,7 +3582,18 @@ components:
 
     SparePartMovement:
       type: object
-      required: [id, sparePartId, movementType, quantity, quantityBefore, quantityAfter, movementDate, referenceType, createdAt]
+      required:
+        [
+          id,
+          sparePartId,
+          movementType,
+          quantity,
+          quantityBefore,
+          quantityAfter,
+          movementDate,
+          referenceType,
+          createdAt,
+        ]
       properties:
         id:
           type: integer
@@ -3582,7 +3664,16 @@ components:
 
     DashboardPmItem:
       type: object
-      required: [id, machineId, machineName, machineNumber, plannedDateFrom, plannedDateTo, status]
+      required:
+        [
+          id,
+          machineId,
+          machineName,
+          machineNumber,
+          plannedDateFrom,
+          plannedDateTo,
+          status,
+        ]
       properties:
         id:
           type: integer
@@ -3601,7 +3692,15 @@ components:
 
     DashboardMaintenanceRequestSummary:
       type: object
-      required: [total, completed, pendingQa, pendingEngineering, acceptedOrInProgress, own]
+      required:
+        [
+          total,
+          completed,
+          pendingQa,
+          pendingEngineering,
+          acceptedOrInProgress,
+          own,
+        ]
       properties:
         total:
           type: integer
@@ -3618,7 +3717,15 @@ components:
 
     DashboardRecentMaintenanceRequest:
       type: object
-      required: [id, requestReportNumber, machineName, machineNumber, status, requestDate]
+      required:
+        [
+          id,
+          requestReportNumber,
+          machineName,
+          machineNumber,
+          status,
+          requestDate,
+        ]
       properties:
         id:
           type: integer
@@ -3635,7 +3742,16 @@ components:
 
     DashboardStats:
       type: object
-      required: [totalMachines, activeMachines, totalUsers, activeUsers, totalDepartments, machinesByDepartment, machinesByStatus]
+      required:
+        [
+          totalMachines,
+          activeMachines,
+          totalUsers,
+          activeUsers,
+          totalDepartments,
+          machinesByDepartment,
+          machinesByStatus,
+        ]
       properties:
         totalMachines:
           type: integer

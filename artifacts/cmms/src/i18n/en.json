@@ -24,8 +24,6 @@
     "no": "No",
     "print": "Print / Save PDF",
     "officialPrint": "Official Print",
-    "scanNameplate": "Scan Nameplate",
-    "scanning": "Scanning…",
     "saveForm": "Save Form",
     "language": "Language"
   },
@@ -111,9 +109,6 @@
     "title": "Equipment Information",
     "formNumber": "FORM-10-0118",
     "readOnly": "You are viewing this record in read-only mode.",
-    "scanSuccess": "Scan Complete",
-    "scanNoData": "No New Data Found",
-    "scanFailed": "Scan Failed",
     "section": {
       "identification": "1. Identification",
       "supplier": "Supplier Information",

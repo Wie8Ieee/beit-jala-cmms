@@ -21,11 +21,13 @@ export function PrintLayout({
   orientation,
   onOrientationChange,
 }: PrintLayoutProps) {
-  const [selectedOrientation, setSelectedOrientation] = useState<"portrait" | "landscape">(
-    landscape ? "landscape" : "portrait",
-  );
+  const [selectedOrientation, setSelectedOrientation] = useState<
+    "portrait" | "landscape"
+  >(landscape ? "landscape" : "portrait");
   const activeOrientation = orientation ?? selectedOrientation;
-  const printLandscape = showOrientationChoice ? activeOrientation === "landscape" : landscape;
+  const printLandscape = showOrientationChoice
+    ? activeOrientation === "landscape"
+    : landscape;
 
   const handlePrint = () => {
     if (!printLandscape) {
@@ -52,10 +54,17 @@ export function PrintLayout({
   };
 
   return (
-    <div className={`official-print-layout min-h-screen bg-slate-100 py-6 text-black print:bg-white print:py-0${printLandscape ? " official-print-layout-landscape" : ""}`}>
+    <div
+      className={`official-print-layout min-h-screen bg-slate-100 py-6 text-black print:bg-white print:py-0${printLandscape ? " official-print-layout-landscape" : ""}`}
+    >
       <div className="mx-auto mb-4 flex max-w-[210mm] items-center justify-between print:hidden">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => window.history.back()} aria-label="Back">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => window.history.back()}
+            aria-label="Back"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-xl font-semibold">{title}</h1>
@@ -68,7 +77,9 @@ export function PrintLayout({
               <select
                 value={activeOrientation}
                 onChange={(event) => {
-                  const nextOrientation = event.target.value as "portrait" | "landscape";
+                  const nextOrientation = event.target.value as
+                    | "portrait"
+                    | "landscape";
                   setSelectedOrientation(nextOrientation);
                   onOrientationChange?.(nextOrientation);
                 }}
@@ -90,9 +101,21 @@ export function PrintLayout({
   );
 }
 
-export function PrintPage({ children, landscape = false, className = "" }: { children: React.ReactNode; landscape?: boolean; className?: string }) {
+type PrintPageProps = React.HTMLAttributes<HTMLDivElement> & {
+  landscape?: boolean;
+};
+
+export function PrintPage({
+  children,
+  landscape = false,
+  className = "",
+  ...props
+}: PrintPageProps) {
   return (
-    <div className={`${landscape ? "official-print-page official-print-landscape" : "official-print-page"} ${className}`}>
+    <div
+      {...props}
+      className={`${landscape ? "official-print-page official-print-landscape" : "official-print-page"} ${className}`}
+    >
       {children}
     </div>
   );
@@ -122,9 +145,15 @@ export function OfficialPrintHeader({
           </td>
           <td className="w-[33%] text-center font-semibold">{title}</td>
           <td className="w-[33%] text-left">
-            <div><strong>Doc. No.:</strong> {documentNumber}</div>
-            <div><strong>Effective Date:</strong> {effectiveDate || ""}</div>
-            <div><strong>{page}</strong></div>
+            <div>
+              <strong>Doc. No.:</strong> {documentNumber}
+            </div>
+            <div>
+              <strong>Effective Date:</strong> {effectiveDate || ""}
+            </div>
+            <div>
+              <strong>{page}</strong>
+            </div>
           </td>
         </tr>
       </tbody>

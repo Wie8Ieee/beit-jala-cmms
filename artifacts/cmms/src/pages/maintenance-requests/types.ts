@@ -115,9 +115,10 @@ export type ExternalMaintenanceReceipt = {
   updatedAt: string;
 };
 
-export type ExternalMaintenanceReceiptDetail = ExternalMaintenanceRequestDetail & {
-  receipt: ExternalMaintenanceReceipt;
-};
+export type ExternalMaintenanceReceiptDetail =
+  ExternalMaintenanceRequestDetail & {
+    receipt: ExternalMaintenanceReceipt;
+  };
 
 export type CorrectiveMaintenanceRecord = {
   id: number;
@@ -132,5 +133,7 @@ export type CorrectiveMaintenanceRecord = {
   startupDate: string | null;
   maxRows: number;
   status: string;
+  createdAt: string;
+  updatedAt: string;
   events: CorrectiveMaintenanceEvent[];
 };

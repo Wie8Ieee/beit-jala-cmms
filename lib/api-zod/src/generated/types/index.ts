@@ -87,7 +87,6 @@ export * from './preliminaryFindingsInput';
 export * from './reviewDecisionInput';
 export * from './reviewDecisionInputDecision';
 export * from './role';
-export * from './scannedEquipmentInfo';
 export * from './searchSparePartsParams';
 export * from './signature';
 export * from './signatureFieldPermission';

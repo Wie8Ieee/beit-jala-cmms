@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save } from "lucide-react";
-import { ScanButton } from "@/components/scan-button";
 import type { MaintenanceRequestDetail } from "./types";
 
 type MachineOption = {
@@ -73,18 +72,7 @@ export default function NewMaintenanceRequestPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <CardTitle>Request Details</CardTitle>
-            <ScanButton
-              formType="maintenance-request"
-              label="Scan Report"
-              onScanned={(data) => {
-                if (data.failureDescription) setFailureDescription(data.failureDescription);
-                if (data.departmentSection) setDepartmentSection(data.departmentSection);
-                if (data.reportingPersonName) setReportingName(data.reportingPersonName);
-              }}
-            />
-          </div>
+          <CardTitle>Request Details</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div>

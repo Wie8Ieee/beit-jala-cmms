@@ -269,6 +269,7 @@ export const SignDocumentFieldResponse = zod.object({
 export const GetUsersResponseItem = zod.object({
   "id": zod.number(),
   "username": zod.string(),
+  "employeeNumber": zod.string().nullish(),
   "fullName": zod.string().nullish(),
   "email": zod.string().nullish(),
   "signatureData": zod.string().nullish(),
@@ -305,6 +306,7 @@ export const CreateUserBody = zod.object({
 export const CreateUserResponse = zod.object({
   "id": zod.number(),
   "username": zod.string(),
+  "employeeNumber": zod.string().nullish(),
   "fullName": zod.string().nullish(),
   "email": zod.string().nullish(),
   "signatureData": zod.string().nullish(),
@@ -328,6 +330,7 @@ export const GetUserParams = zod.object({
 export const GetUserResponse = zod.object({
   "id": zod.number(),
   "username": zod.string(),
+  "employeeNumber": zod.string().nullish(),
   "fullName": zod.string().nullish(),
   "email": zod.string().nullish(),
   "signatureData": zod.string().nullish(),
@@ -359,6 +362,7 @@ export const UpdateUserBody = zod.object({
 export const UpdateUserResponse = zod.object({
   "id": zod.number(),
   "username": zod.string(),
+  "employeeNumber": zod.string().nullish(),
   "fullName": zod.string().nullish(),
   "email": zod.string().nullish(),
   "signatureData": zod.string().nullish(),
@@ -382,6 +386,7 @@ export const DeactivateUserParams = zod.object({
 export const DeactivateUserResponse = zod.object({
   "id": zod.number(),
   "username": zod.string(),
+  "employeeNumber": zod.string().nullish(),
   "fullName": zod.string().nullish(),
   "email": zod.string().nullish(),
   "signatureData": zod.string().nullish(),
@@ -409,6 +414,7 @@ export const UpdateUserPermissionsBody = zod.object({
 export const UpdateUserPermissionsResponse = zod.object({
   "id": zod.number(),
   "username": zod.string(),
+  "employeeNumber": zod.string().nullish(),
   "fullName": zod.string().nullish(),
   "email": zod.string().nullish(),
   "signatureData": zod.string().nullish(),
@@ -717,30 +723,6 @@ export const UpdateEquipmentInformationHeaderParams = zod.object({
 })
 
 export const UpdateEquipmentInformationHeaderResponse = zod.unknown()
-
-
-/**
- * @summary Scan a nameplate image and extract equipment information using AI
- */
-export const ScanEquipmentNameplateParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const ScanEquipmentNameplateResponse = zod.object({
-  "nameOfEquipment": zod.string().optional(),
-  "modelNumber": zod.string().optional(),
-  "serialNumber": zod.string().optional(),
-  "manufacturingCompanyName": zod.string().optional(),
-  "manufacturingCompanyAddress": zod.string().optional(),
-  "purchasedFromName": zod.string().optional(),
-  "utilitiesPowerSupply": zod.string().optional(),
-  "dimensionWidthCm": zod.number().nullish(),
-  "dimensionHeightCm": zod.number().nullish(),
-  "dimensionDepthCm": zod.number().nullish(),
-  "weightKg": zod.number().nullish(),
-  "safetyIssues": zod.string().optional(),
-  "others": zod.string().optional()
-})
 
 
 /**
@@ -3039,6 +3021,8 @@ export const GetMachineCorrectiveMaintenanceResponse = zod.object({
   "startupDate": zod.string().nullish(),
   "maxRows": zod.number().optional(),
   "status": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
   "events": zod.array(zod.object({
   "id": zod.number(),
   "recordId": zod.number(),
@@ -3096,6 +3080,8 @@ export const UpdateCorrectiveMaintenanceHeaderResponse = zod.object({
   "startupDate": zod.string().nullish(),
   "maxRows": zod.number().optional(),
   "status": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
   "events": zod.array(zod.object({
   "id": zod.number(),
   "recordId": zod.number(),
@@ -3147,6 +3133,8 @@ export const GetMachineCorrectiveMaintenanceHistoryResponseItem = zod.object({
   "startupDate": zod.string().nullish(),
   "maxRows": zod.number().optional(),
   "status": zod.string(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
   "events": zod.array(zod.object({
   "id": zod.number(),
   "recordId": zod.number(),

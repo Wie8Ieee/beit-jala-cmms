@@ -1,6 +1,4 @@
 import { Router } from "express";
-import multer from "multer";
-import Groq from "groq-sdk";
 import { db } from "@workspace/db";
 import {
   machinesTable,
@@ -14,8 +12,6 @@ import {
 } from "@workspace/db";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { requireActiveAuth, requirePermission, parseIdParam } from "../lib/auth.js";
-
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -355,72 +351,6 @@ router.get("/:id/equipment-information", requireActiveAuth, requirePermission("v
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     });
-  } catch (err) { next(err); }
-});
-
-// POST /api/machines/:id/equipment-information/scan
-router.post("/:id/equipment-information/scan", requireActiveAuth, requirePermission("edit_equipment_information"), upload.single("image"), async (req, res, next) => {
-  try {
-    if (!process.env.GROQ_API_KEY) {
-      res.status(503).json({ error: "AI service not configured. Set GROQ_API_KEY in your environment." });
-      return;
-    }
-
-    if (!req.file) {
-      res.status(400).json({ error: "No image file provided." });
-      return;
-    }
-
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const base64Image = req.file.buffer.toString("base64");
-    const mimeType = req.file.mimetype;
-
-    const response = await groq.chat.completions.create({
-      model: "meta-llama/llama-4-scout-17b-16e-instruct",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `You are a maintenance technician reading an equipment nameplate or documentation image.
-Extract as much information as possible and return a JSON object with these exact keys (omit keys you cannot find):
-- nameOfEquipment (string): equipment/machine name or type
-- modelNumber (string): model or type number
-- serialNumber (string): serial number or S/N
-- manufacturingCompanyName (string): manufacturer or brand name
-- manufacturingCompanyAddress (string): manufacturer address if visible
-- purchasedFromName (string): supplier/vendor name if visible
-- utilitiesPowerSupply (string): voltage, frequency, phase, power requirements
-- dimensionWidthCm (number): width in cm (convert from mm/inches if needed)
-- dimensionHeightCm (number): height in cm
-- dimensionDepthCm (number): depth/length in cm
-- weightKg (number): weight in kg (convert from lbs if needed)
-- safetyIssues (string): any safety warnings, certifications, IP rating
-- others (string): any other relevant technical specs not covered above
-
-Return ONLY valid JSON. No markdown, no explanation.`,
-            },
-            {
-              type: "image_url",
-              image_url: { url: `data:${mimeType};base64,${base64Image}` },
-            },
-          ],
-        },
-      ],
-    });
-
-    const raw = response.choices[0]?.message?.content ?? "{}";
-    let extracted: Record<string, unknown> = {};
-    try {
-      extracted = JSON.parse(raw);
-    } catch {
-      const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (match) extracted = JSON.parse(match[1]);
-    }
-
-    res.json(extracted);
   } catch (err) { next(err); }
 });
 

@@ -124,6 +124,8 @@ export interface User {
   id: number;
   username: string;
   /** @nullable */
+  employeeNumber?: string | null;
+  /** @nullable */
   fullName?: string | null;
   /** @nullable */
   email?: string | null;
@@ -307,26 +309,6 @@ export interface EquipmentInformationInput {
   preparedByDate?: string;
   approvedByName?: string;
   approvedByDate?: string;
-}
-
-export interface ScannedEquipmentInfo {
-  nameOfEquipment?: string;
-  modelNumber?: string;
-  serialNumber?: string;
-  manufacturingCompanyName?: string;
-  manufacturingCompanyAddress?: string;
-  purchasedFromName?: string;
-  utilitiesPowerSupply?: string;
-  /** @nullable */
-  dimensionWidthCm?: number | null;
-  /** @nullable */
-  dimensionHeightCm?: number | null;
-  /** @nullable */
-  dimensionDepthCm?: number | null;
-  /** @nullable */
-  weightKg?: number | null;
-  safetyIssues?: string;
-  others?: string;
 }
 
 export interface ClosedCorrectiveMaintenanceLogHeader {
@@ -998,6 +980,8 @@ export interface CorrectiveMaintenanceRecordDetail {
   startupDate?: string | null;
   maxRows?: number;
   status: string;
+  createdAt: string;
+  updatedAt: string;
   events: CorrectiveMaintenanceEvent[];
 }
 

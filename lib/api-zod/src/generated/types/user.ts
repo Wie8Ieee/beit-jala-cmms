@@ -10,6 +10,8 @@ export interface User {
   id: number;
   username: string;
   /** @nullable */
+  employeeNumber?: string | null;
+  /** @nullable */
   fullName?: string | null;
   /** @nullable */
   email?: string | null;

@@ -24,8 +24,6 @@
     "no": "لا",
     "print": "طباعة / حفظ PDF",
     "officialPrint": "الطباعة الرسمية",
-    "scanNameplate": "مسح اللوحة",
-    "scanning": "جارٍ المسح…",
     "saveForm": "حفظ النموذج",
     "language": "اللغة"
   },
@@ -111,9 +109,6 @@
     "title": "معلومات المعدة",
     "formNumber": "FORM-10-0118",
     "readOnly": "أنت تشاهد هذا السجل بوضع القراءة فقط.",
-    "scanSuccess": "اكتمل المسح",
-    "scanNoData": "لم يتم العثور على بيانات جديدة",
-    "scanFailed": "فشل المسح",
     "section": {
       "identification": "1. التعريف",
       "supplier": "معلومات المورد",

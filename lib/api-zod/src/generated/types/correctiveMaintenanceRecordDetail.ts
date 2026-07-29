@@ -23,5 +23,7 @@ export interface CorrectiveMaintenanceRecordDetail {
   startupDate?: string | null;
   maxRows?: number;
   status: string;
+  createdAt: string;
+  updatedAt: string;
   events: CorrectiveMaintenanceEvent[];
 }
