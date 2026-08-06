@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Save } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 
 const months = [
   "January",
@@ -35,14 +35,14 @@ export default function MonthlyPlansIndexPage({ params }: { params: { year: stri
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start gap-3">
+        <Button asChild variant="ghost" size="icon" className="mt-1" aria-label="Back">
+          <Link href="/maintenance-plans"><ArrowLeft className="h-5 w-5" /></Link>
+        </Button>
         <div>
           <h1 className="text-4xl font-bold tracking-tight">Monthly PM Program</h1>
           <p className="text-muted-foreground">Select a month for FORM-10-0117.</p>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/maintenance-plans">Back</Link>
-        </Button>
       </div>
 
       {hasPermission("edit_header") && <Card>

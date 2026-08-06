@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import {
   auditLogsTable,
   db,
@@ -83,6 +83,60 @@ async function audit(req: Parameters<Parameters<typeof router.post>[1]>[0], acti
   });
 }
 
+// A saved signature is the user's current official signature. When it is
+// replaced, update its copies in existing forms as well as electronic-signature
+// records, so every place signed by that user renders the same signature.
+async function replaceUserSignature(userId: number, signatureData: string) {
+  const [user] = await db
+    .select({ id: usersTable.id, signatureData: usersTable.signatureData })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+  if (!user) return null;
+
+  const previousSignature = user.signatureData;
+  await db.transaction(async (tx) => {
+    await tx.update(usersTable).set({ signatureData, updatedAt: new Date() }).where(eq(usersTable.id, userId));
+    await tx.update(signaturesTable).set({ signatureData }).where(eq(signaturesTable.userId, userId));
+    if (!previousSignature?.startsWith("data:image/") || previousSignature === signatureData) return;
+
+    await Promise.all([
+      tx.execute(sql`UPDATE maintenance_requests SET
+        reporting_person_signature = CASE WHEN reporting_person_signature = ${previousSignature} THEN ${signatureData} ELSE reporting_person_signature END,
+        department_supervisor_signature = CASE WHEN department_supervisor_signature = ${previousSignature} THEN ${signatureData} ELSE department_supervisor_signature END,
+        qa_supervisor_signature = CASE WHEN qa_supervisor_signature = ${previousSignature} THEN ${signatureData} ELSE qa_supervisor_signature END,
+        engineering_supervisor_signature = CASE WHEN engineering_supervisor_signature = ${previousSignature} THEN ${signatureData} ELSE engineering_supervisor_signature END,
+        updated_at = NOW()
+        WHERE reporting_person_signature = ${previousSignature} OR department_supervisor_signature = ${previousSignature} OR qa_supervisor_signature = ${previousSignature} OR engineering_supervisor_signature = ${previousSignature}`),
+      tx.execute(sql`UPDATE corrective_maintenance_events SET
+        maintenance_technician_signature = CASE WHEN maintenance_technician_signature = ${previousSignature} THEN ${signatureData} ELSE maintenance_technician_signature END,
+        concerned_section_supervisor_signature = CASE WHEN concerned_section_supervisor_signature = ${previousSignature} THEN ${signatureData} ELSE concerned_section_supervisor_signature END,
+        receiver_signature = CASE WHEN receiver_signature = ${previousSignature} THEN ${signatureData} ELSE receiver_signature END,
+        engineering_signature = CASE WHEN engineering_signature = ${previousSignature} THEN ${signatureData} ELSE engineering_signature END,
+        updated_at = NOW()
+        WHERE maintenance_technician_signature = ${previousSignature} OR concerned_section_supervisor_signature = ${previousSignature} OR receiver_signature = ${previousSignature} OR engineering_signature = ${previousSignature}`),
+      tx.execute(sql`UPDATE external_maintenance_requests SET
+        maintenance_technician_signature = CASE WHEN maintenance_technician_signature = ${previousSignature} THEN ${signatureData} ELSE maintenance_technician_signature END,
+        department_manager_signature = CASE WHEN department_manager_signature = ${previousSignature} THEN ${signatureData} ELSE department_manager_signature END,
+        general_manager_signature = CASE WHEN general_manager_signature = ${previousSignature} THEN ${signatureData} ELSE general_manager_signature END,
+        updated_at = NOW()
+        WHERE maintenance_technician_signature = ${previousSignature} OR department_manager_signature = ${previousSignature} OR general_manager_signature = ${previousSignature}`),
+      tx.execute(sql`UPDATE external_maintenance_receipts SET
+        examiner_signature = CASE WHEN examiner_signature = ${previousSignature} THEN ${signatureData} ELSE examiner_signature END,
+        updated_at = NOW()
+        WHERE examiner_signature = ${previousSignature}`),
+      tx.execute(sql`UPDATE monthly_maintenance_evaluation_reports SET
+        engineering_manager_signature = CASE WHEN engineering_manager_signature = ${previousSignature} THEN ${signatureData} ELSE engineering_manager_signature END,
+        updated_at = NOW()
+        WHERE engineering_manager_signature = ${previousSignature}`),
+      tx.execute(sql`UPDATE pm_inspections SET
+        examiner_signature = CASE WHEN examiner_signature = ${previousSignature} THEN ${signatureData} ELSE examiner_signature END,
+        machine_receiver_signature = CASE WHEN machine_receiver_signature = ${previousSignature} THEN ${signatureData} ELSE machine_receiver_signature END
+        WHERE examiner_signature = ${previousSignature} OR machine_receiver_signature = ${previousSignature}`),
+    ]);
+  });
+  return { id: user.id, signatureData };
+}
+
 router.get("/", requireAuth, async (req, res, next) => {
   try {
     const documentType = normalizeDocumentType(req.query.documentType);
@@ -115,8 +169,8 @@ router.put("/profile", requireAuth, async (req, res, next) => {
     const signatureData = typeof req.body.signatureData === "string" ? req.body.signatureData : "";
     if (!signatureData.startsWith("data:image/")) { res.status(400).json({ error: "A drawn signature image is required" }); return; }
     if (signatureData.length > 300_000) { res.status(400).json({ error: "Signature image is too large" }); return; }
-    await db.update(usersTable).set({ signatureData, updatedAt: new Date() }).where(eq(usersTable.id, req.session.userId!));
-    res.json({ signatureData });
+    const updated = await replaceUserSignature(req.session.userId!, signatureData);
+    res.json({ signatureData: updated!.signatureData });
   } catch (err) { next(err); }
 });
 
@@ -125,7 +179,7 @@ router.put("/users/:id/profile", requireAuth, requirePermission("manage_users"),
     const userId = Number(req.params.id);
     const signatureData = typeof req.body.signatureData === "string" ? req.body.signatureData : "";
     if (!Number.isInteger(userId) || !signatureData.startsWith("data:image/")) { res.status(400).json({ error: "A drawn signature image is required" }); return; }
-    const [updated] = await db.update(usersTable).set({ signatureData, updatedAt: new Date() }).where(eq(usersTable.id, userId)).returning({ id: usersTable.id, signatureData: usersTable.signatureData });
+    const updated = await replaceUserSignature(userId, signatureData);
     if (!updated) { res.status(404).json({ error: "User not found" }); return; }
     res.json(updated);
   } catch (err) { next(err); }
@@ -314,6 +368,7 @@ router.post("/sign", requireAuth, requirePermission("sign_assigned_fields"), asy
     const documentType = normalizeDocumentType(req.body.documentType);
     const documentId = Number(req.body.documentId);
     const fieldName = normalizeFieldName(req.body.fieldName);
+    const authorizationFieldName = normalizeFieldName(req.body.authorizationFieldName) || fieldName;
     const signatureType = normalizeFieldName(req.body.signatureType) || "electronic";
     if (!documentType || Number.isNaN(documentId) || !fieldName) {
       res.status(400).json({ error: "documentType, documentId, and fieldName are required" });
@@ -342,14 +397,17 @@ router.post("/sign", requireAuth, requirePermission("sign_assigned_fields"), asy
         and(
           eq(eligibleSignerAssignmentsTable.documentType, documentType),
           eq(eligibleSignerAssignmentsTable.documentId, documentId),
-          eq(eligibleSignerAssignmentsTable.fieldName, fieldName),
+          or(
+            eq(eligibleSignerAssignmentsTable.fieldName, fieldName),
+            eq(eligibleSignerAssignmentsTable.fieldName, authorizationFieldName),
+          ),
           eq(eligibleSignerAssignmentsTable.eligibleUserId, req.session.userId!),
           isNull(eligibleSignerAssignmentsTable.revokedAt),
         ),
       );
     const [permanentPermission] = await db.select().from(signatureFieldPermissionsTable).where(and(
       eq(signatureFieldPermissionsTable.documentType, documentType),
-      eq(signatureFieldPermissionsTable.fieldName, fieldName),
+      eq(signatureFieldPermissionsTable.fieldName, authorizationFieldName),
       eq(signatureFieldPermissionsTable.eligibleUserId, req.session.userId!),
       isNull(signatureFieldPermissionsTable.revokedAt),
     ));
@@ -385,6 +443,7 @@ router.post("/sign", requireAuth, requirePermission("sign_assigned_fields"), asy
       documentType,
       documentId,
       fieldName,
+      authorizationFieldName,
       signatureType,
     });
     res.status(201).json(formatSignature(created!));

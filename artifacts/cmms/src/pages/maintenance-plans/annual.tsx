@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Printer, Save } from "lucide-react";
+import { ArrowLeft, Printer, Save } from "lucide-react";
 import { OfficialFormHeader } from "@/components/official-form-header";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
 
@@ -20,9 +20,7 @@ type AnnualRow = {
   machineLocation: string | null;
   machineCode: string | null;
   frequencyMonths: number | null;
-  duration: string | null;
   startDate: string | null;
-  finishDate: string | null;
   scheduledMonths: number[];
   isOverride: boolean;
 };
@@ -62,10 +60,12 @@ function calculateScheduledMonths(startDate: string | null, frequencyMonths: num
 export default function AnnualPlanPage({ params }: { params: { year: string } }) {
   const year = Number(params.year);
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   const { hasPermission } = useAuth();
   const canEdit = hasPermission("edit_maintenance_plans");
   const canEditHeader = hasPermission("edit_header");
   const [form, setForm] = useState<AnnualPlan | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [header, setHeader] = useState<AnnualPlanHeader>({ documentNumber: "", effectiveOrExecutionDate: "" });
 
   const { data, isLoading } = useQuery({
@@ -74,7 +74,10 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
   });
 
   useEffect(() => {
-    if (data) setForm({ ...data, rows: data.rows.map((row) => ({ ...row, scheduledMonths: calculateScheduledMonths(row.startDate, row.frequencyMonths) })) });
+    if (data) {
+      setForm({ ...data, rows: data.rows.map((row) => ({ ...row, scheduledMonths: calculateScheduledMonths(row.startDate, row.frequencyMonths) })) });
+      setHasUnsavedChanges(false);
+    }
   }, [data]);
 
   const { data: savedHeader } = useQuery({
@@ -102,12 +105,14 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
       }),
     onSuccess: (updated) => {
       setForm(updated);
+      setHasUnsavedChanges(false);
       queryClient.invalidateQueries({ queryKey: ["annual-plan", year] });
     },
   });
 
   function updateField(field: keyof AnnualPlan, value: string) {
     setForm((current) => (current ? { ...current, [field]: value } : current));
+    setHasUnsavedChanges(true);
   }
 
   function updateRow(rowId: number, patch: Partial<AnnualRow>) {
@@ -116,6 +121,7 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
         ? { ...current, rows: current.rows.map((row) => (row.id === rowId ? { ...row, ...patch } : row)) }
         : current,
     );
+    setHasUnsavedChanges(true);
   }
 
   function submit(event: FormEvent) {
@@ -128,21 +134,23 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
   return (
     <form onSubmit={submit} className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Annual Preventive Maintenance Plan</h1>
-          <p className="text-muted-foreground">FORM-10-1025 · {year}</p>
+        <div className="flex items-start gap-3">
+          <Button type="button" variant="outline" size="icon" title="Back" aria-label="Back to previous page" onClick={() => window.history.length > 1 ? window.history.back() : navigate("/maintenance-plans")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Annual Preventive Maintenance Plan</h1>
+            <p className="text-muted-foreground">FORM-10-1025 · {year}</p>
+          </div>
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link href="/maintenance-plans">Back</Link>
-          </Button>
           <Button asChild variant="outline">
             <Link href={`/print/annual-plan/${year}`}>Official Print</Link>
           </Button>
           {canEdit && (
             <Button type="submit" disabled={save.isPending}>
               <Save className="mr-2 h-4 w-4" />
-              Save
+              {hasUnsavedChanges ? "Save changes" : "Save"}
             </Button>
           )}
         </div>
@@ -231,12 +239,21 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
           <CardTitle>Machine Schedule</CardTitle>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/print/annual-plan/${year}/schedule`}>
-              <Printer className="mr-2 h-4 w-4" />
-              Print Schedule
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            {canEdit && hasUnsavedChanges && <span className="text-sm font-medium text-amber-600">Unsaved changes</span>}
+            {canEdit && (
+              <Button type="submit" size="sm" disabled={save.isPending || !hasUnsavedChanges}>
+                <Save className="mr-2 h-4 w-4" />
+                Save changes
+              </Button>
+            )}
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/print/annual-plan/${year}/schedule`}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print Schedule
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -245,7 +262,6 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
                 <TableHead>Department</TableHead>
                 <TableHead>Machine / Code</TableHead>
                 <TableHead>Frequency</TableHead>
-                <TableHead>Duration</TableHead>
                 <TableHead>Start</TableHead>
                 <TableHead>Months</TableHead>
               </TableRow>
@@ -258,9 +274,14 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
                     <div className="font-medium">{row.machineName}</div>
                     <div className="text-xs text-muted-foreground">{row.machineCode || "-"}</div>
                   </TableCell>
-                  <TableCell>{row.frequencyMonths ? `Every ${row.frequencyMonths} months` : "-"}</TableCell>
                   <TableCell>
-                    <Input value={row.duration ?? ""} readOnly={!canEdit} onChange={(event) => updateRow(row.id, { duration: event.target.value })} />
+                    <Input type="number" min="1" value={row.frequencyMonths ?? ""} readOnly={!canEdit} onChange={(event) => {
+                      const frequencyMonths = Number.parseInt(event.target.value, 10);
+                      updateRow(row.id, {
+                        frequencyMonths: Number.isInteger(frequencyMonths) && frequencyMonths > 0 ? frequencyMonths : null,
+                        scheduledMonths: calculateScheduledMonths(row.startDate, Number.isInteger(frequencyMonths) && frequencyMonths > 0 ? frequencyMonths : null),
+                      });
+                    }} />
                   </TableCell>
                   <TableCell>
                     <Input type="date" value={row.startDate ?? ""} readOnly={!canEdit} onChange={(event) => updateRow(row.id, { startDate: event.target.value, scheduledMonths: calculateScheduledMonths(event.target.value, row.frequencyMonths) })} />

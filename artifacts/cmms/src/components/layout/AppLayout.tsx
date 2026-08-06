@@ -35,6 +35,7 @@ import {
   LogOut,
   TestTube,
   Languages,
+  ScrollText,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -137,14 +138,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </SidebarMenuItem>
               )}
 
-              <SidebarMenuItem>
+              {hasPermission("view_reports") && <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={location.startsWith("/reports")}>
                   <Link href="/reports">
                     <BarChart3 className="size-4" />
                     <span>Reports</span>
                   </Link>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
+              </SidebarMenuItem>}
 
               {hasPermission("view_spare_parts") && (
                 <SidebarMenuItem>

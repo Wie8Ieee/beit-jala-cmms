@@ -9,9 +9,12 @@ import {
   annualPmPlansTable,
   monthlyPmPlanRowsTable,
   monthlyPmPlansTable,
+  auditLogsTable,
+  usersTable,
 } from "@workspace/db";
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { requireActiveAuth, requirePermission, parseIdParam } from "../lib/auth.js";
+import { syncAutomaticMaintenancePlans } from "./maintenance-plans.js";
 
 const router = Router();
 
@@ -109,16 +112,32 @@ router.get("/:id/next-pm", requireActiveAuth, requirePermission("view_machines")
     const machineId = parseIdParam(req.params.id);
     const today = new Date().toISOString().slice(0, 10);
     const monthlyRows = await db
-      .select({ plannedDateFrom: monthlyPmPlanRowsTable.plannedDateFrom, plannedDateTo: monthlyPmPlanRowsTable.plannedDateTo })
+      .select({
+        plannedDateFrom: monthlyPmPlanRowsTable.plannedDateFrom,
+        plannedDateTo: monthlyPmPlanRowsTable.plannedDateTo,
+        actualDate: monthlyPmPlanRowsTable.actualDate,
+        isManuallyRemoved: monthlyPmPlanRowsTable.isManuallyRemoved,
+      })
       .from(monthlyPmPlanRowsTable)
       .innerJoin(monthlyPmPlansTable, eq(monthlyPmPlanRowsTable.planId, monthlyPmPlansTable.id))
       .where(eq(monthlyPmPlanRowsTable.machineId, machineId));
-    const monthlyDate = monthlyRows
-      .flatMap((row) => [row.plannedDateFrom, row.plannedDateTo])
-      .filter((date): date is string => Boolean(date && date >= today))
+    const pendingMonthlyDates = monthlyRows
+      .filter((row) => !row.actualDate && !row.isManuallyRemoved)
+      .map((row) => row.plannedDateFrom ?? row.plannedDateTo)
+      .filter((date): date is string => Boolean(date));
+    // The profile should show the current PM cycle first. Older unfinished
+    // rows remain in their monthly plans, but must not hide this month's due
+    // activity (for example, August behind an old February row).
+    const currentMonthStart = `${today.slice(0, 7)}-01`;
+    const currentOrFutureMonthlyDate = pendingMonthlyDates
+      .filter((date) => date >= currentMonthStart)
       .sort()[0];
+    const overdueMonthlyDate = currentOrFutureMonthlyDate && currentOrFutureMonthlyDate <= today
+      ? currentOrFutureMonthlyDate
+      : undefined;
+    const monthlyDate = currentOrFutureMonthlyDate ?? pendingMonthlyDates.filter((date) => date < currentMonthStart).sort().at(-1);
     if (monthlyDate) {
-      res.json({ nextPmDate: monthlyDate, source: "monthly" });
+      res.json({ nextPmDate: monthlyDate, source: "monthly", isDue: Boolean(overdueMonthlyDate) });
       return;
     }
 
@@ -135,8 +154,32 @@ router.get("/:id/next-pm", requireActiveAuth, requirePermission("view_machines")
       } catch {
         return [];
       }
-    }).filter((date) => date >= today).sort();
-    res.json({ nextPmDate: annualDates[0] ?? null, source: annualDates.length ? "annual" : null });
+    }).filter((date) => date >= `${today.slice(0, 7)}-01`).sort();
+    res.json({ nextPmDate: annualDates[0] ?? null, source: annualDates.length ? "annual" : null, isDue: Boolean(annualDates[0] && annualDates[0] <= today) });
+  } catch (err) { next(err); }
+});
+
+// Machine-specific history replaces the global audit-log screen. Only events
+// belonging to this machine are exposed here.
+router.get("/:id/history", requireActiveAuth, requirePermission("view_machine_maintenance_history"), async (req, res, next) => {
+  try {
+    const machineId = parseIdParam(req.params.id);
+    const logs = await db
+      .select({
+        id: auditLogsTable.id,
+        action: auditLogsTable.action,
+        details: auditLogsTable.details,
+        oldValue: auditLogsTable.oldValue,
+        newValue: auditLogsTable.newValue,
+        createdAt: auditLogsTable.createdAt,
+        userName: usersTable.fullName,
+        username: usersTable.username,
+      })
+      .from(auditLogsTable)
+      .leftJoin(usersTable, eq(auditLogsTable.userId, usersTable.id))
+      .where(and(eq(auditLogsTable.entityType, "machine"), eq(auditLogsTable.entityId, machineId)))
+      .orderBy(desc(auditLogsTable.createdAt), desc(auditLogsTable.id));
+    res.json(logs.map((log) => ({ ...log, createdAt: log.createdAt.toISOString(), userName: log.userName ?? log.username ?? "System" })));
   } catch (err) { next(err); }
 });
 
@@ -175,7 +218,13 @@ router.post("/", requireActiveAuth, requirePermission("create_machine"), async (
         })
         .returning({ id: machinesTable.id });
 
+      if (pmFrequencyMonths && pmStartDate) {
+        const years = new Set([new Date().getFullYear(), Number(pmStartDate.slice(0, 4))]);
+        for (const year of years) if (Number.isInteger(year) && year >= 2000) await syncAutomaticMaintenancePlans(year);
+      }
+
       const machine = await getMachineWithDept(newMachine!.id);
+      await db.insert(auditLogsTable).values({ userId: req.session.userId ?? null, action: "machine_created", entityType: "machine", entityId: newMachine!.id, newValue: formatMachine(machine!) });
       res.status(201).json(formatMachine(machine!));
     } catch (err: unknown) {
       const e = err as { code?: string };
@@ -238,6 +287,7 @@ router.put("/:id", requireActiveAuth, requirePermission("edit_machine"), async (
     if (pmFrequencyMonths !== undefined) updateData.pmFrequencyMonths = pmFrequencyMonths;
     if (pmStartDate !== undefined) updateData.pmStartDate = pmStartDate;
 
+    const previous = await getMachineWithDept(id);
     const [updated] = await db
       .update(machinesTable)
       .set(updateData)
@@ -249,7 +299,13 @@ router.put("/:id", requireActiveAuth, requirePermission("edit_machine"), async (
       return;
     }
 
+    if (pmFrequencyMonths !== undefined || pmStartDate !== undefined) {
+      const years = new Set([new Date().getFullYear(), Number(pmStartDate?.slice(0, 4))]);
+      for (const year of years) if (Number.isInteger(year) && year >= 2000) await syncAutomaticMaintenancePlans(year);
+    }
+
     const machine = await getMachineWithDept(id);
+    await db.insert(auditLogsTable).values({ userId: req.session.userId ?? null, action: "machine_updated", entityType: "machine", entityId: id, oldValue: previous ? formatMachine(previous) : null, newValue: formatMachine(machine!) });
     res.json(formatMachine(machine!));
   } catch (err) { next(err); }
 });
@@ -263,6 +319,7 @@ router.patch("/:id/soft-delete", requireActiveAuth, requirePermission("soft_dele
       return;
     }
 
+    const previous = await getMachineWithDept(id);
     const [updated] = await db
       .update(machinesTable)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
@@ -275,6 +332,7 @@ router.patch("/:id/soft-delete", requireActiveAuth, requirePermission("soft_dele
     }
 
     const machine = await getMachineWithDept(id);
+    await db.insert(auditLogsTable).values({ userId: req.session.userId ?? null, action: "machine_archived", entityType: "machine", entityId: id, oldValue: previous ? formatMachine(previous) : null, newValue: formatMachine(machine!) });
     res.json(formatMachine(machine!));
   } catch (err) { next(err); }
 });
@@ -376,7 +434,7 @@ router.put("/:id/equipment-information", requireActiveAuth, requirePermission("e
     }
 
     const existing = await db
-      .select({ id: equipmentInformationTable.id })
+      .select()
       .from(equipmentInformationTable)
       .where(eq(equipmentInformationTable.machineId, id));
 
@@ -393,6 +451,15 @@ router.put("/:id/equipment-information", requireActiveAuth, requirePermission("e
         .values({ machineId: id, ...body })
         .returning();
     }
+
+    await db.insert(auditLogsTable).values({
+      userId: req.session.userId ?? null,
+      action: existing.length > 0 ? "equipment_information_updated" : "equipment_information_created",
+      entityType: "machine",
+      entityId: id,
+      oldValue: existing[0] ?? null,
+      newValue: record!,
+    });
 
     res.json({
       ...record,

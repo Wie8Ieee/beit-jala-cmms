@@ -17,7 +17,7 @@ type AnnualPlan = {
   approvedRdDate: string | null;
   approvedQaName: string | null;
   approvedQaDate: string | null;
-  rows: Array<{ id: number; department: string | null; machineName: string; machineCode: string | null; frequencyMonths: number | null; duration: string | null; startDate: string | null; scheduledMonths: number[] }>;
+  rows: Array<{ id: number; department: string | null; machineName: string; machineCode: string | null; frequencyMonths: number | null; startDate: string | null; scheduledMonths: number[] }>;
 };
 
 type AnnualPlanHeader = {
@@ -59,10 +59,10 @@ export default function AnnualPlanPrintPage({ params }: { params: { year: string
     return (
       <PrintLayout title="Machine Schedule - Print">
         <PrintPage>
-          <OfficialPrintHeader title="Machine Schedule" documentNumber={header?.documentNumber ?? "FORM-10-1025-0"} effectiveDate={header?.effectiveOrExecutionDate ?? String(year)} />
+          <OfficialPrintHeader title={`${header?.documentName ?? "Preventive Maintenance Plan"}\nFor Year: ${data?.year ?? year}`} documentNumber={header?.documentNumber ?? "FORM-10-1025-0"} effectiveDate={header?.effectiveOrExecutionDate ?? String(year)} />
           <table className="official-print-table mt-8">
-            <thead><tr><th>Department</th><th>Machine / Code</th><th>Frequency</th><th>Duration</th><th>Start</th><th>Months</th></tr></thead>
-            <tbody>{data?.rows.map((row) => <tr key={row.id}><td>{row.department ?? ""}</td><td>{row.machineName}<br />{row.machineCode ?? ""}</td><td>{row.frequencyMonths ? `Every ${row.frequencyMonths} months` : ""}</td><td>{row.duration ?? ""}</td><td>{row.startDate ?? ""}</td><td>{row.scheduledMonths.join(", ")}</td></tr>)}</tbody>
+            <thead><tr><th>Department</th><th>Machine / Code</th><th>Frequency</th><th>Start</th><th>Months</th></tr></thead>
+            <tbody>{data?.rows.map((row) => <tr key={row.id}><td>{row.department ?? ""}</td><td>{row.machineName}<br />{row.machineCode ?? ""}</td><td>{row.frequencyMonths ? `Every ${row.frequencyMonths} months` : ""}</td><td>{row.startDate ?? ""}</td><td>{row.scheduledMonths.join(", ")}</td></tr>)}</tbody>
           </table>
         </PrintPage>
       </PrintLayout>

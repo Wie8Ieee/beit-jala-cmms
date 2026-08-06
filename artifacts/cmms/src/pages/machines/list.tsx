@@ -19,7 +19,8 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MachinesList() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isArabic = i18n.language.startsWith("ar");
   const [searchTerm, setSearchTerm] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const debouncedSearch = useDebounce(searchTerm, 300);
@@ -86,27 +87,35 @@ export default function MachinesList() {
       </div>
 
       <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
-        <Table>
+        <Table dir={isArabic ? "rtl" : "ltr"} className="w-full table-fixed">
+          <colgroup>
+            <col className="w-[14%]" />
+            <col className="w-[22%]" />
+            <col className="w-[20%]" />
+            <col className="w-[18%]" />
+            <col className="w-[12%]" />
+            <col className="w-[14%]" />
+          </colgroup>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="w-[100px]">{t('machines.idNumber')}</TableHead>
-              <TableHead>{t('machines.machineName')}</TableHead>
-              <TableHead>{t('machines.department')}</TableHead>
-              <TableHead>{t('machines.location')}</TableHead>
-              <TableHead>{t('machines.status')}</TableHead>
-              <TableHead className="text-right">{t('common.actions')}</TableHead>
+              <TableHead className="text-center">{t('machines.idNumber')}</TableHead>
+              <TableHead className="text-center">{t('machines.machineName')}</TableHead>
+              <TableHead className="text-center">{t('machines.department')}</TableHead>
+              <TableHead className="text-center">{t('machines.location')}</TableHead>
+              <TableHead className="text-center">{t('machines.status')}</TableHead>
+              <TableHead className="text-center">{t('common.actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                  <TableCell className="text-right"><Skeleton className="h-8 w-16 ml-auto" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="mx-auto h-4 w-16" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="mx-auto h-4 w-48" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="mx-auto h-4 w-32" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="mx-auto h-4 w-24" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="mx-auto h-6 w-20 rounded-full" /></TableCell>
+                  <TableCell className="text-center"><Skeleton className="mx-auto h-8 w-16" /></TableCell>
                 </TableRow>
               ))
             ) : isError ? (
@@ -131,12 +140,12 @@ export default function MachinesList() {
             ) : (
               machines?.map((machine) => (
                 <TableRow key={machine.id} className="group hover:bg-muted/30 transition-colors">
-                  <TableCell className="font-mono text-sm">{machine.machineNumber}</TableCell>
-                  <TableCell className="font-medium text-primary">{machine.machineName}</TableCell>
-                  <TableCell>{machine.departmentName || t('common_extra.unassigned')}</TableCell>
-                  <TableCell className="text-muted-foreground">{machine.location || "—"}</TableCell>
-                  <TableCell>{machine.deletedAt ? <Badge variant="secondary">Archived</Badge> : getStatusBadge(machine.status)}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="font-mono text-center text-sm">{machine.machineNumber}</TableCell>
+                  <TableCell className="break-words text-center font-medium text-primary">{machine.machineName}</TableCell>
+                  <TableCell className="break-words text-center">{machine.departmentName || t('common_extra.unassigned')}</TableCell>
+                  <TableCell className="break-words text-center text-muted-foreground">{machine.location || "—"}</TableCell>
+                  <TableCell className="text-center">{machine.deletedAt ? <Badge variant="secondary">Archived</Badge> : getStatusBadge(machine.status)}</TableCell>
+                  <TableCell className="text-center">
                     <Button variant="ghost" size="sm" asChild className="opacity-0 group-hover:opacity-100 transition-opacity">
                       <Link href={`/machines/${machine.id}`}>{t('machines.viewProfile')}</Link>
                     </Button>

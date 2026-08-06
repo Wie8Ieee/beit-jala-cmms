@@ -38,15 +38,14 @@ export default function CorrectiveMaintenancePrintPage({
     ? Number(params.recordId)
     : undefined;
   const { data = [] } = useQuery({
-    queryKey: ["print-cm-history", machineId],
-    queryFn: () =>
-      apiRequest<CorrectiveMaintenanceRecord[]>(
-        `/machines/${machineId}/corrective-maintenance/history`,
-      ),
+    queryKey: ["print-cm-record", machineId, historicalRecordId ?? "current"],
+    queryFn: async () => historicalRecordId
+      ? apiRequest<CorrectiveMaintenanceRecord[]>(`/machines/${machineId}/corrective-maintenance/history`)
+      : [await apiRequest<CorrectiveMaintenanceRecord>(`/machines/${machineId}/corrective-maintenance`)],
   });
   const record = historicalRecordId
     ? data.find((item) => item.id === historicalRecordId)
-    : data[data.length - 1];
+    : data[0];
   // A corrective-maintenance record is one official print page. Records are
   // chained by the API as they fill, so this template never paginates one
   // record into a second physical page.

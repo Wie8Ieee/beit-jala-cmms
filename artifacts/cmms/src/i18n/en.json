@@ -175,7 +175,12 @@
     },
     "empty": "No requests found.",
     "loading": "Loading requests...",
-    "open": "Open"
+    "open": "Open",
+    "closedLog": "Closed Requests Log",
+    "archive": "Archive Requests",
+    "archivedTitle": "Maintenance Requests Archive",
+    "backToRequests": "Back to requests",
+    "back": "Back"
   },
   "users": {
     "title": "User Management",

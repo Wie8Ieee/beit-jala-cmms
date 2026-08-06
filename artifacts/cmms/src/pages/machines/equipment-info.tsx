@@ -313,13 +313,13 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
                 <FormField control={form.control} name="purchasedFromName" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-semibold">Purchased From (Company Name)</FormLabel>
-                    <FormControl><Input {...field} readOnly={!canEdit} className="bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm" /></FormControl>
+                    <FormControl><Textarea {...field} rows={2} readOnly={!canEdit} className="min-h-16 resize-y bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm" /></FormControl>
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="purchasedFromAddress" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-semibold">Address / Contact</FormLabel>
-                    <FormControl><Input {...field} readOnly={!canEdit} className="bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm" /></FormControl>
+                    <FormControl><Textarea {...field} rows={3} readOnly={!canEdit} className="min-h-20 resize-y bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm" /></FormControl>
                   </FormItem>
                 )} />
               </div>
@@ -332,13 +332,13 @@ export default function EquipmentInformationForm({ params }: { params: { id: str
                 <FormField control={form.control} name="manufacturingCompanyName" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-semibold">Manufacturing Company Name</FormLabel>
-                    <FormControl><Input {...field} readOnly={!canEdit} className="bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm" /></FormControl>
+                    <FormControl><Textarea {...field} rows={2} readOnly={!canEdit} className="min-h-16 resize-y bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm" /></FormControl>
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="manufacturingCompanyAddress" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-semibold">Address / Country</FormLabel>
-                    <FormControl><Input {...field} readOnly={!canEdit} className="bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm" /></FormControl>
+                    <FormControl><Textarea {...field} rows={3} readOnly={!canEdit} className="min-h-20 resize-y bg-transparent border-t-0 border-x-0 border-b border-black/20 dark:border-white/20 rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary font-mono text-sm" /></FormControl>
                   </FormItem>
                 )} />
               </div>

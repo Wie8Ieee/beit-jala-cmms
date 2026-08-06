@@ -5,8 +5,9 @@ import {
   correctiveMaintenanceRecordsTable,
   maintenanceRequestsTable,
   machinesTable,
+  auditLogsTable,
 } from "@workspace/db";
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, ne } from "drizzle-orm";
 import { parseIdParam, requireAnyPermission, requireAuth, requirePermission } from "../lib/auth.js";
 
 const router = Router({ mergeParams: true });
@@ -20,6 +21,8 @@ function parseStaff(value: string) {
   }
 }
 
+const CORRECTIVE_RECORD_CAPACITY = 3;
+
 function parseRepairTimeSlots(value: string) {
   try {
     const parsed = JSON.parse(value) as Array<{ date?: string; from?: string; to?: string }>;
@@ -27,6 +30,152 @@ function parseRepairTimeSlots(value: string) {
   } catch {
     return [];
   }
+}
+
+function repairMonth(value: string) {
+  const dates = parseRepairTimeSlots(value)
+    .map((slot) => slot.date)
+    .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+    .sort();
+  return dates[0]?.slice(0, 7) ?? null;
+}
+
+async function createRecordForMonth(
+  machineId: number,
+  previous: typeof correctiveMaintenanceRecordsTable.$inferSelect,
+  month: string,
+  status: string = "active",
+) {
+  const [latest] = await db.select({ sequenceNumber: correctiveMaintenanceRecordsTable.sequenceNumber })
+    .from(correctiveMaintenanceRecordsTable)
+    .where(eq(correctiveMaintenanceRecordsTable.machineId, machineId))
+    .orderBy(desc(correctiveMaintenanceRecordsTable.sequenceNumber))
+    .limit(1);
+  const [created] = await db.insert(correctiveMaintenanceRecordsTable).values({
+    machineId,
+    sequenceNumber: (latest?.sequenceNumber ?? 0) + 1,
+    previousRecordId: previous.id,
+    documentNumber: previous.documentNumber,
+    executionDate: `${month}-01`,
+    pageCount: previous.pageCount,
+    machineName: previous.machineName,
+    machineNumber: previous.machineNumber,
+    machineLocation: previous.machineLocation,
+    startupDate: previous.startupDate,
+    maxRows: CORRECTIVE_RECORD_CAPACITY,
+    status,
+  }).returning();
+  return created!;
+}
+
+/**
+ * Older manual entries were archived only when a printed page reached three
+ * rows. Split any such mixed pages before returning history, so a printed
+ * record never contains repair dates from two calendar months.
+ */
+async function separateMixedMonthRecords(machineId: number) {
+  const records = await db.select().from(correctiveMaintenanceRecordsTable)
+    .where(eq(correctiveMaintenanceRecordsTable.machineId, machineId))
+    .orderBy(asc(correctiveMaintenanceRecordsTable.sequenceNumber));
+
+  for (const record of records) {
+    const events = await db.select().from(correctiveMaintenanceEventsTable)
+      .where(eq(correctiveMaintenanceEventsTable.recordId, record.id))
+      .orderBy(asc(correctiveMaintenanceEventsTable.rowNumber));
+    const months = [...new Set(events.map((event) => repairMonth(event.repairTimeSlots)).filter((month): month is string => month !== null))];
+    if (months.length < 2) continue;
+
+    const retainedMonth = months[0]!;
+    for (const month of months.slice(1)) {
+      const movingEvents = events.filter((event) => repairMonth(event.repairTimeSlots) === month);
+      if (!movingEvents.length) continue;
+      let target: typeof correctiveMaintenanceRecordsTable.$inferSelect | undefined = (await db.select().from(correctiveMaintenanceRecordsTable)
+        .where(and(
+          eq(correctiveMaintenanceRecordsTable.machineId, machineId),
+          eq(correctiveMaintenanceRecordsTable.executionDate, `${month}-01`),
+          ne(correctiveMaintenanceRecordsTable.id, record.id),
+        ))
+        .orderBy(desc(correctiveMaintenanceRecordsTable.sequenceNumber))
+        .limit(1))[0];
+      if (target) {
+        const [targetCount] = await db.select({ total: count() }).from(correctiveMaintenanceEventsTable)
+          .where(eq(correctiveMaintenanceEventsTable.recordId, target.id));
+        if (Number(targetCount?.total ?? 0) + movingEvents.length > CORRECTIVE_RECORD_CAPACITY) target = undefined;
+      }
+      const destination = target ?? await createRecordForMonth(
+        machineId,
+        record,
+        month,
+        record.status === "active" && month === months[months.length - 1] ? "active" : "archived",
+      );
+      const [destinationCount] = await db.select({ total: count() }).from(correctiveMaintenanceEventsTable)
+        .where(eq(correctiveMaintenanceEventsTable.recordId, destination.id));
+      for (const [index, event] of movingEvents.entries()) {
+        await db.update(correctiveMaintenanceEventsTable)
+          .set({ recordId: destination.id, rowNumber: Number(destinationCount?.total ?? 0) + index + 1, updatedAt: new Date() })
+          .where(eq(correctiveMaintenanceEventsTable.id, event.id));
+      }
+      if (record.status === "active" && month === months[months.length - 1]) {
+        await db.update(correctiveMaintenanceRecordsTable)
+          .set({ status: "active", updatedAt: new Date() })
+          .where(eq(correctiveMaintenanceRecordsTable.id, destination.id));
+      }
+    }
+    await db.update(correctiveMaintenanceRecordsTable)
+      .set({ executionDate: `${retainedMonth}-01`, status: record.status === "active" ? "archived" : record.status, updatedAt: new Date() })
+      .where(eq(correctiveMaintenanceRecordsTable.id, record.id));
+  }
+}
+
+/** Pack partially filled pages from the same repair month into one record. */
+async function mergeSameMonthRecords(machineId: number) {
+  const records = await db.select().from(correctiveMaintenanceRecordsTable)
+    .where(eq(correctiveMaintenanceRecordsTable.machineId, machineId))
+    .orderBy(asc(correctiveMaintenanceRecordsTable.sequenceNumber));
+  const groups = new Map<string, Array<{ record: typeof correctiveMaintenanceRecordsTable.$inferSelect; events: Array<typeof correctiveMaintenanceEventsTable.$inferSelect> }>>();
+
+  for (const record of records) {
+    const events = await db.select().from(correctiveMaintenanceEventsTable)
+      .where(eq(correctiveMaintenanceEventsTable.recordId, record.id))
+      .orderBy(asc(correctiveMaintenanceEventsTable.rowNumber));
+    const months = [...new Set(events.map((event) => repairMonth(event.repairTimeSlots)).filter((month): month is string => month !== null))];
+    if (months.length !== 1) continue;
+    groups.set(months[0]!, [...(groups.get(months[0]!) ?? []), { record, events }]);
+  }
+
+  for (const [month, pages] of groups) {
+    const destination = pages[0];
+    if (!destination) continue;
+    const mergedEvents = [...destination.events];
+    let hasActivePage = destination.record.status === "active";
+    for (const page of pages.slice(1)) {
+      // A printed form has three rows. Keep a second page only when this
+      // month's combined entries genuinely cannot fit on the first one.
+      if (mergedEvents.length + page.events.length > CORRECTIVE_RECORD_CAPACITY) continue;
+      hasActivePage ||= page.record.status === "active";
+      for (const event of page.events) {
+        await db.update(correctiveMaintenanceEventsTable)
+          .set({ recordId: destination.record.id, rowNumber: mergedEvents.length + 1, updatedAt: new Date() })
+          .where(eq(correctiveMaintenanceEventsTable.id, event.id));
+        mergedEvents.push(event);
+      }
+      await db.delete(correctiveMaintenanceRecordsTable)
+        .where(eq(correctiveMaintenanceRecordsTable.id, page.record.id));
+    }
+    await db.update(correctiveMaintenanceRecordsTable)
+      .set({ executionDate: `${month}-01`, status: hasActivePage ? "active" : "archived", updatedAt: new Date() })
+      .where(eq(correctiveMaintenanceRecordsTable.id, destination.record.id));
+  }
+}
+
+/**
+ * Keep the archive in the same shape as the printed form: one repair month
+ * per record and no more than three maintenance rows on a page.  This also
+ * repairs pages that were created before month-based grouping was added.
+ */
+async function normalizeMonthlyRecordPages(machineId: number) {
+  await separateMixedMonthRecords(machineId);
+  await mergeSameMonthRecords(machineId);
 }
 
 function formatEvent(event: typeof correctiveMaintenanceEventsTable.$inferSelect) {
@@ -84,7 +233,7 @@ async function getRecordForNewEvent(machineId: number) {
     .orderBy(desc(correctiveMaintenanceRecordsTable.sequenceNumber)).limit(1);
   if (!active) return null;
   const [countResult] = await db.select({ total: count() }).from(correctiveMaintenanceEventsTable).where(eq(correctiveMaintenanceEventsTable.recordId, active.id));
-  if (Number(countResult?.total ?? 0) < active.maxRows) return active;
+  if (Number(countResult?.total ?? 0) < CORRECTIVE_RECORD_CAPACITY) return active;
   await db.update(correctiveMaintenanceRecordsTable).set({ status: "archived", updatedAt: new Date() }).where(eq(correctiveMaintenanceRecordsTable.id, active.id));
   const [machine] = await db.select().from(machinesTable).where(eq(machinesTable.id, machineId));
   if (!machine) return null;
@@ -101,7 +250,59 @@ async function getRecordForNewEvent(machineId: number) {
   return next!;
 }
 
-router.get("/", requireAuth, requirePermission("view_machines"), async (req, res, next) => {
+async function moveEventToRepairMonth(
+  record: typeof correctiveMaintenanceRecordsTable.$inferSelect,
+  event: typeof correctiveMaintenanceEventsTable.$inferSelect,
+  month: string,
+) {
+  if (record.executionDate?.slice(0, 7) === month) return;
+  const sourceEvents = await db.select().from(correctiveMaintenanceEventsTable)
+    .where(eq(correctiveMaintenanceEventsTable.recordId, record.id))
+    .orderBy(asc(correctiveMaintenanceEventsTable.rowNumber));
+
+  // A newly created, otherwise empty page simply becomes that month's page.
+  if (sourceEvents.length === 1) {
+    await db.update(correctiveMaintenanceRecordsTable)
+      .set({ executionDate: `${month}-01`, updatedAt: new Date() })
+      .where(eq(correctiveMaintenanceRecordsTable.id, record.id));
+    return;
+  }
+
+  const candidates = await db.select().from(correctiveMaintenanceRecordsTable)
+    .where(and(
+      eq(correctiveMaintenanceRecordsTable.machineId, record.machineId),
+      eq(correctiveMaintenanceRecordsTable.executionDate, `${month}-01`),
+    ))
+    .orderBy(desc(correctiveMaintenanceRecordsTable.sequenceNumber));
+  let destination: typeof correctiveMaintenanceRecordsTable.$inferSelect | undefined = candidates[0];
+  if (destination) {
+    const [countResult] = await db.select({ total: count() }).from(correctiveMaintenanceEventsTable)
+      .where(eq(correctiveMaintenanceEventsTable.recordId, destination.id));
+    if (Number(countResult?.total ?? 0) >= CORRECTIVE_RECORD_CAPACITY) destination = undefined;
+  }
+  destination ??= await createRecordForMonth(record.machineId, record, month);
+
+  const [destinationCount] = await db.select({ total: count() }).from(correctiveMaintenanceEventsTable)
+    .where(eq(correctiveMaintenanceEventsTable.recordId, destination.id));
+  await db.update(correctiveMaintenanceEventsTable)
+    .set({ recordId: destination.id, rowNumber: Number(destinationCount?.total ?? 0) + 1, updatedAt: new Date() })
+    .where(eq(correctiveMaintenanceEventsTable.id, event.id));
+
+  const remaining = sourceEvents.filter((sourceEvent) => sourceEvent.id !== event.id);
+  for (const [index, sourceEvent] of remaining.entries()) {
+    await db.update(correctiveMaintenanceEventsTable)
+      .set({ rowNumber: index + 1, updatedAt: new Date() })
+      .where(eq(correctiveMaintenanceEventsTable.id, sourceEvent.id));
+  }
+  await db.update(correctiveMaintenanceRecordsTable)
+    .set({ status: "archived", updatedAt: new Date() })
+    .where(eq(correctiveMaintenanceRecordsTable.id, record.id));
+  await db.update(correctiveMaintenanceRecordsTable)
+    .set({ status: "active", updatedAt: new Date() })
+    .where(eq(correctiveMaintenanceRecordsTable.id, destination.id));
+}
+
+router.get("/", requireAuth, requirePermission("view_corrective_maintenance"), async (req, res, next) => {
   try {
     const machineId = parseIdParam(req.params.id);
     const [machine] = await db.select().from(machinesTable).where(eq(machinesTable.id, machineId));
@@ -122,29 +323,12 @@ router.get("/", requireAuth, requirePermission("view_machines"), async (req, res
       return;
     }
 
-    // Every machine has an immediately usable CM form. The first visit creates
-    // its empty active log page; later maintenance rows are added to it by the
-    // normal workflow and historical pages remain untouched.
-    const [latest] = await db
-      .select()
-      .from(correctiveMaintenanceRecordsTable)
-      .where(eq(correctiveMaintenanceRecordsTable.machineId, machineId))
-      .orderBy(desc(correctiveMaintenanceRecordsTable.sequenceNumber))
-      .limit(1);
-    const [created] = await db
-      .insert(correctiveMaintenanceRecordsTable)
-      .values({
-        machineId,
-        sequenceNumber: (latest?.sequenceNumber ?? 0) + 1,
-        previousRecordId: latest?.id ?? null,
-        executionDate: new Date().toISOString().slice(0, 10),
-        machineName: machine.machineName,
-        machineNumber: machine.machineNumber,
-        machineLocation: machine.location,
-        startupDate: machine.pmStartDate,
-      })
-      .returning();
-    res.status(201).json(await recordDetail(created!));
+    // A corrective-maintenance record is opened only by accepting a linked
+    // maintenance request in Engineering. Visiting this page must never create
+    // an empty log for a machine with no approved request.
+    res.status(404).json({
+      error: "No corrective maintenance record exists until Engineering approves a maintenance request",
+    });
   } catch (err) {
     next(err);
   }
@@ -223,16 +407,45 @@ router.put("/events/:eventId", requireAuth, requireAnyPermission(["fill_correcti
       receiverName?: string | null;
       handoverDate?: string | null;
     };
+    const slots = body.repairTimeSlots?.slice(0, 5).map((slot) => ({ date: slot.date ?? "", from: slot.from ?? "", to: slot.to ?? "" }));
+    const slotMonths = [...new Set((slots ?? parseRepairTimeSlots(event.repairTimeSlots)).map((slot) => slot.date.slice(0, 7)).filter((month) => /^\d{4}-\d{2}$/.test(month)))];
+    if (slotMonths.length > 1) {
+      res.status(400).json({ error: "Repair dates in one record must belong to the same calendar month" });
+      return;
+    }
+    const requestReportNumber = event.requestId
+      ? event.requestReportNumber
+      : body.requestReportNumber?.trim() || null;
+    // The maintenance-request number is the permanent link between the CM
+    // row and its request. It must remain unique across CM rows as well.
+    if (requestReportNumber) {
+      const [sameNumberEvent] = await db
+        .select({ id: correctiveMaintenanceEventsTable.id })
+        .from(correctiveMaintenanceEventsTable)
+        .where(
+          and(
+            eq(correctiveMaintenanceEventsTable.requestReportNumber, requestReportNumber),
+            ne(correctiveMaintenanceEventsTable.id, event.id),
+          ),
+        )
+        .limit(1);
+      if (sameNumberEvent) {
+        res.status(409).json({
+          error: "يوجد صف صيانة علاجية آخر يحمل رقم طلب الصيانة نفسه. أدخل رقم طلب غير مكرر.",
+        });
+        return;
+      }
+    }
     const [updated] = await db
       .update(correctiveMaintenanceEventsTable)
       .set({
-        requestReportNumber: event.requestId ? event.requestReportNumber : body.requestReportNumber?.trim() || null,
+        requestReportNumber,
         requestDate: body.requestDate ?? event.requestDate,
         maintenanceType: body.maintenanceType ?? event.maintenanceType,
         preliminaryCheckResults: body.preliminaryCheckResults ?? event.preliminaryCheckResults,
         expectedWorkTimeFrom: body.expectedWorkTimeFrom ?? event.expectedWorkTimeFrom,
         expectedWorkTimeTo: body.expectedWorkTimeTo ?? event.expectedWorkTimeTo,
-        repairTimeSlots: body.repairTimeSlots ? JSON.stringify(body.repairTimeSlots.slice(0, 5).map((slot) => ({ date: slot.date ?? "", from: slot.from ?? "", to: slot.to ?? "" }))) : event.repairTimeSlots,
+        repairTimeSlots: slots ? JSON.stringify(slots) : event.repairTimeSlots,
         actionsTaken: body.actionsTaken ?? event.actionsTaken,
         technicianName: body.technicianName ?? event.technicianName,
         sparePartsUsed: body.sparePartsUsed ?? event.sparePartsUsed,
@@ -242,12 +455,16 @@ router.put("/events/:eventId", requireAuth, requireAnyPermission(["fill_correcti
       })
       .where(eq(correctiveMaintenanceEventsTable.id, event.id))
       .returning();
-    // The last (third) row must remain editable. Archive this page only after
-    // the user saves that row, then create the next blank page for later use.
-    const [eventCount] = await db.select({ total: count() }).from(correctiveMaintenanceEventsTable).where(eq(correctiveMaintenanceEventsTable.recordId, record.id));
-    if (Number(eventCount?.total ?? 0) >= record.maxRows) {
-      await getRecordForNewEvent(machineId);
-    }
+    // Pages are filled by row capacity, not by repair month. A page is
+    // archived only when its three rows are full, then the next added row
+    // starts a new active page.
+    await db.insert(auditLogsTable).values({
+      userId: req.session.userId ?? null,
+      action: "corrective_maintenance_record_updated",
+      entityType: "machine",
+      entityId: machineId,
+      details: { eventId: updated!.id, recordId: record.id, requestReportNumber: updated!.requestReportNumber },
+    });
     res.json(formatEvent(updated!));
   } catch (err) {
     next(err);
@@ -289,21 +506,32 @@ router.post("/events", requireAuth, requireAnyPermission(["fill_corrective_maint
         handoverDate: body.handoverDate ?? null,
       })
       .returning();
+    await db.insert(auditLogsTable).values({
+      userId: req.session.userId ?? null,
+      action: "corrective_maintenance_record_filled",
+      entityType: "machine",
+      entityId: machineId,
+      details: { eventId: created!.id, recordId: record.id, requestReportNumber: created!.requestReportNumber },
+    });
     res.status(201).json(formatEvent(created!));
   } catch (err) {
     next(err);
   }
 });
 
-router.get("/history", requireAuth, requirePermission("view_machines"), async (req, res, next) => {
+router.get("/history", requireAuth, requirePermission("view_corrective_maintenance"), async (req, res, next) => {
   try {
     const machineId = parseIdParam(req.params.id);
+    const includeActive = req.query.includeActive === "true";
     const records = await db
       .select()
       .from(correctiveMaintenanceRecordsTable)
       .where(eq(correctiveMaintenanceRecordsTable.machineId, machineId))
       .orderBy(asc(correctiveMaintenanceRecordsTable.sequenceNumber));
-    res.json(await Promise.all(records.map(recordDetail)));
+    const visibleRecords = includeActive
+      ? records
+      : records.filter((record) => record.status === "archived");
+    res.json(await Promise.all(visibleRecords.map(recordDetail)));
   } catch (err) {
     next(err);
   }

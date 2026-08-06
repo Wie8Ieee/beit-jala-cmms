@@ -7,6 +7,8 @@ import {
   monthlyPmPlanRowsTable,
   monthlyPmPlansTable,
   maintenanceRequestsTable,
+  pmInspectionsTable,
+  signatureFieldPermissionsTable,
   sparePartsTable,
 } from "@workspace/db";
 import { and, eq, isNull, count, sql } from "drizzle-orm";
@@ -91,7 +93,11 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
     })
     .from(monthlyPmPlanRowsTable)
     .innerJoin(monthlyPmPlansTable, eq(monthlyPmPlanRowsTable.planId, monthlyPmPlansTable.id))
-    .where(and(eq(monthlyPmPlansTable.year, currentYear), eq(monthlyPmPlansTable.month, currentMonth)));
+    .where(and(
+      eq(monthlyPmPlansTable.year, currentYear),
+      eq(monthlyPmPlansTable.month, currentMonth),
+      eq(monthlyPmPlanRowsTable.isManuallyRemoved, false),
+    ));
 
   const thisWeekPm = monthlyPmRows
     .filter((row) => {
@@ -128,6 +134,10 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
   );
   const overdueCount = overdueRows.length;
 
+  const [currentUser] = await db.select({ departmentName: departmentsTable.name })
+    .from(usersTable).leftJoin(departmentsTable, eq(usersTable.departmentId, departmentsTable.id))
+    .where(eq(usersTable.id, currentUserId!));
+  const isEngineeringMaintenance = currentUser?.departmentName?.toLowerCase().includes("engineering") || req.session.roleName === "Maintenance Supervisor";
   const requestNotifications = [
     ...(requestSummary.pendingQa
       ? [{ type: "qa", message: `${requestSummary.pendingQa} maintenance request(s) pending QA approval`, href: "/maintenance-requests/qa" }]
@@ -139,6 +149,29 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
       ? [{ type: "overdue_pm", message: `${overdueCount} PM activity(ies) overdue this month`, href: "/maintenance-plans" }]
       : []),
   ];
+
+  if (!isEngineeringMaintenance && currentUserId) {
+    const ownRequestNotifications = requestRows
+      .filter((row) => row.requestedByUserId === currentUserId)
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .slice(0, 8)
+      .map((row) => ({
+        type: "request_status",
+        message: `طلب الصيانة ${row.requestReportNumber.startsWith("PENDING-") ? "قيد المراجعة" : row.requestReportNumber} للماكينة ${row.machineName}: ${row.status}`,
+        href: `/maintenance-requests/${row.id}`,
+      }));
+    const [receiverPermission] = await db.select({ id: signatureFieldPermissionsTable.id })
+      .from(signatureFieldPermissionsTable)
+      .where(and(eq(signatureFieldPermissionsTable.documentType, "PM_RECORD"), eq(signatureFieldPermissionsTable.fieldName, "machine_receiver"), eq(signatureFieldPermissionsTable.eligibleUserId, currentUserId), isNull(signatureFieldPermissionsTable.revokedAt)));
+    const signatureNotifications = receiverPermission
+      ? (await db.select({ inspectionId: pmInspectionsTable.id, machineId: pmInspectionsTable.machineId, machineName: machinesTable.machineName, machineNumber: machinesTable.machineNumber, completedByUserId: pmInspectionsTable.completedByUserId })
+        .from(pmInspectionsTable).innerJoin(machinesTable, eq(pmInspectionsTable.machineId, machinesTable.id))
+        .where(isNull(pmInspectionsTable.machineReceiverSignature)))
+        .filter((inspection) => inspection.completedByUserId !== currentUserId)
+        .map((inspection) => ({ type: "signature", message: `مطلوب توقيع استلام الماكينة: ${inspection.machineName} (${inspection.machineNumber})`, href: `/machines/${inspection.machineId}/pm` }))
+      : [];
+    requestNotifications.splice(0, requestNotifications.length, ...signatureNotifications, ...ownRequestNotifications);
+  }
 
   const monthlyPmCompletionMachines = {
     completed: monthlyPmRows

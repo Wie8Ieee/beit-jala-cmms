@@ -85,8 +85,8 @@
   --popover-foreground: 222 47% 11%;
   --popover-border: 214 32% 91%;
 
-  /* Pharma Blue */
-  --primary: 221 83% 53%; 
+  /* Pharma navy */
+  --primary: 210 65% 25%;
   --primary-foreground: 210 40% 98%;
   
   --secondary: 214 32% 91%;
@@ -103,9 +103,9 @@
 
   --border: 214 32% 91%;
   --input: 214 32% 91%;
-  --ring: 221 83% 53%;
+  --ring: 210 65% 25%;
   
-  --chart-1: 221 83% 53%;
+  --chart-1: 210 65% 25%;
   --chart-2: 215 16% 47%;
   --chart-3: 142 71% 45%;
   --chart-4: 43 74% 66%;
@@ -114,11 +114,11 @@
   --sidebar: 222 47% 11%;
   --sidebar-foreground: 210 40% 98%;
   --sidebar-border: 217 33% 17%;
-  --sidebar-primary: 221 83% 53%;
+  --sidebar-primary: 210 65% 25%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 217 33% 17%;
   --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-ring: 221 83% 53%;
+  --sidebar-ring: 210 65% 25%;
 
   --app-font-sans: 'Inter', sans-serif;
   --app-font-mono: 'Roboto Mono', monospace;
@@ -193,6 +193,31 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+}
+
+/* Keep the permissions editor inside the viewport. Its normal in-app
+   scrollbar remains visible while the outer document no longer overflows. */
+html:has([data-permissions-page='true']),
+body:has([data-permissions-page='true']) {
+  height: 100%;
+  overflow: hidden !important;
+}
+
+[data-slot='sidebar-wrapper']:has([data-permissions-page='true']) {
+  height: 100svh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+main:has([data-permissions-page='true']) {
+  height: 100svh;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+main:has([data-permissions-page='true']) > div:last-child {
+  flex: 0 0 auto;
+  min-height: 0;
 }
 
 @layer utilities {
@@ -310,6 +335,19 @@
 .official-print-landscape {
   width: 297mm;
   min-height: 210mm;
+}
+
+/* The sidebar is fixed and its menu fits without a nested scroll area. Keep
+   the document scrollbar as the only visible vertical scrollbar. */
+[data-sidebar='content'] {
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+}
+
+[data-sidebar='content']::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* The PM orientation selector changes the preview as well as the actual
@@ -744,20 +782,17 @@
 }
 
 .official-print-mr-remarks {
-  position: relative;
-  min-height: 46px;
-  padding: 5px 10px 2px;
+  min-height: 0;
   border-top: 0.7px dotted #000;
-  border-bottom: 0.7px solid #000;
+  border-bottom: 1px solid #000;
 }
 
-.official-print-mr-remarks::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  left: 0;
-  top: 25px;
-  border-top: 0.7px dotted #000;
+.official-print-mr-remarks .official-print-mr-ruled-value:last-child {
+  border-bottom: 0;
+}
+
+.official-print-mr-ruled-prefix {
+  margin-left: 4px;
 }
 
 .official-print-mr-actions .official-print-mr-writing-line:last-child {
@@ -1116,7 +1151,10 @@
 
 .evaluation-signatures {
   width: 66%;
-  margin: 43mm 0 0 auto;
+  /* Keep the preparation and approval block with the report data whenever
+     the first sheet has space; it naturally flows to the next page only
+     when the report itself grows. */
+  margin: 7mm 0 0 auto;
   display: grid;
   gap: 10mm;
   text-align: right;
@@ -1736,13 +1774,9 @@
   border-right: 1px solid #000 !important;
 }
 
-/* Chromium occasionally drops the collapsed outer-right table border in its
-   print preview. Draw it independently so the header frame is always closed. */
 .official-print-annual-header-frame {
   position: relative;
   box-sizing: border-box;
-  padding-right: 1px;
-  border-right: 1px solid #000;
 }
 
 .official-print-annual-header-frame::after {
@@ -1980,6 +2014,12 @@
     margin: 0;
     padding: 0;
     box-shadow: none;
+  }
+
+  /* Keep the annual summary clear of the very top print edge. This needs an
+     explicit override because the common print rule removes page padding. */
+  .official-print-page.annual-maintenance-summary-print {
+    padding-top: 9mm !important;
   }
 
   .official-print-landscape {

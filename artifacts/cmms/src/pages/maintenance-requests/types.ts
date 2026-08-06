@@ -12,6 +12,7 @@ export type MaintenanceRequestSummary = {
   assignedTechnicianUserId: number | null;
   createdAt: string;
   updatedAt: string;
+  archivedAt: string | null;
 };
 
 export type PerformingStaff = {
@@ -45,6 +46,7 @@ export type CorrectiveMaintenanceEvent = {
   receiverSignature: string | null;
   handoverDate: string | null;
   engineeringSignature: string | null;
+  engineeringDate: string | null;
   completedAt: string | null;
 };
 
@@ -60,10 +62,12 @@ export type MaintenanceRequestDetail = {
   qaSupervisorSignature: string | null;
   qaReviewDate: string | null;
   qaReviewNotes: string | null;
+  qaReviewerName: string | null;
   engineeringDecision: string | null;
   assignedTechnicianUserId: number | null;
   engineeringSupervisorSignature: string | null;
   engineeringReviewNotes: string | null;
+  engineeringReviewerName: string | null;
   expectedWorkTimeFrom: string | null;
   expectedWorkTimeTo: string | null;
   correctiveEvent: CorrectiveMaintenanceEvent | null;

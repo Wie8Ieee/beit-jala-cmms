@@ -13,6 +13,7 @@ import LoginPage from './pages/login';
 import DashboardPage from './pages/dashboard';
 import ReportsPage from './pages/reports';
 import MonthlyMaintenanceEvaluationPage from './pages/reports/monthly-maintenance-evaluation';
+import CorrectiveMaintenanceTimePage from './pages/reports/corrective-maintenance-time';
 import MachinesList from './pages/machines/list';
 import MachineForm from './pages/machines/form';
 import MachineProfile from './pages/machines/profile';
@@ -40,6 +41,8 @@ import SparePartMovementFormPage from './pages/spare-parts/movement-form';
 import UsersList from './pages/admin/users/list';
 import UserForm from './pages/admin/users/form';
 import SignaturePermissionsPage from './pages/admin/signature-permissions';
+import DepartmentsPage from './pages/admin/departments';
+import RolesPage from './pages/admin/roles';
 import EquipmentInformationPrintPage from './pages/print/equipment-information';
 import MaintenanceRequestPrintPage from './pages/print/maintenance-request';
 import ClosedCorrectiveMaintenanceLogPrintPage from './pages/print/closed-corrective-maintenance-log';
@@ -139,7 +142,7 @@ function Router() {
 
       <Route path="/machines/:id/equipment-information">
         {(params) => (
-          <ProtectedRoute permission="view_machines">
+          <ProtectedRoute permission="view_equipment_information">
             <EquipmentInformationForm params={params} />
           </ProtectedRoute>
         )}
@@ -163,7 +166,7 @@ function Router() {
 
       <Route path="/machines/:id/pm/history">
         {(params) => (
-          <ProtectedRoute permission="view_machines">
+          <ProtectedRoute permission="view_pm_records">
             <PmHistoryPage params={params} />
           </ProtectedRoute>
         )}
@@ -178,13 +181,19 @@ function Router() {
       </Route>
 
       <Route path="/reports/monthly-maintenance-evaluation">
-        <ProtectedRoute permission="view_maintenance_plans">
+        <ProtectedRoute permission="view_reports">
           <MonthlyMaintenanceEvaluationPage />
         </ProtectedRoute>
       </Route>
 
+      <Route path="/reports/corrective-maintenance-time">
+        <ProtectedRoute permission="view_reports">
+          <CorrectiveMaintenanceTimePage />
+        </ProtectedRoute>
+      </Route>
+
       <Route path="/reports">
-        <ProtectedRoute>
+        <ProtectedRoute permission="view_reports">
           <ReportsPage />
         </ProtectedRoute>
       </Route>
@@ -225,7 +234,7 @@ function Router() {
 
       <Route path="/machines/:id/pm/history/:recordId">
         {(params) => (
-          <ProtectedRoute permission="view_machines">
+          <ProtectedRoute permission="view_pm_records">
             <PmRecordPage params={params} />
           </ProtectedRoute>
         )}
@@ -233,7 +242,7 @@ function Router() {
 
       <Route path="/machines/:id/pm">
         {(params) => (
-          <ProtectedRoute permission="view_machines">
+          <ProtectedRoute permission="view_pm_records">
             <PmRecordPage params={params} />
           </ProtectedRoute>
         )}
@@ -241,16 +250,16 @@ function Router() {
 
       <Route path="/machines/:id/corrective-maintenance">
         {(params) => (
-          <ProtectedRoute permission="view_machines">
+          <ProtectedRoute permission="view_corrective_maintenance">
             <MachineCorrectiveMaintenancePage params={params} />
           </ProtectedRoute>
         )}
       </Route>
       <Route path="/machines/:id/corrective-maintenance/history">
-        {(params) => <ProtectedRoute permission="view_machines"><CmHistoryPage params={params} /></ProtectedRoute>}
+        {(params) => <ProtectedRoute permission="view_corrective_maintenance"><CmHistoryPage params={params} /></ProtectedRoute>}
       </Route>
       <Route path="/machines/:id/corrective-maintenance/history/:recordId">
-        {(params) => <ProtectedRoute permission="view_machines"><MachineCorrectiveMaintenancePage params={params} /></ProtectedRoute>}
+        {(params) => <ProtectedRoute permission="view_corrective_maintenance"><MachineCorrectiveMaintenancePage params={params} /></ProtectedRoute>}
       </Route>
 
       <Route path="/maintenance-plans/annual/:year">
@@ -327,6 +336,12 @@ function Router() {
         </ProtectedRoute>
       </Route>
 
+      <Route path="/maintenance-requests/archive">
+        <ProtectedRoute permission="archive_maintenance_requests">
+          <MaintenanceRequestsListPage scope="archived" />
+        </ProtectedRoute>
+      </Route>
+
       <Route path="/maintenance-requests/:id/external-maintenance">
         {(params) => <ProtectedRoute><ExternalMaintenanceRequestPage params={params} /></ProtectedRoute>}
       </Route>
@@ -394,6 +409,18 @@ function Router() {
       <Route path="/admin/signature-permissions">
         <ProtectedRoute permission="manage_signatures">
           <SignaturePermissionsPage />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/admin/departments">
+        <ProtectedRoute permission="manage_users">
+          <DepartmentsPage />
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/admin/roles">
+        <ProtectedRoute permission="manage_users">
+          <RolesPage />
         </ProtectedRoute>
       </Route>
 

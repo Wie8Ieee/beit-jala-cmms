@@ -12,4 +12,5 @@ export type ClosedCorrectiveMaintenanceLogRowSource = typeof ClosedCorrectiveMai
 export const ClosedCorrectiveMaintenanceLogRowSource = {
   automatic: 'automatic',
   manual: 'manual',
+  'corrective-record': 'corrective-record',
 } as const;

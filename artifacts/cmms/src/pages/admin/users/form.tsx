@@ -53,6 +53,7 @@ import { ArrowLeft, Loader2, Save, UserX, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SignaturePad } from "@/components/signature-pad";
 import { apiRequest } from "@/lib/api";
+import { useLang } from "@/contexts/LanguageContext";
 
 // Base schema for both create and edit
 const baseUserSchema = z.object({
@@ -78,6 +79,8 @@ type CreateUserValues = z.infer<typeof createUserSchema>;
 type EditUserValues = z.infer<typeof editUserSchema>;
 
 export default function UserForm({ params }: { params?: { id: string } }) {
+  const { isArabic } = useLang();
+  const tr = (english: string, arabic: string) => isArabic ? arabic : english;
   const isEditing = !!params?.id && params.id !== "new";
   const userId = isEditing ? parseInt(params.id as string, 10) : undefined;
   
@@ -111,7 +114,6 @@ export default function UserForm({ params }: { params?: { id: string } }) {
   // Selected permissions state for the edit form
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [signatureData, setSignatureData] = useState("");
-
   const formSchema = isEditing ? editUserSchema : createUserSchema;
   const form = useForm<any>({
     resolver: zodResolver(formSchema),
@@ -206,7 +208,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
   const savePermissions = () => {
     if (!userId) return;
     permissionsMutation.mutate(
-      { id: userId, data: { permissionNames: selectedPermissions } },
+      { id: userId, data: { permissionNames: [...new Set(selectedPermissions)] } },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(userId) });
@@ -255,7 +257,14 @@ export default function UserForm({ params }: { params?: { id: string } }) {
   const isPending = createMutation.isPending || updateMutation.isPending;
   const signatureMutation = useMutation({
     mutationFn: () => apiRequest(`/signatures/users/${userId}/profile`, { method: "PUT", body: JSON.stringify({ signatureData }) }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(userId!) }); toast({ title: "Signature saved", description: "The user's saved signature was updated." }); },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(userId!) }),
+        queryClient.invalidateQueries({ queryKey: ["signatures"] }),
+        queryClient.invalidateQueries({ queryKey: ["signature-profile"] }),
+      ]);
+      toast({ title: "Signature saved", description: "The user's saved signature was updated everywhere." });
+    },
     onError: (error) => toast({ variant: "destructive", title: "Signature failed", description: getErrorMessage(error, "Unable to save signature.") }),
   });
 
@@ -274,28 +283,115 @@ export default function UserForm({ params }: { params?: { id: string } }) {
     acc[category].push(perm);
     return acc;
   }, {} as Record<string, typeof allPermissions>) || {};
+  const maintenancePermissionLabels: Record<string, string> = {
+    submit_maintenance_request: "تعبئة وإرسال طلب صيانة",
+    review_department_requests: "اعتماد طلب الصيانة كمشرف القسم",
+    review_qa_requests: "الموافقة على طلب الصيانة من QA",
+    review_engineering_requests: "الموافقة على طلب الصيانة من الهندسة والصيانة",
+    fill_preliminary_findings: "تعبئة وتعديل نتائج الفحص الأولي ووقت العمل",
+    fill_corrective_maintenance: "تعبئة وتعديل الإجراءات المتخذة والملاحظات والقائمين بالعمل",
+    sign_assigned_fields: "التوقيع الإلكتروني في الحقول الممنوحة للحساب",
+    archive_maintenance_requests: "أرشفة طلبات الصيانة وإعادتها من الأرشيف",
+    set_maintenance_request_number_start: "تحديد رقم بدء تسلسل طلبات الصيانة",
+    edit_closed_corrective_maintenance_log: "تعديل سجل طلبات الصيانة العلاجية المغلقة",
+  };
+  const maintenancePermissions = (allPermissions ?? []).filter((permission) => permission.name in maintenancePermissionLabels);
+  const dashboardPermissionLabels: Record<string, string> = {
+    view_dashboard: "الدخول إلى لوحة المعلومات",
+    view_dashboard_notifications: "عرض التنبيهات",
+    view_dashboard_machines: "عرض إحصائيات الماكينات",
+    view_dashboard_users: "عرض إحصائيات المستخدمين",
+    view_dashboard_departments: "عرض إحصائيات الأقسام",
+    view_dashboard_preventive_maintenance: "عرض الصيانة الوقائية",
+    view_dashboard_maintenance_requests: "عرض طلبات الصيانة",
+    view_dashboard_corrective_maintenance: "عرض الصيانة العلاجية",
+    view_dashboard_spare_parts: "عرض تنبيهات قطع الغيار",
+  };
+  const dashboardPermissions = (allPermissions ?? []).filter((permission) => permission.name in dashboardPermissionLabels);
+  const categoryLabels: Record<string, string> = {
+    general: "عام",
+    users: "المستخدمون",
+    machines: "الماكينات",
+    equipment: "معلومات المعدات",
+    pm: "الصيانة الوقائية",
+    maintenance: "الصيانة",
+    monthly: "جدول الصيانة الوقائية الشهري",
+    spare: "قطع الغيار",
+    signatures: "التوقيعات",
+    reports: "التقارير",
+    header: "رؤوس النماذج",
+    machine: "الماكينات",
+    delete: "الحذف والأرشفة",
+    technician: "الفنيون",
+    forms: "النماذج والطباعة",
+  };
+  const generalPermissionLabels: Record<string, string> = {
+    view_reports: "عرض التقارير",
+    manage_users: "إدارة المستخدمين",
+    view_machines: "عرض الماكينات",
+    create_machine: "إضافة ماكينة",
+    edit_machine: "تعديل الماكينات",
+    soft_delete_machine: "أرشفة الماكينات واستعادتها",
+    view_equipment_information: "عرض معلومات المعدات",
+    view_machine_maintenance_history: "عرض سجل صيانة الماكينة",
+    edit_equipment_information: "تعديل معلومات المعدات",
+    manage_pm_checklist: "إدارة نقاط فحص الصيانة الوقائية",
+    fill_pm_record: "تعبئة سجل الصيانة الوقائية",
+    view_pm_records: "عرض سجلات الصيانة الوقائية",
+    view_maintenance_plans: "عرض خطط الصيانة",
+    edit_maintenance_plans: "تعديل خطط الصيانة",
+    edit_monthly_pm_plan_rows: "تعديل جدول الصيانة الوقائية الشهري",
+    delete_monthly_pm_plan_rows: "حذف صفوف من جدول الصيانة الوقائية الشهري",
+    assign_technician: "تعيين فني الصيانة",
+    view_spare_parts: "عرض قطع الغيار",
+    manage_spare_parts: "إدارة قطع الغيار",
+    record_spare_part_usage: "تسجيل استخدام قطع الغيار",
+    adjust_spare_parts: "تسوية كميات قطع الغيار",
+    edit_header: "تعديل رؤوس النماذج",
+    print_forms: "طباعة النماذج",
+    manage_signatures: "إدارة التوقيعات",
+  };
+  const pmPermissionLabels: Record<string, string> = {
+    manage_pm_checklist: tr("Manage PM checklist points", "إدارة نقاط فحص الصيانة الوقائية"),
+    fill_pm_record: tr("Add preventive-maintenance inspections", "إضافة فحوصات الصيانة الوقائية"),
+    edit_pm_inspection: tr("Edit preventive-maintenance inspections", "تعديل فحوصات الصيانة الوقائية"),
+    delete_pm_inspection: tr("Delete preventive-maintenance inspections", "حذف فحوصات الصيانة الوقائية"),
+    view_pm_records: tr("View preventive-maintenance records", "عرض سجلات الصيانة الوقائية"),
+  };
+  const pmPermissions = (allPermissions ?? []).filter((permission) => permission.name in pmPermissionLabels);
+  const featuredPermissionNames = new Set([
+    ...Object.keys(dashboardPermissionLabels),
+    ...Object.keys(maintenancePermissionLabels),
+    "view_audit_logs",
+    ...Object.keys(pmPermissionLabels),
+  ]);
+  const fineGrainedPermissionGroups = Object.fromEntries(
+    Object.entries(groupedPermissions)
+      .map(([category, permissions]) => [category, permissions.filter((permission) => !featuredPermissionNames.has(permission.name))])
+      .filter(([, permissions]) => permissions.length > 0),
+  ) as typeof groupedPermissions;
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
+    <div data-permissions-page={isEditing ? "true" : undefined} dir={isArabic ? "rtl" : "ltr"} className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
           <Link href="/admin/users">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className={`h-4 w-4 ${isArabic ? "rotate-180" : ""}`} />
           </Link>
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight">
-              {isEditing ? `Edit User: ${userData?.username}` : "Create New User"}
+              {isEditing ? `${tr("Edit User", "تعديل المستخدم")}: ${userData?.username}` : tr("Create New User", "إنشاء مستخدم جديد")}
             </h1>
             {isEditing && userData && (
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${userData.isActive ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground'}`}>
-                {userData.isActive ? "Active" : "Inactive"}
+                {userData.isActive ? tr("Active", "نشط") : tr("Inactive", "غير نشط")}
               </span>
             )}
           </div>
           <p className="text-muted-foreground text-sm">
-            {isEditing ? "Update identity and system access." : "Provision a new account for the CMMS."}
+            {isEditing ? tr("Update identity and system access.", "تحديث بيانات المستخدم وصلاحيات الدخول.") : tr("Provision a new account for the CMMS.", "إنشاء حساب جديد في النظام.")}
           </p>
         </div>
 
@@ -304,25 +400,25 @@ export default function UserForm({ params }: { params?: { id: string } }) {
             <AlertDialogTrigger asChild>
               <Button variant={userData.isActive ? "destructive" : "secondary"}>
                 <UserX className="mr-2 h-4 w-4" />
-                {userData.isActive ? "Deactivate" : "Reactivate"}
+                {userData.isActive ? tr("Deactivate", "تعطيل الحساب") : tr("Reactivate", "إعادة تفعيل الحساب")}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogTitle>{tr("Are you sure?", "هل أنت متأكد؟")}</AlertDialogTitle>
                 <AlertDialogDescription>
                   {userData.isActive 
-                    ? "This will prevent the user from logging in. Their existing records will remain." 
-                    : "This will restore the user's ability to log in with their previous permissions."}
+                    ? tr("This will prevent the user from logging in. Their existing records will remain.", "سيتم منع المستخدم من تسجيل الدخول مع الاحتفاظ بسجلاته الحالية.")
+                    : tr("This will restore the user's ability to log in with their previous permissions.", "سيتمكن المستخدم من تسجيل الدخول بصلاحياته السابقة.")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>{tr("Cancel", "إلغاء")}</AlertDialogCancel>
                 <AlertDialogAction 
                   onClick={handleDeactivate}
                   className={userData.isActive ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
                 >
-                  {deactivateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirm"}
+                  {deactivateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : tr("Confirm", "تأكيد")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -336,8 +432,8 @@ export default function UserForm({ params }: { params?: { id: string } }) {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Profile Details</CardTitle>
-                  <CardDescription>Identity and contact information</CardDescription>
+                  <CardTitle>{tr("Profile Details", "بيانات الحساب")}</CardTitle>
+                  <CardDescription>{tr("Identity and contact information", "بيانات الهوية والتواصل")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {!isEditing && (
@@ -346,7 +442,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
                       name="username"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Username <span className="text-destructive">*</span></FormLabel>
+                          <FormLabel>{tr("Username", "اسم المستخدم")} <span className="text-destructive">*</span></FormLabel>
                           <FormControl>
                             <Input placeholder="jsmith" {...field} />
                           </FormControl>
@@ -361,7 +457,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
                     name="fullName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Full Name</FormLabel>
+                        <FormLabel>{tr("Full Name", "الاسم الكامل")}</FormLabel>
                         <FormControl>
                           <Input placeholder="John Smith" {...field} />
                         </FormControl>
@@ -371,7 +467,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
                   />
 
                   <FormField control={form.control} name="employeeNumber" render={({ field }) => (
-                    <FormItem><FormLabel>Employee Number <span className="text-destructive">*</span></FormLabel><FormControl><Input placeholder="EMP-0001" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>{tr("Employee Number", "رقم الموظف")} <span className="text-destructive">*</span></FormLabel><FormControl><Input placeholder="EMP-0001" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
 
                   <FormField
@@ -379,7 +475,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email Address</FormLabel>
+                        <FormLabel>{tr("Email Address", "البريد الإلكتروني")}</FormLabel>
                         <FormControl>
                           <Input type="email" placeholder="john@example.com" {...field} />
                         </FormControl>
@@ -388,21 +484,21 @@ export default function UserForm({ params }: { params?: { id: string } }) {
                     )}
                   />
 
-                  {isEditing && <div className="space-y-3 rounded-md border p-3"><p className="text-sm font-medium leading-none">Saved drawn signature</p><SignaturePad value={signatureData} onChange={setSignatureData} /><Button type="button" variant="outline" onClick={() => signatureMutation.mutate()} disabled={!signatureData || signatureMutation.isPending}>Save / Replace Signature</Button></div>}
+                  {isEditing && <div className="space-y-3 rounded-md border p-3"><p className="text-sm font-medium leading-none">{tr("Saved drawn signature", "التوقيع المحفوظ")}</p><SignaturePad value={signatureData} onChange={setSignatureData} /><Button type="button" variant="outline" onClick={() => signatureMutation.mutate()} disabled={!signatureData || signatureMutation.isPending}>{tr("Save / Replace Signature", "حفظ / استبدال التوقيع")}</Button></div>}
 
                   <FormField
                     control={form.control}
                     name="roleId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Primary Role <span className="text-destructive">*</span></FormLabel>
+                        <FormLabel>{tr("Primary Role", "الدور الأساسي")} <span className="text-destructive">*</span></FormLabel>
                         <Select
                           onValueChange={(val) => field.onChange(parseInt(val, 10))}
                           value={field.value?.toString()}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a role" />
+                              <SelectValue placeholder={tr("Select a role", "اختر الدور")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -423,18 +519,18 @@ export default function UserForm({ params }: { params?: { id: string } }) {
                     name="departmentId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Department</FormLabel>
+                        <FormLabel>{tr("Department", "القسم")}</FormLabel>
                         <Select
                           onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val, 10))}
                           value={field.value?.toString() || "none"}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a department" />
+                              <SelectValue placeholder={tr("Select a department", "اختر القسم")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="none">None (Global)</SelectItem>
+                            <SelectItem value="none">{tr("None (Global)", "بدون قسم (عام)")}</SelectItem>
                             {departments?.map((dept) => (
                               <SelectItem key={dept.id} value={dept.id.toString()}>
                                 {dept.name}
@@ -452,9 +548,9 @@ export default function UserForm({ params }: { params?: { id: string } }) {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{isEditing ? "Reset Password" : "Password"} {(!isEditing) && <span className="text-destructive">*</span>}</FormLabel>
+                        <FormLabel>{isEditing ? tr("Reset Password", "إعادة تعيين كلمة المرور") : tr("Password", "كلمة المرور")} {(!isEditing) && <span className="text-destructive">*</span>}</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder={isEditing ? "Leave blank to keep current" : "Minimum 4 characters"} {...field} />
+                          <Input type="password" placeholder={isEditing ? tr("Leave blank to keep current", "اتركها فارغة للإبقاء على الحالية") : tr("Minimum 4 characters", "4 أحرف على الأقل")} {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -463,7 +559,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
 
                   <Button type="submit" className="w-full" disabled={isPending}>
                     {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    {isEditing ? "Update Profile" : "Create User"}
+                    {isEditing ? tr("Update Profile", "تحديث البيانات") : tr("Create User", "إنشاء المستخدم")}
                   </Button>
                 </CardContent>
               </Card>
@@ -473,31 +569,72 @@ export default function UserForm({ params }: { params?: { id: string } }) {
 
         {isEditing && (
           <div className="lg:col-span-2 space-y-6">
-            <Card className="h-full flex flex-col">
+            <div className="sticky top-2 z-20 flex justify-end rounded-lg border bg-background/95 p-3 shadow-sm backdrop-blur">
+              <Button onClick={savePermissions} disabled={permissionsMutation.isPending}>
+                {permissionsMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {tr("Save Permissions", "حفظ الصلاحيات")}
+              </Button>
+            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>صلاحيات لوحة المعلومات</CardTitle>
+                <CardDescription>حدّد الوحدات التي تظهر لهذا المستخدم في الداشبورد.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 md:grid-cols-2">
+                {dashboardPermissions.map((permission) => (
+                  <label key={permission.id} htmlFor={`dashboard-perm-${permission.id}`} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                    <Checkbox id={`dashboard-perm-${permission.id}`} checked={selectedPermissions.includes(permission.name)} onCheckedChange={() => togglePermission(permission.name)} />
+                    <span className="text-sm font-medium">{dashboardPermissionLabels[permission.name]}</span>
+                  </label>
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>صلاحيات طلبات الصيانة</CardTitle>
+                <CardDescription>اختَر الصلاحيات المطلوبة لهذا الحساب ثم اضغط حفظ الصلاحيات.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 md:grid-cols-2">
+                {maintenancePermissions.map((permission) => (
+                  <label key={permission.id} htmlFor={`maintenance-perm-${permission.id}`} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                    <Checkbox id={`maintenance-perm-${permission.id}`} checked={selectedPermissions.includes(permission.name)} onCheckedChange={() => togglePermission(permission.name)} />
+                    <span className="text-sm font-medium">{maintenancePermissionLabels[permission.name]}</span>
+                  </label>
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>{tr("Preventive Maintenance Permissions", "صلاحيات الصيانة الوقائية")}</CardTitle>
+                <CardDescription>{tr("Control inspection creation, editing, deletion, and viewing.", "التحكم في إضافة الفحوصات وتعديلها وحذفها وعرضها.")}</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-3 md:grid-cols-2">
+                {pmPermissions.map((permission) => (
+                  <label key={permission.id} htmlFor={`pm-perm-${permission.id}`} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+                    <Checkbox id={`pm-perm-${permission.id}`} checked={selectedPermissions.includes(permission.name)} onCheckedChange={() => togglePermission(permission.name)} />
+                    <span className="text-sm font-medium">{pmPermissionLabels[permission.name]}</span>
+                  </label>
+                ))}
+              </CardContent>
+            </Card>
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-4">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <ShieldCheck className="h-5 w-5 text-primary" />
-                    Fine-grained Permissions
+                    {tr("Fine-grained Permissions", "الصلاحيات التفصيلية")}
                   </CardTitle>
                   <CardDescription>
-                    Base role is {userData?.roleName}. Toggle extra permissions below.
+                    {tr(`Base role is ${userData?.roleName}. Toggle extra permissions below.`, `الدور الأساسي هو ${userData?.roleName}. حدّد الصلاحيات الإضافية أدناه.`)}
                   </CardDescription>
                 </div>
-                <Button 
-                  onClick={savePermissions} 
-                  variant="outline" 
-                  disabled={permissionsMutation.isPending}
-                >
-                  {permissionsMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Permissions"}
-                </Button>
               </CardHeader>
-              <CardContent className="flex-1">
+              <CardContent>
                 <div className="grid sm:grid-cols-2 gap-x-8 gap-y-8">
-                  {Object.entries(groupedPermissions).map(([category, perms]) => (
+                  {Object.entries(fineGrainedPermissionGroups).map(([category, perms]) => (
                     <div key={category} className="space-y-3">
                       <h4 className="font-semibold text-sm tracking-wide uppercase text-muted-foreground border-b pb-1">
-                        {category}
+                        {isArabic ? categoryLabels[category] ?? category.replaceAll("_", " ") : category.replaceAll("_", " ")}
                       </h4>
                       <div className="space-y-2.5">
                         {perms.map(perm => (
@@ -513,10 +650,10 @@ export default function UserForm({ params }: { params?: { id: string } }) {
                                 htmlFor={`perm-${perm.id}`}
                                 className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                               >
-                                {perm.name}
+                                {isArabic ? generalPermissionLabels[perm.name] ?? perm.name.replaceAll("_", " ") : perm.name.replaceAll("_", " ")}
                               </label>
                               <p className="text-xs text-muted-foreground">
-                                {perm.description}
+                                {!isArabic && perm.description}
                               </p>
                             </div>
                           </div>

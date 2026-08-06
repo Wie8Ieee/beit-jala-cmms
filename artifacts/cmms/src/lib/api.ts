@@ -13,5 +13,9 @@ export async function apiRequest<T>(url: string, init: RequestInit = {}): Promis
     throw new Error(data?.error ?? `Request failed with ${response.status}`);
   }
 
+  // DELETE endpoints commonly return 204 (No Content). Trying to parse that
+  // empty response as JSON makes a successful delete look like a failure.
+  if (response.status === 204) return undefined as T;
+
   return (await response.json()) as T;
 }

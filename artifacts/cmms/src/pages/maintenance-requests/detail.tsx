@@ -8,75 +8,78 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Check, Play, Save, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Archive, ArchiveRestore, ArrowLeft, Check, Play, Save, Wrench, X } from "lucide-react";
 import type { ExternalMaintenanceRequestDetail, MaintenanceRequestDetail, PerformingStaff } from "./types";
 import { OfficialFormHeader } from "@/components/official-form-header";
 import { ElectronicSignatureField } from "@/components/electronic-signature-field";
+import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/error-message";
 
-type TechnicianOption = {
-  id: number;
-  username: string;
-  fullName: string | null;
-};
+type TechnicianOption = { id: number; username: string; fullName: string | null };
+type HandoverSignature = { fieldName: string; userId: number };
 
 export default function MaintenanceRequestDetailPage({ params }: { params: { id: string } }) {
   const requestId = Number(params.id);
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const { user, hasPermission } = useAuth();
-  const [qaNotes, setQaNotes] = useState("");
-  const [qaSignature, setQaSignature] = useState("");
-  const [engineeringNotes, setEngineeringNotes] = useState("");
-  const [engineeringReviewSignature, setEngineeringReviewSignature] = useState("");
-  const [assignedTechnicianId, setAssignedTechnicianId] = useState("");
+  const { toast } = useToast();
+  const [assignedTechnicianUserId, setAssignedTechnicianUserId] = useState("");
+  const [departmentSection, setDepartmentSection] = useState("");
+  const [priority, setPriority] = useState("normal");
+  const [requestDate, setRequestDate] = useState("");
+  const [failureDescription, setFailureDescription] = useState("");
+  const [reportingPersonName, setReportingPersonName] = useState("");
+  const [departmentSupervisorName, setDepartmentSupervisorName] = useState("");
   const [workFrom, setWorkFrom] = useState("");
   const [workTo, setWorkTo] = useState("");
   const [preliminary, setPreliminary] = useState("");
   const [technicianName, setTechnicianName] = useState("");
-  const [techSignature, setTechSignature] = useState("");
-  const [sectionSupervisorSignature, setSectionSupervisorSignature] = useState("");
   const [actionsTaken, setActionsTaken] = useState("");
   const [remarks, setRemarks] = useState("");
   const [staff, setStaff] = useState<PerformingStaff[]>([{ no: "1", name: "", signature: "" }]);
   const [receiverName, setReceiverName] = useState("");
-  const [receiverSignature, setReceiverSignature] = useState("");
   const [handoverDate, setHandoverDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [engineeringSignature, setEngineeringSignature] = useState("");
+  const [engineeringDate, setEngineeringDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [externalDialogOpen, setExternalDialogOpen] = useState(false);
+  const [manualRequestReportNumber, setManualRequestReportNumber] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["maintenance-request", requestId],
     queryFn: () => apiRequest<MaintenanceRequestDetail>(`/maintenance-requests/${requestId}`),
   });
-
   const { data: technicians = [] } = useQuery({
     queryKey: ["maintenance-request-technicians"],
     queryFn: () => apiRequest<TechnicianOption[]>("/maintenance-requests/technicians"),
     enabled: hasPermission("review_engineering_requests"),
   });
+  const { data: handoverSignatures = [] } = useQuery({
+    queryKey: ["signatures", "MAINTENANCE_REQUEST", requestId],
+    queryFn: () => apiRequest<HandoverSignature[]>(`/signatures?documentType=MAINTENANCE_REQUEST&documentId=${requestId}`),
+  });
 
   useEffect(() => {
     if (!data) return;
     const event = data.correctiveEvent;
-    setQaNotes(data.qaReviewNotes ?? "");
-    setQaSignature(data.qaSupervisorSignature ?? "");
-    setEngineeringNotes(data.engineeringReviewNotes ?? "");
-    setEngineeringReviewSignature(data.engineeringSupervisorSignature ?? "");
-    setAssignedTechnicianId(data.assignedTechnicianUserId ? String(data.assignedTechnicianUserId) : "");
+    setAssignedTechnicianUserId(data.assignedTechnicianUserId ? String(data.assignedTechnicianUserId) : "");
+    setDepartmentSection(data.request.departmentSection ?? "");
+    setPriority(data.request.priority);
+    setRequestDate(data.request.requestDate);
+    setFailureDescription(data.request.failureDescription);
+    setReportingPersonName(data.reportingPersonName ?? "");
+    setDepartmentSupervisorName(data.departmentSupervisorName ?? "");
     setWorkFrom(event?.expectedWorkTimeFrom ?? data.expectedWorkTimeFrom ?? "");
     setWorkTo(event?.expectedWorkTimeTo ?? data.expectedWorkTimeTo ?? "");
     setPreliminary(event?.preliminaryCheckResults ?? "");
     setTechnicianName(event?.technicianName ?? "");
-    setTechSignature(event?.maintenanceTechnicianSignature ?? "");
-    setSectionSupervisorSignature(event?.concernedSectionSupervisorSignature ?? "");
     setActionsTaken(event?.actionsTaken ?? "");
     setRemarks(event?.remarksRecommendations ?? "");
     setStaff(event?.performingStaff.length ? event.performingStaff : [{ no: "1", name: "", signature: "" }]);
     setReceiverName(event?.receiverName ?? "");
-    setReceiverSignature(event?.receiverSignature ?? "");
     setHandoverDate(event?.handoverDate ?? new Date().toISOString().slice(0, 10));
-    setEngineeringSignature(event?.engineeringSignature ?? "");
+    setEngineeringDate(event?.engineeringDate ?? new Date().toISOString().slice(0, 10));
   }, [data]);
 
   function refresh() {
@@ -88,9 +91,20 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
     mutationFn: (decision: "approve" | "reject") =>
       apiRequest<MaintenanceRequestDetail>(`/maintenance-requests/${requestId}/qa-review`, {
         method: "PATCH",
-        body: JSON.stringify({ decision, notes: qaNotes, signature: qaSignature }),
+        body: JSON.stringify({ decision }),
       }),
-    onSuccess: refresh,
+    onSuccess: () => { refresh(); toast({ title: "تمت مراجعة QA" }); },
+    onError: (error) => toast({ variant: "destructive", title: "تعذرت مراجعة QA", description: getErrorMessage(error, "تعذرت مراجعة الطلب.") }),
+  });
+
+  const supervisorReview = useMutation({
+    mutationFn: (decision: "approve" | "reject") =>
+      apiRequest<MaintenanceRequestDetail>(`/maintenance-requests/${requestId}/supervisor-review`, {
+        method: "PATCH",
+        body: JSON.stringify({ decision }),
+      }),
+    onSuccess: () => { refresh(); toast({ title: "تم اعتماد مشرف القسم وإرسال الطلب إلى QA" }); },
+    onError: (error) => toast({ variant: "destructive", title: "تعذر اعتماد مشرف القسم", description: getErrorMessage(error, "تعذرت مراجعة الطلب.") }),
   });
 
   const engineeringReview = useMutation({
@@ -99,14 +113,12 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
         method: "PATCH",
         body: JSON.stringify({
           decision,
-          notes: engineeringNotes,
-          signature: engineeringReviewSignature,
-          assignedTechnicianUserId: assignedTechnicianId ? Number(assignedTechnicianId) : null,
-          expectedWorkTimeFrom: workFrom,
-          expectedWorkTimeTo: workTo,
+          assignedTechnicianUserId: assignedTechnicianUserId ? Number(assignedTechnicianUserId) : null,
+          requestReportNumber: decision === "accept" ? manualRequestReportNumber.trim() || undefined : undefined,
         }),
       }),
-    onSuccess: refresh,
+    onSuccess: () => { refresh(); toast({ title: "تمت مراجعة الهندسة" }); },
+    onError: (error) => toast({ variant: "destructive", title: "تعذرت مراجعة الهندسة", description: getErrorMessage(error, "تعذرت مراجعة الطلب.") }),
   });
 
   const startWork = useMutation({
@@ -114,7 +126,8 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
       apiRequest<MaintenanceRequestDetail>(`/maintenance-requests/${requestId}/start-work`, {
         method: "PATCH",
       }),
-    onSuccess: refresh,
+    onSuccess: () => { refresh(); toast({ title: "بدأ العمل" }); },
+    onError: (error) => toast({ variant: "destructive", title: "تعذر بدء العمل", description: getErrorMessage(error, "تعذر بدء أعمال الصيانة.") }),
   });
 
   const savePreliminary = useMutation({
@@ -126,11 +139,10 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
           expectedWorkTimeFrom: workFrom,
           expectedWorkTimeTo: workTo,
           technicianName,
-          maintenanceTechnicianSignature: techSignature,
-          concernedSectionSupervisorSignature: sectionSupervisorSignature,
         }),
       }),
-    onSuccess: refresh,
+    onSuccess: () => { refresh(); toast({ title: "تم الحفظ", description: "تم حفظ نتائج الكشف الأولي." }); },
+    onError: (error) => toast({ variant: "destructive", title: "تعذر الحفظ", description: getErrorMessage(error, "تعذر حفظ نتائج الكشف الأولي.") }),
   });
 
   const saveActions = useMutation({
@@ -143,7 +155,8 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
           performingStaff: staff,
         }),
       }),
-    onSuccess: refresh,
+    onSuccess: () => { refresh(); toast({ title: "تم الحفظ", description: "تم حفظ الإجراءات المتخذة." }); },
+    onError: (error) => toast({ variant: "destructive", title: "تعذر الحفظ", description: getErrorMessage(error, "تعذر حفظ الإجراءات المتخذة.") }),
   });
 
   const saveHandover = useMutation({
@@ -152,33 +165,79 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
         method: "PATCH",
         body: JSON.stringify({
           receiverName,
-          receiverSignature,
           handoverDate,
-          engineeringSignature,
         }),
       }),
-    onSuccess: refresh,
+    onSuccess: () => { refresh(); toast({ title: "تم التسليم", description: "تم حفظ التسليم وإغلاق الطلب." }); },
+    onError: (error) => toast({ variant: "destructive", title: "تعذر التسليم", description: getErrorMessage(error, "تعذر حفظ التسليم.") }),
+  });
+  const saveReceiverHandover = useMutation({
+    mutationFn: () => apiRequest<MaintenanceRequestDetail>(`/maintenance-requests/${requestId}/receiver-handover`, {
+      method: "PATCH",
+      body: JSON.stringify({ receiverName, handoverDate }),
+    }),
+    onSuccess: () => { refresh(); toast({ title: "تم الحفظ", description: "تم حفظ اسم وتاريخ مستلم الماكينة." }); },
+    onError: (error) => toast({ variant: "destructive", title: "تعذر الحفظ", description: getErrorMessage(error, "تعذر حفظ بيانات المستلم.") }),
+  });
+  const saveEngineeringHandover = useMutation({
+    mutationFn: () => apiRequest<MaintenanceRequestDetail>(`/maintenance-requests/${requestId}/engineering-handover`, {
+      method: "PATCH",
+      body: JSON.stringify({ engineeringDate }),
+    }),
+    onSuccess: () => { refresh(); toast({ title: "تم الحفظ", description: "تم حفظ تاريخ اعتماد الهندسة." }); },
+    onError: (error) => toast({ variant: "destructive", title: "تعذر الحفظ", description: getErrorMessage(error, "تعذر حفظ تاريخ الهندسة.") }),
+  });
+
+  const saveRequestDetails = useMutation({
+    mutationFn: () =>
+      apiRequest<MaintenanceRequestDetail>(`/maintenance-requests/${requestId}/request-details`, {
+        method: "PATCH",
+        body: JSON.stringify({ departmentSection, priority, requestDate, failureDescription, reportingPersonName, departmentSupervisorName }),
+      }),
+    onSuccess: () => { refresh(); toast({ title: "تم الحفظ", description: "تم تحديث تفاصيل طلب الصيانة." }); },
+    onError: (error) => toast({ variant: "destructive", title: "تعذر الحفظ", description: getErrorMessage(error, "تعذر تحديث تفاصيل الطلب.") }),
   });
 
   const convertToExternalMaintenance = useMutation({
-    mutationFn: () => apiRequest<ExternalMaintenanceRequestDetail>(`/maintenance-requests/${requestId}/external-maintenance`, { method: "POST" }),
+    mutationFn: () => apiRequest<ExternalMaintenanceRequestDetail>(`/maintenance-requests/${requestId}/external-maintenance`, {
+      method: "POST",
+    }),
     onSuccess: () => {
       refresh();
+      setExternalDialogOpen(false);
       setLocation(`/maintenance-requests/${requestId}/external-maintenance`);
     },
+  });
+  const setArchived = useMutation({
+    mutationFn: (archive: boolean) => apiRequest<MaintenanceRequestDetail>(`/maintenance-requests/${requestId}/${archive ? "archive" : "restore"}`, { method: "PATCH" }),
+    onSuccess: (_result, archive) => {
+      refresh();
+      toast({ title: archive ? "تمت أرشفة الطلب" : "تمت إعادة الطلب من الأرشيف" });
+      setLocation(archive ? "/maintenance-requests/archive" : "/maintenance-requests");
+    },
+    onError: (error) => toast({ variant: "destructive", title: "تعذر تحديث الأرشيف", description: getErrorMessage(error, "تعذر تحديث حالة الأرشفة.") }),
   });
 
   if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading request...</div>;
 
   const request = data.request;
-  const isAssignedTechnician = data.assignedTechnicianUserId === user?.id;
-  const canManageCorrectiveWork = hasPermission("fill_corrective_maintenance") && (isAssignedTechnician || user?.roleName === "Admin");
+  const canManageCorrectiveWork = hasPermission("fill_corrective_maintenance") || hasPermission("manage_maintenance_requests");
+  const canFillPreliminary = canManageCorrectiveWork || hasPermission("fill_preliminary_findings");
+  const canSupervisorReview = hasPermission("review_department_requests") && request.status === "Submitted";
   const canQaReview = hasPermission("review_qa_requests") && request.status === "Pending QA Approval";
   const canEngineeringReview = hasPermission("review_engineering_requests") && request.status === "QA Approved";
   const canStartWork = canManageCorrectiveWork && request.status === "Accepted";
-  const canTechnicianWork = canManageCorrectiveWork && (request.status === "Accepted" || request.status === "In Progress");
+  // Approval is required only to receive the request initially. Once engineering
+  // accepted it (or a corrective event was already created), later status changes
+  // must not lock previously entered maintenance data.
+  const correctiveRequestReceived = data.engineeringDecision === "Accepted" || Boolean(data.correctiveEvent);
+  const canPreliminaryWork = canFillPreliminary && correctiveRequestReceived;
+  const canTechnicianWork = canManageCorrectiveWork && correctiveRequestReceived;
   const canHandover = canManageCorrectiveWork && (request.status === "In Progress" || request.status === "Completed");
+  const receiverSignedByCurrentUser = handoverSignatures.some((signature) => signature.fieldName === "receiver" && signature.userId === user?.id);
+  const engineeringSignedByCurrentUser = handoverSignatures.some((signature) => signature.fieldName === "engineering_final" && signature.userId === user?.id);
   const canConvertToExternal = hasPermission("manage_maintenance_requests") && !["Closed", "Rejected", "QA Rejected", "External Maintenance"].includes(request.status);
+  const canEditRequestDetails = data.requestedByUserId === user?.id && ["Submitted", "Pending Department Supervisor Approval", "Pending QA Approval", "QA Rejected"].includes(request.status);
 
   function submitPreliminary(event: FormEvent) {
     event.preventDefault();
@@ -195,6 +254,11 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
     saveHandover.mutate();
   }
 
+  function submitRequestDetails(event: FormEvent) {
+    event.preventDefault();
+    saveRequestDetails.mutate();
+  }
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center gap-3">
@@ -208,15 +272,29 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
           <p className="text-muted-foreground">Maintenance Request and Corrective Maintenance Report (FORM-10-0975)</p>
         </div>
         <Badge variant="secondary">{request.status}</Badge>
+        {hasPermission("archive_maintenance_requests") && (
+          <Button type="button" variant="outline" onClick={() => setArchived.mutate(!request.archivedAt)} disabled={setArchived.isPending}>
+            {request.archivedAt ? <ArchiveRestore className="mr-2 h-4 w-4" /> : <Archive className="mr-2 h-4 w-4" />}
+            {request.archivedAt ? "إعادة من الأرشيف" : "أرشفة الطلب"}
+          </Button>
+        )}
         <Button asChild variant="outline">
           <Link href={`/print/maintenance-request/${requestId}`}>Official Print</Link>
         </Button>
         {request.status === "External Maintenance" ? (
           <Button asChild variant="outline"><Link href={`/maintenance-requests/${requestId}/external-maintenance`}>External Maintenance Request</Link></Button>
         ) : canConvertToExternal ? (
-          <Button variant="outline" onClick={() => convertToExternalMaintenance.mutate()} disabled={convertToExternalMaintenance.isPending}>Convert to External Maintenance</Button>
+          <Button variant="outline" onClick={() => setExternalDialogOpen(true)}>Convert to External Maintenance</Button>
         ) : null}
       </div>
+
+      <Dialog open={externalDialogOpen} onOpenChange={setExternalDialogOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader><DialogTitle>تحويل إلى صيانة خارجية</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">سيُستخدم رقم طلب الصيانة نفسه: <span dir="ltr">{request.requestReportNumber}</span></p>
+          <Button type="button" onClick={() => convertToExternalMaintenance.mutate()} disabled={convertToExternalMaintenance.isPending}><Save className="ml-2 h-4 w-4" />حفظ وتحويل الطلب</Button>
+        </DialogContent>
+      </Dialog>
 
       <div className="rounded-md border bg-white p-6 text-black shadow-sm print:border-none print:p-0 print:shadow-none">
         <OfficialFormHeader
@@ -228,6 +306,7 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
         />
       </div>
 
+      <form onSubmit={submitRequestDetails}>
       <Card>
         <CardHeader>
           <CardTitle>Section 1 - Request</CardTitle>
@@ -235,33 +314,48 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label>Request / Report Number</Label>
-            <Button asChild variant="outline" className="justify-start font-mono">
-              <Link href={`/machines/${request.machineId}/corrective-maintenance`}>{request.requestReportNumber}</Link>
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" className="justify-start font-mono">
+                <Link href={`/maintenance-requests/${requestId}`}>{request.requestReportNumber}</Link>
+              </Button>
+              {data.correctiveEvent && (
+                <Button asChild variant="outline">
+                  <Link href={`/machines/${request.machineId}/corrective-maintenance/history/${data.correctiveEvent.recordId}`}><Wrench className="mr-2 h-4 w-4" />سجل الصيانة العلاجية</Link>
+                </Button>
+              )}
+            </div>
           </div>
-          <div><Label>Department / Section</Label><Input value={request.departmentSection ?? ""} readOnly /></div>
-          <div><Label>Priority</Label><Input value={request.priority} readOnly /></div>
+          <div><Label>Department / Section</Label><Input value={departmentSection} readOnly={!canEditRequestDetails} onChange={(event) => setDepartmentSection(event.target.value)} /></div>
+          <div><Label>Priority</Label><Input value={priority} readOnly={!canEditRequestDetails} onChange={(event) => setPriority(event.target.value)} /></div>
           <div><Label>Machine name / machine number</Label><Input value={`${request.machineName} / ${request.machineNumber}`} readOnly /></div>
-          <div><Label>Date</Label><Input value={request.requestDate} readOnly /></div>
-          <div className="md:col-span-2"><Label>Failure description</Label><Textarea value={request.failureDescription} readOnly /></div>
-          <div><Label>Person reporting failure</Label><Input value={data.reportingPersonName ?? ""} readOnly /></div>
+          <div><Label>Date</Label><Input type="date" value={requestDate} readOnly={!canEditRequestDetails} onChange={(event) => setRequestDate(event.target.value)} /></div>
+          <div className="md:col-span-2"><Label>Failure description</Label><Textarea value={failureDescription} readOnly={!canEditRequestDetails} onChange={(event) => setFailureDescription(event.target.value)} /></div>
+          <div><Label>Person reporting failure</Label><Input value={reportingPersonName} readOnly={!canEditRequestDetails} onChange={(event) => setReportingPersonName(event.target.value)} /></div>
           <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="reporting_person" label="Person Reporting Failure Electronic Signature" />
-          <div><Label>Department supervisor</Label><Input value={data.departmentSupervisorName ?? ""} readOnly /></div>
-          <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="department_supervisor" label="Department Supervisor Electronic Signature" />
-          <div><Label>QA decision</Label><Input value={data.qaDecision ?? ""} readOnly /></div>
-          <div><Label>QA review date</Label><Input value={data.qaReviewDate ?? ""} readOnly /></div>
-          <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="qa_supervisor_approval" label="QA Supervisor Electronic Signature" />
-          <div><Label>QA notes</Label><Input value={data.qaReviewNotes ?? ""} readOnly /></div>
+          <div><Label>Department supervisor</Label><Input value={departmentSupervisorName} readOnly={!canEditRequestDetails} onChange={(event) => setDepartmentSupervisorName(event.target.value)} /></div>
+          {data.qaDecision === "Approved" && <div className="rounded-md border border-green-700/30 bg-green-50 px-3 py-2 text-sm font-medium text-green-800">تم قبول الطلب من قبل QA</div>}
+          {data.qaReviewerName && <div><Label>اعتماد QA بواسطة</Label><Input value={data.qaReviewerName} readOnly /></div>}
+          {data.engineeringReviewerName && <div><Label>اعتماد الهندسة بواسطة</Label><Input value={data.engineeringReviewerName} readOnly /></div>}
+          {canEditRequestDetails && <Button type="submit" className="w-fit" disabled={saveRequestDetails.isPending}><Save className="mr-2 h-4 w-4" />Save Request Details</Button>}
         </CardContent>
       </Card>
+      </form>
+
+      {canSupervisorReview && (
+        <Card>
+          <CardHeader><CardTitle>اعتماد مشرف القسم المعني</CardTitle></CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <p className="md:col-span-2 text-sm text-muted-foreground">عند الاعتماد يُسجّل توقيع حسابك تلقائياً ويُرسل الطلب إلى QA.</p>
+            <div className="flex gap-2"><Button type="button" onClick={() => supervisorReview.mutate("approve")}>اعتماد وإرسال إلى QA</Button><Button type="button" variant="destructive" onClick={() => supervisorReview.mutate("reject")}>رفض</Button></div>
+          </CardContent>
+        </Card>
+      )}
 
       {canQaReview && (
         <Card>
           <CardHeader><CardTitle>QA Supervisor Review</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <div><Label>QA Supervisor name</Label><Input value={qaSignature} onChange={(event) => setQaSignature(event.target.value)} /></div>
-            <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="qa_supervisor_approval" label="QA Supervisor Electronic Signature" />
-            <div><Label>Review notes</Label><Input value={qaNotes} onChange={(event) => setQaNotes(event.target.value)} /></div>
+            <p className="md:col-span-2 text-sm text-muted-foreground">عند قبول QA يُسجّل توقيع حسابك تلقائياً ويُرسل الطلب إلى الهندسة.</p>
             <div className="flex gap-2">
               <Button type="button" onClick={() => qaReview.mutate("approve")}><Check className="mr-2 h-4 w-4" />Approve</Button>
               <Button type="button" variant="destructive" onClick={() => qaReview.mutate("reject")}><X className="mr-2 h-4 w-4" />Reject</Button>
@@ -270,44 +364,14 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
         </Card>
       )}
 
-      <Card>
-        <CardHeader><CardTitle>Section 2 - Engineering Review</CardTitle></CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div><Label>Engineering decision</Label><Input value={data.engineeringDecision ?? ""} readOnly /></div>
-          <div><Label>Assigned technician</Label><Input value={technicians.find((item) => item.id === data.assignedTechnicianUserId)?.fullName ?? ""} readOnly /></div>
-          <div><Label>Expected work time From</Label><Input value={data.expectedWorkTimeFrom ?? ""} readOnly /></div>
-          <div><Label>Expected work time To</Label><Input value={data.expectedWorkTimeTo ?? ""} readOnly /></div>
-          <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="engineering_supervisor_approval" label="Engineering Supervisor Electronic Signature" />
-          <div><Label>Engineering notes</Label><Input value={data.engineeringReviewNotes ?? ""} readOnly /></div>
-        </CardContent>
-      </Card>
-
       {canEngineeringReview && (
         <Card>
-          <CardHeader><CardTitle>Engineering / Maintenance Supervisor Action</CardTitle></CardHeader>
+          <CardHeader><CardTitle>مراجعة قسم الهندسة والصيانة</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <div><Label>Assigned technician</Label>
-              <Select value={assignedTechnicianId || "unassigned"} onValueChange={(value) => setAssignedTechnicianId(value === "unassigned" ? "" : value)}>
-                <SelectTrigger><SelectValue placeholder="Select technician" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {technicians.map((technician) => (
-                    <SelectItem key={technician.id} value={String(technician.id)}>
-                      {technician.fullName || technician.username}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Engineering supervisor name</Label><Input value={engineeringReviewSignature} onChange={(event) => setEngineeringReviewSignature(event.target.value)} /></div>
-            <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="engineering_supervisor_approval" label="Engineering Supervisor Electronic Signature" />
-            <div><Label>Expected work time From</Label><Input value={workFrom} onChange={(event) => setWorkFrom(event.target.value)} /></div>
-            <div><Label>Expected work time To</Label><Input value={workTo} onChange={(event) => setWorkTo(event.target.value)} /></div>
-            <div className="md:col-span-2"><Label>Review notes</Label><Input value={engineeringNotes} onChange={(event) => setEngineeringNotes(event.target.value)} /></div>
-            <div className="flex gap-2">
-              <Button type="button" onClick={() => engineeringReview.mutate("accept")}><Check className="mr-2 h-4 w-4" />Accept</Button>
-              <Button type="button" variant="destructive" onClick={() => engineeringReview.mutate("reject")}><X className="mr-2 h-4 w-4" />Reject</Button>
-            </div>
+            <div><Label>فني الصيانة المكلّف</Label><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={assignedTechnicianUserId} onChange={(event) => setAssignedTechnicianUserId(event.target.value)}><option value="">غير محدد</option>{technicians.map((technician) => <option key={technician.id} value={technician.id}>{technician.fullName || technician.username}</option>)}</select></div>
+            <div><Label>رقم طلب الصيانة (يدوي عند عدم ضبط التسلسل)</Label><Input dir="ltr" value={manualRequestReportNumber} onChange={(event) => setManualRequestReportNumber(event.target.value)} placeholder="مثال: 401/08/2026" /></div>
+            <p className="md:col-span-2 text-sm text-muted-foreground">إذا ضبط مشرف الصيانة رقم بدء التسلسل، يُنشأ الرقم تلقائياً. خلاف ذلك أدخل الرقم يدوياً بالصيغة 1/MM/YYYY عند القبول.</p>
+            <div className="flex gap-2"><Button type="button" onClick={() => engineeringReview.mutate("accept")}>قبول وإرسال للصيانة</Button><Button type="button" variant="destructive" onClick={() => engineeringReview.mutate("reject")}>رفض</Button></div>
           </CardContent>
         </Card>
       )}
@@ -321,35 +385,34 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
 
       <form onSubmit={submitPreliminary}>
         <Card>
-          <CardHeader><CardTitle>Section 3 - Preliminary Findings</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Section 2 - Preliminary Findings</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2"><Label>Preliminary check results</Label><Textarea value={preliminary} readOnly={!canTechnicianWork} onChange={(event) => setPreliminary(event.target.value)} /></div>
-            <div><Label>Expected work time From</Label><Input value={workFrom} readOnly={!canTechnicianWork} onChange={(event) => setWorkFrom(event.target.value)} /></div>
-            <div><Label>Expected work time To</Label><Input value={workTo} readOnly={!canTechnicianWork} onChange={(event) => setWorkTo(event.target.value)} /></div>
-            <div><Label>Maintenance technician name</Label><Input value={technicianName} readOnly={!canTechnicianWork} onChange={(event) => setTechnicianName(event.target.value)} /></div>
-            <div><Label>Maintenance technician name/signature reference</Label><Input value={techSignature} readOnly={!canTechnicianWork} onChange={(event) => setTechSignature(event.target.value)} /></div>
-            <div><Label>Concerned section supervisor name/reference</Label><Input value={sectionSupervisorSignature} readOnly={!canTechnicianWork} onChange={(event) => setSectionSupervisorSignature(event.target.value)} /></div>
-            <ElectronicSignatureField documentType="CORRECTIVE_MAINTENANCE" documentId={requestId} fieldName="maintenance_technician" label="Maintenance Technician Electronic Signature" />
-            <ElectronicSignatureField documentType="CORRECTIVE_MAINTENANCE" documentId={requestId} fieldName="concerned_section_supervisor" label="Concerned Section Supervisor Electronic Signature" />
-            {canTechnicianWork && <Button type="submit" className="w-fit"><Save className="mr-2 h-4 w-4" />Save Preliminary Findings</Button>}
+            {!canPreliminaryWork && <p className="md:col-span-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{canFillPreliminary ? "بانتظار اعتماد مشرف القسم وQA وقبول الهندسة قبل فتح نتائج الفحص الأولي للفني." : "لا تملك صلاحية تعبئة نتائج الفحص الأولي. يضيفها المسؤول من صلاحيات طلبات الصيانة."}</p>}
+            <div className="md:col-span-2"><Label>Preliminary check results</Label><Textarea value={preliminary} readOnly={!canPreliminaryWork} onChange={(event) => setPreliminary(event.target.value)} /></div>
+            <div><Label>Expected work time From</Label><Input value={workFrom} readOnly={!canPreliminaryWork} onChange={(event) => setWorkFrom(event.target.value)} /></div>
+            <div><Label>Expected work time To</Label><Input value={workTo} readOnly={!canPreliminaryWork} onChange={(event) => setWorkTo(event.target.value)} /></div>
+            <div><Label>Maintenance technician name</Label><Input value={technicianName} readOnly={!canPreliminaryWork} onChange={(event) => setTechnicianName(event.target.value)} /></div>
+            <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="maintenance_technician" label="التوقيع الإلكتروني لفني الصيانة" />
+            {data.correctiveEvent?.preliminaryCheckResults && <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="concerned_section_supervisor" label="التوقيع الإلكتروني لمشرف القسم المعني" />}
+            {canPreliminaryWork && <Button type="submit" className="w-fit"><Save className="mr-2 h-4 w-4" />Save Preliminary Findings</Button>}
           </CardContent>
         </Card>
       </form>
 
       <form onSubmit={submitActions}>
         <Card>
-          <CardHeader><CardTitle>Section 4 - Actions Taken</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Section 3 - Actions Taken</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
+            {!canTechnicianWork && <p className="md:col-span-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{canManageCorrectiveWork ? "بانتظار اعتماد مشرف القسم وQA وقبول الهندسة قبل فتح الإجراءات المتخذة للفني." : "لا تملك صلاحية تعبئة الإجراءات المتخذة. يضيفها المسؤول من صلاحيات طلبات الصيانة."}</p>}
             <div className="md:col-span-2"><Label>Actions taken</Label><Textarea value={actionsTaken} readOnly={!canTechnicianWork} onChange={(event) => setActionsTaken(event.target.value)} /></div>
             <div className="md:col-span-2"><Label>Remarks and recommendations</Label><Textarea value={remarks} readOnly={!canTechnicianWork} onChange={(event) => setRemarks(event.target.value)} /></div>
             <div className="md:col-span-2 space-y-2">
-              <Label>Performing staff - No. / Name / Signature reference</Label>
+              <Label>Performing staff - No. / Name / Electronic signature</Label>
               {staff.map((item, index) => (
-                <div key={index} className="grid gap-2 md:grid-cols-[80px_1fr_1fr]">
+                <div key={index} className="grid gap-2 md:grid-cols-[80px_1fr]">
                   <Input value={item.no ?? ""} readOnly={!canTechnicianWork} onChange={(event) => setStaff((current) => current.map((row, i) => i === index ? { ...row, no: event.target.value } : row))} />
                   <Input value={item.name ?? ""} readOnly={!canTechnicianWork} onChange={(event) => setStaff((current) => current.map((row, i) => i === index ? { ...row, name: event.target.value } : row))} />
-                  <Input value={item.signature ?? ""} readOnly={!canTechnicianWork} onChange={(event) => setStaff((current) => current.map((row, i) => i === index ? { ...row, signature: event.target.value } : row))} />
-                  {index < 4 && <div className="md:col-span-3"><ElectronicSignatureField documentType="CORRECTIVE_MAINTENANCE" documentId={requestId} fieldName={`performing_staff_${index + 1}`} label={`Performing Staff ${index + 1} Electronic Signature`} /></div>}
+                  <div className="md:col-span-2"><ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName={`performing_staff_${index + 1}`} permissionFieldName="performing_staff" label={`التوقيع الإلكتروني للقائم بالعمل ${index + 1}`} /></div>
                 </div>
               ))}
               {canTechnicianWork && <Button type="button" variant="outline" onClick={() => setStaff((current) => [...current, { no: String(current.length + 1), name: "", signature: "" }])}>Add Staff Row</Button>}
@@ -363,12 +426,13 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
         <Card>
           <CardHeader><CardTitle>Section 4 - Hand-over Confirmation</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            <div><Label>Receiver name</Label><Input value={receiverName} readOnly={!canHandover} onChange={(event) => setReceiverName(event.target.value)} /></div>
-            <div><Label>Receiver signature reference</Label><Input value={receiverSignature} readOnly={!canHandover} onChange={(event) => setReceiverSignature(event.target.value)} /></div>
-            <div><Label>Handover date</Label><Input type="date" value={handoverDate} readOnly={!canHandover} onChange={(event) => setHandoverDate(event.target.value)} /></div>
-            <div><Label>Engineering final confirmation reference</Label><Input value={engineeringSignature} readOnly={!canHandover} onChange={(event) => setEngineeringSignature(event.target.value)} /></div>
-            <ElectronicSignatureField documentType="CORRECTIVE_MAINTENANCE" documentId={requestId} fieldName="receiver" label="Receiver Electronic Signature" />
-            <ElectronicSignatureField documentType="CORRECTIVE_MAINTENANCE" documentId={requestId} fieldName="engineering_final" label="Engineering Final Electronic Signature" />
+            <div><Label>Receiver name</Label><Input value={receiverName} readOnly={!receiverSignedByCurrentUser} onChange={(event) => setReceiverName(event.target.value)} /></div>
+            <div><Label>Receiver date</Label><Input type="date" value={handoverDate} readOnly={!receiverSignedByCurrentUser} onChange={(event) => setHandoverDate(event.target.value)} /></div>
+            <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="receiver" label="التوقيع الإلكتروني لمستلم الماكنة" />
+            <ElectronicSignatureField documentType="MAINTENANCE_REQUEST" documentId={requestId} fieldName="engineering_final" label="التوقيع الإلكتروني للهندسة" />
+            {receiverSignedByCurrentUser && <Button type="button" variant="outline" onClick={() => saveReceiverHandover.mutate()} disabled={saveReceiverHandover.isPending}>Save Receiver Details</Button>}
+            <div><Label>Engineering date</Label><Input type="date" value={engineeringDate} readOnly={!engineeringSignedByCurrentUser} onChange={(event) => setEngineeringDate(event.target.value)} /></div>
+            {engineeringSignedByCurrentUser && <Button type="button" variant="outline" onClick={() => saveEngineeringHandover.mutate()} disabled={saveEngineeringHandover.isPending}>Save Engineering Date</Button>}
             {canHandover && <Button type="submit" className="w-fit"><Save className="mr-2 h-4 w-4" />Close Request</Button>}
           </CardContent>
         </Card>

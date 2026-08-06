@@ -4,6 +4,7 @@ import {
   type Request,
   type Response,
 } from "express";
+import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import {
   auditLogsTable,
@@ -20,17 +21,22 @@ import {
   maintenanceRequestsTable,
   maintenanceRequestStatusHistoryTable,
   monthlyMaintenanceEvaluationReportsTable,
+  monthlyPmPlanRowsTable,
+  monthlyPmPlansTable,
+  pmInspectionsTable,
   rolesTable,
   signatureFieldPermissionsTable,
+  signaturesTable,
   usersTable,
 } from "@workspace/db";
-import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, like } from "drizzle-orm";
 import { parseIdParam, requireAuth, requirePermission } from "../lib/auth.js";
 
 const router = Router();
 
 const STATUS = {
   SUBMITTED: "Submitted",
+  PENDING_SUPERVISOR: "Pending Department Supervisor Approval",
   PENDING_QA: "Pending QA Approval",
   QA_APPROVED: "QA Approved",
   QA_REJECTED: "QA Rejected",
@@ -43,6 +49,21 @@ const STATUS = {
 } as const;
 
 const CLOSED_CM_LOG_HEADER_ID = 0;
+const MAINTENANCE_REQUEST_NUMBERING_HEADER_ID = 0;
+
+async function getMaintenanceRequestNumberingStart() {
+  const [setting] = await db
+    .select({ documentNumber: formHeadersTable.documentNumber })
+    .from(formHeadersTable)
+    .where(
+      and(
+        eq(formHeadersTable.documentType, "MAINTENANCE_REQUEST_NUMBERING"),
+        eq(formHeadersTable.documentId, MAINTENANCE_REQUEST_NUMBERING_HEADER_ID),
+      ),
+    );
+  const value = setting?.documentNumber.trim() ?? "";
+  return /^\d+$/.test(value) ? Number(value) : null;
+}
 
 async function getClosedCorrectiveMaintenanceLogHeader() {
   const [existing] = await db
@@ -88,6 +109,97 @@ function firstParam(value: unknown) {
   return undefined;
 }
 
+type CorrectiveRepairTimeSlot = {
+  date?: unknown;
+  from?: unknown;
+  to?: unknown;
+  repairDate?: unknown;
+  repairTimeFrom?: unknown;
+  repairTimeTo?: unknown;
+};
+
+function parseCorrectiveRepairTimeSlots(value: unknown): CorrectiveRepairTimeSlot[] {
+  try {
+    const parsed: unknown = typeof value === "string" ? JSON.parse(value) : value;
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (slot): slot is CorrectiveRepairTimeSlot =>
+            Boolean(slot) && typeof slot === "object",
+        )
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function repairSlotText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+type ParsedRepairDate = {
+  year: number;
+  month: number;
+  iso: string;
+};
+
+function validRepairDate(year: number, month: number, day: number): ParsedRepairDate | null {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    !Number.isInteger(year) ||
+    year < 2000 ||
+    year > 2100 ||
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return {
+    year,
+    month,
+    iso: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+  };
+}
+
+// Repair dates can originate from native date inputs (YYYY-MM-DD) or older
+// records written in the printed DD/MM/YYYY format. Normalize both before
+// grouping the report by month.
+function parseRepairDate(value: unknown): ParsedRepairDate | null {
+  const text = repairSlotText(value);
+  const isoMatch = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})/.exec(text);
+  if (isoMatch) {
+    return validRepairDate(Number(isoMatch[1]), Number(isoMatch[2]), Number(isoMatch[3]));
+  }
+
+  const localizedMatch = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/.exec(text);
+  if (!localizedMatch) return null;
+
+  // The CMMS print forms use DD/MM/YYYY. Fall back to MM/DD/YYYY only when
+  // the first interpretation is not a valid calendar date.
+  return (
+    validRepairDate(Number(localizedMatch[3]), Number(localizedMatch[2]), Number(localizedMatch[1])) ??
+    validRepairDate(Number(localizedMatch[3]), Number(localizedMatch[1]), Number(localizedMatch[2]))
+  );
+}
+
+function repairTimeToMinutes(value: unknown): number | null {
+  const match = /^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i.exec(repairSlotText(value));
+  if (!match) return null;
+
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const meridiem = match[3]?.toUpperCase();
+  if (meridiem) {
+    if (hours < 1 || hours > 12) return null;
+    hours = (hours % 12) + (meridiem === "PM" ? 12 : 0);
+  } else if (hours < 0 || hours > 23) {
+    return null;
+  }
+  if (minutes < 0 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
 function parseStaff(value: string) {
   try {
     const parsed = JSON.parse(value) as unknown;
@@ -102,7 +214,12 @@ function formatRequestSummary(
 ) {
   return {
     id: row.id,
-    requestReportNumber: row.requestReportNumber,
+    // A temporary internal key keeps unapproved requests distinct without
+    // exposing an official maintenance-request number before Engineering
+    // accepts the request.
+    requestReportNumber: isPendingRequestNumber(row.requestReportNumber)
+      ? ""
+      : row.requestReportNumber,
     machineId: row.machineId,
     machineName: row.machineName,
     machineNumber: row.machineNumber,
@@ -114,6 +231,7 @@ function formatRequestSummary(
     assignedTechnicianUserId: row.assignedTechnicianUserId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    archivedAt: row.archivedAt ? row.archivedAt.toISOString() : null,
   };
 }
 
@@ -179,6 +297,14 @@ async function getRequestDetail(
       asc(maintenanceRequestStatusHistoryTable.createdAt),
       asc(maintenanceRequestStatusHistoryTable.id),
     );
+  const reviewerIds = [request.qaReviewedByUserId, request.engineeringReviewedByUserId].filter((id): id is number => id !== null);
+  const reviewers = reviewerIds.length
+    ? await db.select({ id: usersTable.id, fullName: usersTable.fullName, username: usersTable.username }).from(usersTable)
+    : [];
+  const reviewerName = (id: number | null) => {
+    const reviewer = reviewers.find((item) => item.id === id);
+    return reviewer ? (reviewer.fullName || reviewer.username) : null;
+  };
 
   return {
     request: formatRequestSummary(request),
@@ -192,10 +318,12 @@ async function getRequestDetail(
     qaSupervisorSignature: request.qaSupervisorSignature,
     qaReviewDate: request.qaReviewDate,
     qaReviewNotes: request.qaReviewNotes,
+    qaReviewerName: reviewerName(request.qaReviewedByUserId),
     engineeringDecision: request.engineeringDecision,
     assignedTechnicianUserId: request.assignedTechnicianUserId,
     engineeringSupervisorSignature: request.engineeringSupervisorSignature,
     engineeringReviewNotes: request.engineeringReviewNotes,
+    engineeringReviewerName: reviewerName(request.engineeringReviewedByUserId),
     expectedWorkTimeFrom: request.expectedWorkTimeFrom,
     expectedWorkTimeTo: request.expectedWorkTimeTo,
     correctiveEvent: formatEvent(event),
@@ -217,17 +345,25 @@ function ensureCanView(
   if (req.session.roleName === "Admin") return true;
   if (
     hasPermission(req, "manage_maintenance_requests") ||
+    hasPermission(req, "review_department_requests") ||
     hasPermission(req, "review_qa_requests") ||
     hasPermission(req, "review_engineering_requests")
   )
     return true;
   if (
-    hasPermission(req, "fill_corrective_maintenance") &&
+    canFillPreliminaryFindings(req) &&
     (request.status === STATUS.ACCEPTED ||
       request.status === STATUS.IN_PROGRESS ||
       request.status === STATUS.COMPLETED ||
-      request.status === STATUS.CLOSED) &&
-    request.assignedTechnicianUserId === req.session.userId
+      request.status === STATUS.CLOSED)
+  )
+    return true;
+  if (
+    canWorkOnCorrectiveMaintenance(req) &&
+    (request.status === STATUS.ACCEPTED ||
+      request.status === STATUS.IN_PROGRESS ||
+      request.status === STATUS.COMPLETED ||
+      request.status === STATUS.CLOSED)
   )
     return true;
   if (
@@ -238,17 +374,25 @@ function ensureCanView(
   return false;
 }
 
-function isAssignedTechnician(
-  req: Request,
-  request: typeof maintenanceRequestsTable.$inferSelect,
-) {
-  // Administrators can complete or close a corrective request when needed,
-  // while all other users remain limited to their assigned request.
-  return (
-    req.session.roleName === "Admin" ||
-    (!!request.assignedTechnicianUserId &&
-      request.assignedTechnicianUserId === req.session.userId)
-  );
+function canWorkOnCorrectiveMaintenance(req: Request) {
+  // The permission, rather than a display name for the role, controls access.
+  // This keeps the form usable when role names are localized or customized.
+  return hasPermission(req, "fill_corrective_maintenance") ||
+    hasPermission(req, "manage_maintenance_requests");
+}
+
+function canFillPreliminaryFindings(req: Request) {
+  return canWorkOnCorrectiveMaintenance(req) ||
+    hasPermission(req, "fill_preliminary_findings");
+}
+
+async function currentUserSignature(userId: number | undefined, fallback: string) {
+  if (!userId) return fallback;
+  const [user] = await db
+    .select({ fullName: usersTable.fullName, username: usersTable.username, signatureData: usersTable.signatureData })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+  return user?.signatureData || user?.fullName || user?.username || fallback;
 }
 
 async function hasAssignedSignatureAccess(
@@ -302,13 +446,39 @@ function formatExternalMaintenanceReceipt(
   };
 }
 
-async function nextRequestNumber() {
-  const year = new Date().getFullYear();
-  const [stats] = await db
-    .select({ total: count() })
-    .from(maintenanceRequestsTable);
-  const next = Number(stats?.total ?? 0) + 1;
-  return `MR-${year}-${String(next).padStart(4, "0")}`;
+function isPendingRequestNumber(value: string) {
+  return value.startsWith("PENDING-");
+}
+
+function pendingRequestNumber() {
+  return `PENDING-${randomUUID()}`;
+}
+
+function requestNumberDate(value: string) {
+  const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value);
+  if (!match) return new Date();
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+async function nextApprovedRequestNumber(requestDate: string) {
+  const date = requestNumberDate(requestDate);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const rows = await db
+    .select({ requestReportNumber: maintenanceRequestsTable.requestReportNumber })
+    .from(maintenanceRequestsTable)
+    .where(like(maintenanceRequestsTable.requestReportNumber, `%/${year}`));
+  const lastSequence = rows.reduce((highest, row) => {
+    const match = /^(\d+)\/\d{1,2}\/\d{4}$/.exec(row.requestReportNumber);
+    return match ? Math.max(highest, Number(match[1])) : highest;
+  }, 0);
+  // For a newly deployed system, use the last paper number entered by the
+  // maintenance supervisor. Once an app number exists, that number drives
+  // the sequence for the rest of the year.
+  const configuredStart = await getMaintenanceRequestNumberingStart();
+  const baseSequence = Math.max(lastSequence, configuredStart ?? 0);
+  if (baseSequence === 0 && configuredStart === null) return null;
+  return `${baseSequence + 1}/${String(month).padStart(2, "0")}/${year}`;
 }
 
 async function getMachine(machineId: number) {
@@ -392,8 +562,56 @@ async function getOrCreateCmRecord(
   return created!;
 }
 
-// Summary used by the Reports screen.  Request data is intentionally read from
-// the immutable maintenance-request rows, so historical reports remain stable.
+    // Read every corrective record, including archived Record History entries.
+    // Machine details are stored on the record itself so an archived/deleted machine
+    // does not make its historical repair time disappear from the report.
+router.get("/reports/corrective-maintenance-time", requireAuth, requirePermission("view_reports"), async (req, res, next) => {
+  try {
+    const today = new Date();
+    const requestedYear = Number(firstParam(req.query.year));
+    const requestedMonth = Number(firstParam(req.query.month));
+    const year = Number.isInteger(requestedYear) && requestedYear >= 2000 && requestedYear <= 2100 ? requestedYear : today.getFullYear();
+    const month = Number.isInteger(requestedMonth) && requestedMonth >= 1 && requestedMonth <= 12 ? requestedMonth : today.getMonth() + 1;
+    const eventRows = await db
+      .select({
+        machineId: correctiveMaintenanceRecordsTable.machineId,
+        machineName: correctiveMaintenanceRecordsTable.machineName,
+        machineNumber: correctiveMaintenanceRecordsTable.machineNumber,
+        repairTimeSlots: correctiveMaintenanceEventsTable.repairTimeSlots,
+      })
+      .from(correctiveMaintenanceEventsTable)
+      .innerJoin(correctiveMaintenanceRecordsTable, eq(correctiveMaintenanceEventsTable.recordId, correctiveMaintenanceRecordsTable.id));
+
+    const byMachine = new Map<number, { machineId: number; machineName: string; machineNumber: string; totalMinutes: number; intervals: Array<{ date: string; from: string; to: string; minutes: number }> }>();
+    for (const row of eventRows) {
+      const summary = byMachine.get(row.machineId) ?? { machineId: row.machineId, machineName: row.machineName, machineNumber: row.machineNumber, totalMinutes: 0, intervals: [] };
+      for (const slot of parseCorrectiveRepairTimeSlots(row.repairTimeSlots ?? "[]")) {
+        const repairDate = parseRepairDate(slot.date ?? slot.repairDate);
+        const from = repairSlotText(slot.from ?? slot.repairTimeFrom);
+        const to = repairSlotText(slot.to ?? slot.repairTimeTo);
+        if (!repairDate || repairDate.year !== year || repairDate.month !== month) continue;
+        const fromMinutes = repairTimeToMinutes(from);
+        const toMinutes = repairTimeToMinutes(to);
+        if (fromMinutes === null || toMinutes === null) continue;
+        const minutes = (toMinutes - fromMinutes + 24 * 60) % (24 * 60);
+        if (minutes <= 0) continue;
+        summary.totalMinutes += minutes;
+        summary.intervals.push({ date: repairDate.iso, from, to, minutes });
+      }
+      if (summary.intervals.length > 0) byMachine.set(row.machineId, summary);
+    }
+
+    const machines = [...byMachine.values()]
+      .map((machine) => ({ ...machine, intervals: machine.intervals.sort((a, b) => a.date.localeCompare(b.date) || a.from.localeCompare(b.from)) }))
+      .sort((a, b) => a.machineName.localeCompare(b.machineName));
+    const totalMinutes = machines.reduce((sum, machine) => sum + machine.totalMinutes, 0);
+    const totalIntervals = machines.reduce((sum, machine) => sum + machine.intervals.length, 0);
+    res.json({ year, month, machines, totalMinutes, totalIntervals });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get(
   "/reports/corrective-maintenance",
   requireAuth,
@@ -450,12 +668,50 @@ router.get(
   },
 );
 
+type ManualSummaryAdjustment = {
+  id: string;
+  total: number;
+  achieved: number;
+  description?: string;
+  createdAt: string;
+};
+
+function parseManualSummaryAdjustments(value: string | null | undefined): ManualSummaryAdjustment[] {
+  try {
+    const parsed: unknown = JSON.parse(value ?? "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const candidate = item as Record<string, unknown>;
+      const total = Number(candidate.total);
+      const achieved = Number(candidate.achieved);
+      if (typeof candidate.id !== "string" || !Number.isFinite(total) || !Number.isFinite(achieved)) return [];
+      return [{
+        id: candidate.id,
+        total,
+        achieved,
+        description: typeof candidate.description === "string" ? candidate.description : undefined,
+        createdAt: typeof candidate.createdAt === "string" ? candidate.createdAt : "",
+      }];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function adjustedSummary(autoTotal: number, autoAchieved: number, adjustments: ManualSummaryAdjustment[]) {
+  const total = Math.max(0, autoTotal + adjustments.reduce((sum, item) => sum + item.total, 0));
+  const achieved = Math.max(0, Math.min(total, autoAchieved + adjustments.reduce((sum, item) => sum + item.achieved, 0)));
+  return { total, achieved };
+}
+
 // Annual abstract matching the company's Excel "Abstract of monthly Evaluation
 // reports".  PM values come from the approved monthly evaluation records and
 // corrective values come directly from the preserved maintenance requests.
 router.get(
   "/reports/annual-maintenance-summary",
   requireAuth,
+  requirePermission("view_reports"),
   async (req, res, next) => {
     try {
       const requestedYear = Number(firstParam(req.query.year));
@@ -478,7 +734,7 @@ router.get(
       );
       const completedStatuses = new Set([STATUS.COMPLETED, STATUS.CLOSED]);
 
-      const months = Array.from({ length: 12 }, (_, index) => {
+      const months = await Promise.all(Array.from({ length: 12 }, async (_, index) => {
         const month = index + 1;
         const evaluation = evaluationByMonth.get(month);
         const correctiveRows = requests.filter((request) =>
@@ -486,28 +742,30 @@ router.get(
             `${year}-${String(month).padStart(2, "0")}`,
           ),
         );
+        const correctiveAdjustments = parseManualSummaryAdjustments(evaluation?.manualCorrectiveAdjustments);
+        const preventiveAdjustments = parseManualSummaryAdjustments(evaluation?.manualPreventiveAdjustments);
+        const automaticPreventive = await preventiveEvaluationMetrics(year, month);
+        const automaticCorrectiveTotal = correctiveRows.length;
+        const automaticCorrectiveAchieved = correctiveRows.filter((request) =>
+          completedStatuses.has(request.status as typeof STATUS.COMPLETED | typeof STATUS.CLOSED),
+        ).length;
+        const preventive = adjustedSummary(
+          automaticPreventive.totalPmActivities,
+          automaticPreventive.completedPmOnTime,
+          preventiveAdjustments,
+        );
+        const corrective = adjustedSummary(
+          automaticCorrectiveTotal,
+          automaticCorrectiveAchieved,
+          correctiveAdjustments,
+        );
         return {
           month,
-          preventive: evaluation
-            ? {
-                planned: evaluation.totalPmActivities,
-                achieved: evaluation.completedPmOnTime,
-              }
-            : null,
-          corrective: correctiveRows.length
-            ? {
-                total: correctiveRows.length,
-                achieved: correctiveRows.filter((request) =>
-                  completedStatuses.has(
-                    request.status as
-                      | typeof STATUS.COMPLETED
-                      | typeof STATUS.CLOSED,
-                  ),
-                ).length,
-              }
-            : null,
+          preventive: automaticPreventive.totalPmActivities || preventiveAdjustments.length ? { planned: preventive.total, achieved: preventive.achieved } : null,
+          corrective: automaticCorrectiveTotal || correctiveAdjustments.length ? { total: corrective.total, achieved: corrective.achieved } : null,
+          manualAdjustments: { corrective: correctiveAdjustments, preventive: preventiveAdjustments },
         };
-      });
+      }));
 
       res.json({ year, months });
     } catch (error) {
@@ -516,8 +774,143 @@ router.get(
   },
 );
 
+router.post(
+  "/reports/annual-maintenance-summary/adjustments",
+  requireAuth,
+  requirePermission("edit_maintenance_plans"),
+  async (req, res, next) => {
+    try {
+      const body = req.body ?? {};
+      const year = Number(body.year);
+      const month = Number(body.month);
+      const type = body.type === "preventive" ? "preventive" : body.type === "corrective" ? "corrective" : null;
+      const total = Number(body.total);
+      const achieved = Number(body.achieved);
+      if (!Number.isInteger(year) || year < 2000 || year > 2100 || !Number.isInteger(month) || month < 1 || month > 12 || !type || !Number.isInteger(total) || !Number.isInteger(achieved)) {
+        res.status(400).json({ error: "Invalid annual summary adjustment." });
+        return;
+      }
+      const description = typeof body.description === "string" ? body.description.trim().slice(0, 500) : "";
+      const [existing] = await db.select().from(monthlyMaintenanceEvaluationReportsTable).where(and(eq(monthlyMaintenanceEvaluationReportsTable.year, year), eq(monthlyMaintenanceEvaluationReportsTable.month, month)));
+      const entry: ManualSummaryAdjustment = { id: randomUUID(), total, achieved, description: description || undefined, createdAt: new Date().toISOString() };
+      if (existing) {
+        if (type === "corrective") {
+          const adjustments = [...parseManualSummaryAdjustments(existing.manualCorrectiveAdjustments), entry];
+          await db.update(monthlyMaintenanceEvaluationReportsTable).set({ manualCorrectiveAdjustments: JSON.stringify(adjustments), updatedAt: new Date() }).where(eq(monthlyMaintenanceEvaluationReportsTable.id, existing.id));
+        } else {
+          const adjustments = [...parseManualSummaryAdjustments(existing.manualPreventiveAdjustments), entry];
+          await db.update(monthlyMaintenanceEvaluationReportsTable).set({ manualPreventiveAdjustments: JSON.stringify(adjustments), updatedAt: new Date() }).where(eq(monthlyMaintenanceEvaluationReportsTable.id, existing.id));
+        }
+      } else {
+        await db.insert(monthlyMaintenanceEvaluationReportsTable).values({
+          year, month,
+          manualCorrectiveAdjustments: type === "corrective" ? JSON.stringify([entry]) : "[]",
+          manualPreventiveAdjustments: type === "preventive" ? JSON.stringify([entry]) : "[]",
+        });
+      }
+      res.status(201).json({ adjustment: entry });
+    } catch (error) { next(error); }
+  },
+);
+
+router.patch("/:id/request-details", requireAuth, async (req, res, next) => {
+  try {
+    const request = await getRequest(parseIdParam(req.params.id));
+    const editableStatuses: string[] = [
+      STATUS.SUBMITTED,
+      STATUS.PENDING_SUPERVISOR,
+      STATUS.PENDING_QA,
+      STATUS.QA_REJECTED,
+    ];
+    if (!request || request.requestedByUserId !== req.session.userId || !editableStatuses.includes(request.status)) {
+      res.status(403).json({ error: "Request details can only be changed by the reporter before QA acceptance" });
+      return;
+    }
+    const body = req.body as {
+      departmentSection?: string;
+      priority?: string;
+      requestDate?: string;
+      failureDescription?: string;
+      reportingPersonName?: string;
+      departmentSupervisorName?: string;
+    };
+    const failureDescription = body.failureDescription?.trim();
+    if (!failureDescription) {
+      res.status(400).json({ error: "Failure description is required" });
+      return;
+    }
+    const [updated] = await db
+      .update(maintenanceRequestsTable)
+      .set({
+        departmentSection: body.departmentSection?.trim() || null,
+        priority: body.priority === "urgent" ? "urgent" : "normal",
+        requestDate: body.requestDate?.trim() || request.requestDate,
+        failureDescription,
+        reportingPersonName: body.reportingPersonName?.trim() || null,
+        departmentSupervisorName: body.departmentSupervisorName?.trim() || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(maintenanceRequestsTable.id, request.id))
+      .returning();
+    res.json(await getRequestDetail(updated!));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete(
+  "/reports/annual-maintenance-summary/adjustments/:year/:month/:type/:adjustmentId",
+  requireAuth,
+  requirePermission("edit_maintenance_plans"),
+  async (req, res, next) => {
+    try {
+      const year = Number(req.params.year);
+      const month = Number(req.params.month);
+      const type = req.params.type === "preventive" ? "preventive" : req.params.type === "corrective" ? "corrective" : null;
+      if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12 || !type) {
+        res.status(400).json({ error: "Invalid annual summary adjustment." });
+        return;
+      }
+      const [existing] = await db.select().from(monthlyMaintenanceEvaluationReportsTable).where(and(eq(monthlyMaintenanceEvaluationReportsTable.year, year), eq(monthlyMaintenanceEvaluationReportsTable.month, month)));
+      if (!existing) {
+        res.status(404).json({ error: "Adjustment not found." });
+        return;
+      }
+      if (type === "corrective") {
+        const adjustments = parseManualSummaryAdjustments(existing.manualCorrectiveAdjustments).filter((item) => item.id !== req.params.adjustmentId);
+        await db.update(monthlyMaintenanceEvaluationReportsTable).set({ manualCorrectiveAdjustments: JSON.stringify(adjustments), updatedAt: new Date() }).where(eq(monthlyMaintenanceEvaluationReportsTable.id, existing.id));
+      } else {
+        const adjustments = parseManualSummaryAdjustments(existing.manualPreventiveAdjustments).filter((item) => item.id !== req.params.adjustmentId);
+        await db.update(monthlyMaintenanceEvaluationReportsTable).set({ manualPreventiveAdjustments: JSON.stringify(adjustments), updatedAt: new Date() }).where(eq(monthlyMaintenanceEvaluationReportsTable.id, existing.id));
+      }
+      res.json({ success: true });
+    } catch (error) { next(error); }
+  },
+);
+
 // FORM-10-0944-0.  The report is deliberately stored per calendar month so a
 // completed evaluation remains available as part of the controlled record.
+async function preventiveEvaluationMetrics(year: number, month: number) {
+  const [plan] = await db.select().from(monthlyPmPlansTable).where(and(eq(monthlyPmPlansTable.year, year), eq(monthlyPmPlansTable.month, month))).limit(1);
+  if (!plan) return { totalPmActivities: 0, completedPmOnTime: 0, delayedActivities: "[]" };
+  const rows = await db.select().from(monthlyPmPlanRowsTable).where(and(
+    eq(monthlyPmPlanRowsTable.planId, plan.id),
+    eq(monthlyPmPlanRowsTable.isManuallyRemoved, false),
+  )).orderBy(asc(monthlyPmPlanRowsTable.rowNumber));
+  const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+  const inspections = await db.select({ machineId: pmInspectionsTable.machineId }).from(pmInspectionsTable).where(like(pmInspectionsTable.inspectionDate, `${monthKey}-%`));
+  const completedMachineIds = new Set(inspections.map((inspection) => inspection.machineId));
+  const delayedRows = rows.filter((row) => !completedMachineIds.has(row.machineId)).map((row) => ({
+    activity: `${row.machineName}${row.identificationNumber ? ` (${row.identificationNumber})` : ""}`,
+    reason: row.amendments ?? "",
+  }));
+  return {
+    totalPmActivities: rows.length,
+    completedPmOnTime: rows.filter((row) => completedMachineIds.has(row.machineId)).length,
+    delayedActivities: JSON.stringify(delayedRows),
+  };
+}
+
 router.get(
   "/reports/monthly-maintenance-evaluation",
   requireAuth,
@@ -536,15 +929,14 @@ router.get(
             eq(monthlyMaintenanceEvaluationReportsTable.month, month),
           ),
         );
+      const preventiveMetrics = await preventiveEvaluationMetrics(year, month);
       res.json(
-        report ?? {
+        report ? { ...report, ...preventiveMetrics } : {
           year,
           month,
-          delayedActivities: "",
           delayReason: "",
           followUpIncluded: "",
-          totalPmActivities: 0,
-          completedPmOnTime: 0,
+          ...preventiveMetrics,
           productionImpact: "",
           sparePartShortage: "",
           correctiveMaintenanceDetails: "",
@@ -588,11 +980,9 @@ router.put(
         return;
       }
       const values = {
-        delayedActivities: String(body.delayedActivities ?? ""),
         delayReason: String(body.delayReason ?? ""),
         followUpIncluded: String(body.followUpIncluded ?? ""),
-        totalPmActivities: Math.max(0, Number(body.totalPmActivities) || 0),
-        completedPmOnTime: Math.max(0, Number(body.completedPmOnTime) || 0),
+        ...(await preventiveEvaluationMetrics(year, month)),
         productionImpact: String(body.productionImpact ?? ""),
         sparePartShortage: String(body.sparePartShortage ?? ""),
         correctiveMaintenanceDetails: String(
@@ -670,7 +1060,20 @@ async function ensureEventForRequest(
     .select()
     .from(correctiveMaintenanceEventsTable)
     .where(eq(correctiveMaintenanceEventsTable.requestId, request.id));
-  if (existing) return existing;
+  if (existing) {
+    // Keep the CM row aligned with the official maintenance-request number.
+    // This also repairs any linked rows that predate the approval workflow.
+    if (existing.requestReportNumber === request.requestReportNumber) return existing;
+    const [updated] = await db
+      .update(correctiveMaintenanceEventsTable)
+      .set({
+        requestReportNumber: request.requestReportNumber,
+        updatedAt: new Date(),
+      })
+      .where(eq(correctiveMaintenanceEventsTable.id, existing.id))
+      .returning();
+    return updated!;
+  }
 
   const record = await getOrCreateCmRecord(
     request.machineId,
@@ -695,6 +1098,59 @@ async function ensureEventForRequest(
   return created!;
 }
 
+router.get(
+  "/numbering-start",
+  requireAuth,
+  requirePermission("set_maintenance_request_number_start"),
+  async (_req, res, next) => {
+    try {
+      res.json({ lastSequence: await getMaintenanceRequestNumberingStart() });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.put(
+  "/numbering-start",
+  requireAuth,
+  requirePermission("set_maintenance_request_number_start"),
+  async (req, res, next) => {
+    try {
+      const value = String(req.body?.lastSequence ?? "").trim();
+      if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value))) {
+        res.status(400).json({ error: "Enter a valid last maintenance-request sequence number" });
+        return;
+      }
+      const [existing] = await db
+        .select({ id: formHeadersTable.id })
+        .from(formHeadersTable)
+        .where(
+          and(
+            eq(formHeadersTable.documentType, "MAINTENANCE_REQUEST_NUMBERING"),
+            eq(formHeadersTable.documentId, MAINTENANCE_REQUEST_NUMBERING_HEADER_ID),
+          ),
+        );
+      if (existing) {
+        await db
+          .update(formHeadersTable)
+          .set({ documentNumber: value, updatedAt: new Date() })
+          .where(eq(formHeadersTable.id, existing.id));
+      } else {
+        await db.insert(formHeadersTable).values({
+          documentType: "MAINTENANCE_REQUEST_NUMBERING",
+          documentId: MAINTENANCE_REQUEST_NUMBERING_HEADER_ID,
+          documentName: "Maintenance request numbering",
+          documentNumber: value,
+        });
+      }
+      res.json({ lastSequence: Number(value) });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 router.get("/", requireAuth, async (req, res, next) => {
   try {
     const scope = String(req.query.scope ?? "all");
@@ -714,6 +1170,11 @@ router.get("/", requireAuth, async (req, res, next) => {
       allowedStatuses = [STATUS.QA_APPROVED];
     } else if (scope === "technician") {
       allowedStatuses = [STATUS.ACCEPTED, STATUS.IN_PROGRESS, STATUS.COMPLETED];
+    } else if (scope === "archived") {
+      if (!permissions.includes("archive_maintenance_requests")) {
+        res.status(403).json({ error: "Archive permission is required" });
+        return;
+      }
     }
 
     let rows = await db
@@ -767,10 +1228,7 @@ router.get("/", requireAuth, async (req, res, next) => {
       );
     if (allowedStatuses)
       rows = rows.filter((row) => allowedStatuses.includes(row.status));
-    if (scope === "technician")
-      rows = rows.filter(
-        (row) => row.assignedTechnicianUserId === req.session.userId,
-      );
+    rows = rows.filter((row) => scope === "archived" ? Boolean(row.archivedAt) : !row.archivedAt);
     rows = rows.filter(
       (row) =>
         ensureCanView(req, row) ||
@@ -781,6 +1239,34 @@ router.get("/", requireAuth, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+router.patch("/:id/archive", requireAuth, requirePermission("archive_maintenance_requests"), async (req, res, next) => {
+  try {
+    const id = parseIdParam(req.params.id);
+    const [updated] = await db.update(maintenanceRequestsTable).set({
+      archivedAt: new Date(),
+      archivedByUserId: req.session.userId ?? null,
+      updatedAt: new Date(),
+    }).where(eq(maintenanceRequestsTable.id, id)).returning();
+    if (!updated) { res.status(404).json({ error: "Maintenance request not found" }); return; }
+    await db.insert(auditLogsTable).values({ userId: req.session.userId ?? null, action: "maintenance_request_archived", entityType: "maintenance_request", entityId: id });
+    res.json(await getRequestDetail(updated));
+  } catch (err) { next(err); }
+});
+
+router.patch("/:id/restore", requireAuth, requirePermission("archive_maintenance_requests"), async (req, res, next) => {
+  try {
+    const id = parseIdParam(req.params.id);
+    const [updated] = await db.update(maintenanceRequestsTable).set({
+      archivedAt: null,
+      archivedByUserId: null,
+      updatedAt: new Date(),
+    }).where(eq(maintenanceRequestsTable.id, id)).returning();
+    if (!updated) { res.status(404).json({ error: "Maintenance request not found" }); return; }
+    await db.insert(auditLogsTable).values({ userId: req.session.userId ?? null, action: "maintenance_request_restored", entityType: "maintenance_request", entityId: id });
+    res.json(await getRequestDetail(updated));
+  } catch (err) { next(err); }
 });
 
 router.get(
@@ -889,27 +1375,29 @@ router.get(
       const [rows, exclusions] = await Promise.all([
         db
           .select({
-            id: maintenanceRequestsTable.id,
+            eventId: correctiveMaintenanceEventsTable.id,
+            recordId: correctiveMaintenanceEventsTable.recordId,
+            requestId: maintenanceRequestsTable.id,
+            machineId: maintenanceRequestsTable.machineId,
             machineName: maintenanceRequestsTable.machineName,
             machineNumber: maintenanceRequestsTable.machineNumber,
             requestDate: maintenanceRequestsTable.requestDate,
             requestReportNumber: maintenanceRequestsTable.requestReportNumber,
             priority: maintenanceRequestsTable.priority,
-            closedAt: maintenanceRequestsTable.closedAt,
+            status: maintenanceRequestsTable.status,
+            handoverDate: correctiveMaintenanceEventsTable.handoverDate,
             remarks: correctiveMaintenanceEventsTable.remarksRecommendations,
           })
           .from(maintenanceRequestsTable)
-          .leftJoin(
+          .innerJoin(
             correctiveMaintenanceEventsTable,
             eq(
               correctiveMaintenanceEventsTable.requestId,
               maintenanceRequestsTable.id,
             ),
           )
-          .where(eq(maintenanceRequestsTable.status, STATUS.CLOSED))
           .orderBy(
-            desc(maintenanceRequestsTable.closedAt),
-            desc(maintenanceRequestsTable.id),
+            desc(maintenanceRequestsTable.updatedAt),
           ),
         db
           .select({
@@ -931,21 +1419,29 @@ router.get(
           desc(closedCorrectiveMaintenanceManualEntriesTable.id),
         );
 
-      const automaticRows = rows
-        .filter((row) => !excludedRequestIds.has(row.id))
-        .map((row) => ({
-          id: `automatic-${row.id}`,
+      const automaticRows = rows.flatMap((row) => {
+        // This official log is driven by completed maintenance requests. A
+        // corrective-maintenance record alone must never create a log row.
+        if (
+          (row.status !== STATUS.COMPLETED && row.status !== STATUS.CLOSED) ||
+          !row.handoverDate ||
+          excludedRequestIds.has(row.requestId)
+        ) return [];
+        return [{
+          id: `automatic-${row.requestId}`,
           source: "automatic" as const,
-          closedDate: row.closedAt
-            ? row.closedAt.toISOString().slice(0, 10)
-            : "",
+          eventId: row.eventId,
+          recordId: row.recordId,
+          closedDate: row.handoverDate,
+          handoverDate: row.handoverDate,
           remarks: row.remarks ?? "",
           machineName: row.machineName,
           machineNumber: row.machineNumber,
           requestDate: row.requestDate,
           requestReportNumber: row.requestReportNumber,
           priority: row.priority,
-        }));
+        }];
+      });
       const manualLogRows = manualRows.map((row) => ({
         id: `manual-${row.id}`,
         source: "manual" as const,
@@ -1026,6 +1522,59 @@ router.post(
         closedDate: created.closedDate,
         remarks: created.remarks ?? "",
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Controlled corrections for rows that originated from the corrective
+// maintenance record. Access is intentionally separate from general request
+// management so only explicitly authorized users can edit this log.
+router.patch(
+  "/closed-log/events/:eventId",
+  requireAuth,
+  requirePermission("edit_closed_corrective_maintenance_log"),
+  async (req, res, next) => {
+    try {
+      const eventId = parseIdParam(req.params.eventId);
+      const [event] = await db
+        .select()
+        .from(correctiveMaintenanceEventsTable)
+        .where(eq(correctiveMaintenanceEventsTable.id, eventId));
+      if (!event) {
+        res.status(404).json({ error: "Corrective maintenance row not found" });
+        return;
+      }
+      if (!event.requestId) {
+        res.status(400).json({ error: "This log row is not linked to a maintenance request" });
+        return;
+      }
+      const body = req.body as {
+        requestDate?: string;
+        maintenanceType?: string;
+        handoverDate?: string;
+        remarks?: string;
+      };
+      const maintenanceType = body.maintenanceType === "urgent" ? "urgent" : "normal";
+      await db
+        .update(maintenanceRequestsTable)
+        .set({
+          requestDate: body.requestDate?.trim() || undefined,
+          priority: maintenanceType,
+          updatedAt: new Date(),
+        })
+        .where(eq(maintenanceRequestsTable.id, event.requestId));
+      const [updated] = await db
+        .update(correctiveMaintenanceEventsTable)
+        .set({
+          handoverDate: body.handoverDate?.trim() || null,
+          remarksRecommendations: body.remarks?.trim() || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(correctiveMaintenanceEventsTable.id, event.id))
+        .returning();
+      res.json(formatEvent(updated!));
     } catch (err) {
       next(err);
     }
@@ -1114,6 +1663,7 @@ router.post(
     try {
       const body = req.body as {
         machineId?: number;
+        departmentId?: number;
         departmentSection?: string;
         priority?: string;
         requestDate?: string;
@@ -1138,30 +1688,41 @@ router.post(
         res.status(404).json({ error: "Machine not found" });
         return;
       }
+      const selectedDepartmentId = Number(body.departmentId);
+      const [selectedDepartment] = Number.isInteger(selectedDepartmentId) && selectedDepartmentId > 0
+        ? await db.select({ id: departmentsTable.id, name: departmentsTable.name }).from(departmentsTable).where(eq(departmentsTable.id, selectedDepartmentId))
+        : [];
+      if (!selectedDepartment) {
+        res.status(400).json({ error: "Please select a department from the administrator-managed list" });
+        return;
+      }
       const [user] = await db
-        .select({ departmentId: usersTable.departmentId })
+        .select({ departmentId: usersTable.departmentId, fullName: usersTable.fullName, username: usersTable.username, signatureData: usersTable.signatureData })
         .from(usersTable)
         .where(eq(usersTable.id, req.session.userId!));
       const [created] = await db
         .insert(maintenanceRequestsTable)
         .values({
-          requestReportNumber: await nextRequestNumber(),
+          requestReportNumber: pendingRequestNumber(),
           machineId: machine.id,
           requestedByUserId: req.session.userId!,
-          departmentId: user?.departmentId ?? machine.departmentId ?? null,
-          departmentSection:
-            body.departmentSection ?? machine.departmentName ?? null,
+          // The request must use one of the controlled departments configured
+          // by the administrator, rather than free-text entered by a user.
+          departmentId: selectedDepartment.id,
+          departmentSection: selectedDepartment.name,
           priority: body.priority === "urgent" ? "urgent" : "normal",
           machineName: machine.machineName,
           machineNumber: machine.machineNumber,
           requestDate: body.requestDate,
           failureDescription: body.failureDescription,
-          reportingPersonName: body.reportingPersonName ?? null,
-          reportingPersonSignature: body.reportingPersonSignature ?? null,
-          departmentSupervisorName: body.departmentSupervisorName ?? null,
-          departmentSupervisorSignature:
-            body.departmentSupervisorSignature ?? null,
-          status: STATUS.PENDING_QA,
+          reportingPersonName: body.reportingPersonName?.trim() || user?.fullName || user?.username || null,
+          // Do not show a name as a signature. This remains empty until the
+          // reporter signs the dedicated electronic-signature field.
+          reportingPersonSignature: null,
+          // Keep the supervisor named by the reporting department visible on
+          // the request until that supervisor approves and signs it.
+          departmentSupervisorName: body.departmentSupervisorName?.trim() || null,
+          status: STATUS.SUBMITTED,
         })
         .returning();
       await addStatusHistory(
@@ -1170,13 +1731,6 @@ router.post(
         STATUS.SUBMITTED,
         req.session.userId,
         "Request submitted",
-      );
-      await addStatusHistory(
-        created!.id,
-        STATUS.SUBMITTED,
-        STATUS.PENDING_QA,
-        req.session.userId,
-        "Routed to QA Supervisor",
       );
       res.status(201).json(await getRequestDetail(created!));
     } catch (err) {
@@ -1200,6 +1754,33 @@ router.get("/by-number/:requestNumber", requireAuth, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// The department supervisor is the mandatory gate between the reporter and
+// QA.  A rejected request stays stopped at this stage.
+router.patch("/:id/supervisor-review", requireAuth, requirePermission("review_department_requests"), async (req, res, next) => {
+  try {
+    const request = await getRequest(parseIdParam(req.params.id));
+    if (!request || request.status !== STATUS.SUBMITTED) {
+      res.status(400).json({ error: "Request is not awaiting department supervisor approval" });
+      return;
+    }
+    const body = req.body as { decision?: string; notes?: string };
+    const approved = body.decision !== "reject";
+    const [supervisor] = await db.select({ fullName: usersTable.fullName, username: usersTable.username, signatureData: usersTable.signatureData })
+      .from(usersTable).where(eq(usersTable.id, req.session.userId!));
+    const supervisorName = supervisor?.fullName || supervisor?.username || "Department Supervisor";
+    const toStatus = approved ? STATUS.PENDING_QA : STATUS.REJECTED;
+    const [updated] = await db.update(maintenanceRequestsTable).set({
+      status: toStatus,
+      departmentSupervisorName: supervisorName,
+      // Approval records the approver's saved electronic signature immediately.
+      departmentSupervisorSignature: await currentUserSignature(req.session.userId, supervisorName),
+      updatedAt: new Date(),
+    }).where(eq(maintenanceRequestsTable.id, request.id)).returning();
+    await addStatusHistory(request.id, request.status, toStatus, req.session.userId, body.notes ?? (approved ? "Approved by department supervisor; routed to QA" : "Rejected by department supervisor"));
+    res.json(await getRequestDetail(updated!));
+  } catch (err) { next(err); }
 });
 
 router.get("/:id/external-maintenance", requireAuth, async (req, res, next) => {
@@ -1274,12 +1855,14 @@ router.post(
         .select()
         .from(correctiveMaintenanceEventsTable)
         .where(eq(correctiveMaintenanceEventsTable.requestId, request.id));
+      if (isPendingRequestNumber(request.requestReportNumber)) {
+        res.status(409).json({ error: "The maintenance request must be approved by Engineering before it can be converted to external maintenance" });
+        return;
+      }
       const [created] = await db
         .insert(externalMaintenanceRequestsTable)
         .values({
           maintenanceRequestId: request.id,
-          // FORM-00-0077-1 uses the original maintenance request number; it does
-          // not create a second, unrelated request number.
           externalRequestNumber: request.requestReportNumber,
           requestDate: request.requestDate,
           departmentSection: request.departmentSection,
@@ -1363,6 +1946,24 @@ router.patch(
     }
   },
 );
+
+router.delete("/:id/external-maintenance", requireAuth, requirePermission("manage_maintenance_requests"), async (req, res, next) => {
+  try {
+    const request = await getRequest(parseIdParam(req.params.id));
+    if (!request || request.status !== STATUS.EXTERNAL_MAINTENANCE) { res.status(400).json({ error: "Request is not in external maintenance" }); return; }
+    const [externalRequest] = await db.select().from(externalMaintenanceRequestsTable).where(eq(externalMaintenanceRequestsTable.maintenanceRequestId, request.id));
+    if (!externalRequest) { res.status(404).json({ error: "External maintenance request not found" }); return; }
+    const [receipt] = await db.select({ id: externalMaintenanceReceiptsTable.id }).from(externalMaintenanceReceiptsTable).where(eq(externalMaintenanceReceiptsTable.externalMaintenanceRequestId, externalRequest.id)).limit(1);
+    const [externalSignature] = await db.select({ id: signaturesTable.id }).from(signaturesTable).where(and(eq(signaturesTable.documentType, "EXTERNAL_MAINTENANCE_REQUEST"), eq(signaturesTable.documentId, request.id))).limit(1);
+    if (receipt || externalSignature) { res.status(409).json({ error: "External maintenance cannot be cancelled after receipt or signatures have started" }); return; }
+    await db.delete(externalMaintenanceRequestsTable).where(eq(externalMaintenanceRequestsTable.id, externalRequest.id));
+    const [event] = await db.select().from(correctiveMaintenanceEventsTable).where(eq(correctiveMaintenanceEventsTable.requestId, request.id)).limit(1);
+    const restoredStatus = event ? STATUS.IN_PROGRESS : STATUS.ACCEPTED;
+    const [updated] = await db.update(maintenanceRequestsTable).set({ status: restoredStatus, updatedAt: new Date() }).where(eq(maintenanceRequestsTable.id, request.id)).returning();
+    await addStatusHistory(request.id, request.status, restoredStatus, req.session.userId, "Accidental external-maintenance conversion cancelled");
+    res.json(await getRequestDetail(updated!));
+  } catch (err) { next(err); }
+});
 
 router.get(
   "/:id/external-maintenance-receipt",
@@ -1589,7 +2190,9 @@ async function qaReviewHandler(
       .set({
         status: toStatus,
         qaDecision: toStatus === STATUS.QA_REJECTED ? "Rejected" : "Approved",
-        qaSupervisorSignature: body.signature ?? null,
+        // QA acceptance is itself the approval signature; never rely on a
+        // manually typed name when the account has a saved signature.
+        qaSupervisorSignature: await currentUserSignature(req.session.userId, body.signature ?? "QA Supervisor"),
         qaReviewDate: todayString(),
         qaReviewNotes: body.notes ?? null,
         qaReviewedByUserId: req.session.userId,
@@ -1642,13 +2245,44 @@ async function engineeringReviewHandler(
       expectedWorkTimeFrom?: string;
       expectedWorkTimeTo?: string;
       signature?: string;
+      requestReportNumber?: string;
     };
     const toStatus =
       body.decision === "reject" ? STATUS.REJECTED : STATUS.ACCEPTED;
+    let approvedRequestNumber = request.requestReportNumber;
+    if (toStatus === STATUS.ACCEPTED) {
+      const manualNumber = body.requestReportNumber?.trim() ?? "";
+      if (manualNumber) {
+        if (!/^\d+\/\d{2}\/\d{4}$/.test(manualNumber)) {
+          res.status(400).json({ error: "Maintenance request number must use the format 1/MM/YYYY" });
+          return;
+        }
+        approvedRequestNumber = manualNumber;
+      } else {
+        const automaticNumber = await nextApprovedRequestNumber(request.requestDate);
+        if (!automaticNumber) {
+          res.status(400).json({ error: "Set the starting maintenance request number first, or enter this request number manually" });
+          return;
+        }
+        approvedRequestNumber = automaticNumber;
+      }
+      const [duplicate] = await db
+        .select({ id: maintenanceRequestsTable.id })
+        .from(maintenanceRequestsTable)
+        .where(eq(maintenanceRequestsTable.requestReportNumber, approvedRequestNumber));
+      if (duplicate && duplicate.id !== request.id) {
+        res.status(409).json({ error: "This maintenance request number is already in use" });
+        return;
+      }
+    }
     const [updated] = await db
       .update(maintenanceRequestsTable)
       .set({
         status: toStatus,
+        requestReportNumber:
+          toStatus === STATUS.ACCEPTED
+            ? approvedRequestNumber
+            : request.requestReportNumber,
         engineeringDecision:
           toStatus === STATUS.REJECTED ? "Rejected" : "Accepted",
         assignedTechnicianUserId:
@@ -1657,7 +2291,7 @@ async function engineeringReviewHandler(
             : null,
         expectedWorkTimeFrom: body.expectedWorkTimeFrom ?? null,
         expectedWorkTimeTo: body.expectedWorkTimeTo ?? null,
-        engineeringSupervisorSignature: body.signature ?? null,
+        engineeringSupervisorSignature: await currentUserSignature(req.session.userId, body.signature ?? "Engineering Reviewer"),
         engineeringReviewNotes: body.notes ?? null,
         engineeringReviewedByUserId: req.session.userId,
         engineeringReviewedAt: new Date(),
@@ -1729,14 +2363,13 @@ router.patch(
 router.patch(
   "/:id/start-work",
   requireAuth,
-  requirePermission("fill_corrective_maintenance"),
   async (req, res, next) => {
     try {
       const request = await getRequest(parseIdParam(req.params.id));
       if (
         !request ||
         request.status !== STATUS.ACCEPTED ||
-        !isAssignedTechnician(req, request)
+        !canWorkOnCorrectiveMaintenance(req)
       ) {
         res
           .status(400)
@@ -1772,18 +2405,24 @@ async function preliminaryFindingsHandler(
 ) {
   try {
     const request = await getRequest(parseIdParam(req.params.id));
+    const [existingEvent] = request
+      ? await db
+          .select()
+          .from(correctiveMaintenanceEventsTable)
+          .where(eq(correctiveMaintenanceEventsTable.requestId, request.id))
+          .limit(1)
+      : [];
     if (
       !request ||
-      (request.status !== STATUS.ACCEPTED &&
-        request.status !== STATUS.IN_PROGRESS) ||
-      !isAssignedTechnician(req, request)
+      (request.engineeringDecision !== "Accepted" && !existingEvent) ||
+      !canFillPreliminaryFindings(req)
     ) {
       res
         .status(400)
         .json({ error: "Request is not accepted for corrective maintenance" });
       return;
     }
-    const event = await ensureEventForRequest(request);
+    const event = existingEvent ?? (await ensureEventForRequest(request));
     const body = req.body as Record<string, string | undefined>;
     await db
       .update(correctiveMaintenanceEventsTable)
@@ -1823,13 +2462,11 @@ async function preliminaryFindingsHandler(
 router.put(
   "/:id/preliminary-findings",
   requireAuth,
-  requirePermission("fill_corrective_maintenance"),
   preliminaryFindingsHandler,
 );
 router.patch(
   "/:id/preliminary-findings",
   requireAuth,
-  requirePermission("fill_corrective_maintenance"),
   preliminaryFindingsHandler,
 );
 
@@ -1840,16 +2477,22 @@ async function actionsTakenHandler(
 ) {
   try {
     const request = await getRequest(parseIdParam(req.params.id));
+    const [existingEvent] = request
+      ? await db
+          .select()
+          .from(correctiveMaintenanceEventsTable)
+          .where(eq(correctiveMaintenanceEventsTable.requestId, request.id))
+          .limit(1)
+      : [];
     if (
       !request ||
-      (request.status !== STATUS.ACCEPTED &&
-        request.status !== STATUS.IN_PROGRESS) ||
-      !isAssignedTechnician(req, request)
+      (request.engineeringDecision !== "Accepted" && !existingEvent) ||
+      !canWorkOnCorrectiveMaintenance(req)
     ) {
       res.status(400).json({ error: "Request is not ready for completion" });
       return;
     }
-    const event = await ensureEventForRequest(request);
+    const event = existingEvent ?? (await ensureEventForRequest(request));
     const body = req.body as {
       actionsTaken?: string;
       remarksRecommendations?: string;
@@ -1868,18 +2511,21 @@ async function actionsTakenHandler(
         updatedAt: new Date(),
       })
       .where(eq(correctiveMaintenanceEventsTable.id, event.id));
-    const [updatedRequest] = await db
-      .update(maintenanceRequestsTable)
-      .set({ status: STATUS.COMPLETED, updatedAt: new Date() })
-      .where(eq(maintenanceRequestsTable.id, request.id))
-      .returning();
-    await addStatusHistory(
-      request.id,
-      request.status,
-      STATUS.COMPLETED,
-      req.session.userId,
-      "Corrective maintenance actions recorded",
-    );
+    let updatedRequest = request;
+    if (request.status === STATUS.ACCEPTED) {
+      [updatedRequest] = await db
+        .update(maintenanceRequestsTable)
+        .set({ status: STATUS.IN_PROGRESS, updatedAt: new Date() })
+        .where(eq(maintenanceRequestsTable.id, request.id))
+        .returning();
+      await addStatusHistory(
+        request.id,
+        request.status,
+        STATUS.IN_PROGRESS,
+        req.session.userId,
+        "Corrective maintenance actions recorded; awaiting handover",
+      );
+    }
     res.json(await getRequestDetail(updatedRequest!));
   } catch (err) {
     next(err);
@@ -1889,9 +2535,72 @@ async function actionsTakenHandler(
 router.patch(
   "/:id/actions-taken",
   requireAuth,
-  requirePermission("fill_corrective_maintenance"),
   actionsTakenHandler,
 );
+
+async function hasSignedHandoverField(requestId: number, userId: number | undefined, fieldName: "receiver" | "engineering_final") {
+  if (!userId) return false;
+  const [signature] = await db
+    .select({ id: signaturesTable.id })
+    .from(signaturesTable)
+    .where(and(
+      eq(signaturesTable.documentType, "MAINTENANCE_REQUEST"),
+      eq(signaturesTable.documentId, requestId),
+      eq(signaturesTable.fieldName, fieldName),
+      eq(signaturesTable.userId, userId),
+    ))
+    .limit(1);
+  return Boolean(signature);
+}
+
+async function completeRequestWhenHandoverReady(request: typeof maintenanceRequestsTable.$inferSelect) {
+  const [event] = await db.select().from(correctiveMaintenanceEventsTable).where(eq(correctiveMaintenanceEventsTable.requestId, request.id)).limit(1);
+  if (!event?.handoverDate || !event.engineeringDate) return request;
+  const signatures = await db.select({ fieldName: signaturesTable.fieldName }).from(signaturesTable).where(and(
+    eq(signaturesTable.documentType, "MAINTENANCE_REQUEST"),
+    eq(signaturesTable.documentId, request.id),
+  ));
+  const signedFields = new Set(signatures.map((item) => item.fieldName));
+  if (!signedFields.has("receiver") || !signedFields.has("engineering_final") || request.status === STATUS.COMPLETED || request.status === STATUS.CLOSED) return request;
+  const [updated] = await db.update(maintenanceRequestsTable).set({ status: STATUS.COMPLETED, updatedAt: new Date() }).where(eq(maintenanceRequestsTable.id, request.id)).returning();
+  await addStatusHistory(request.id, request.status, STATUS.COMPLETED, undefined, "Receiver and engineering handover completed");
+  return updated ?? request;
+}
+
+router.patch("/:id/receiver-handover", requireAuth, async (req, res, next) => {
+  try {
+    const request = await getRequest(parseIdParam(req.params.id));
+    if (!request || !(await hasSignedHandoverField(request.id, req.session.userId, "receiver"))) {
+      res.status(403).json({ error: "Only the signed machine receiver can save receiver details" });
+      return;
+    }
+    const event = await ensureEventForRequest(request);
+    const body = req.body as { receiverName?: string; handoverDate?: string };
+    await db.update(correctiveMaintenanceEventsTable).set({
+      receiverName: body.receiverName?.trim() || null,
+      handoverDate: body.handoverDate || null,
+      updatedAt: new Date(),
+    }).where(eq(correctiveMaintenanceEventsTable.id, event.id));
+    res.json(await getRequestDetail(await completeRequestWhenHandoverReady(request)));
+  } catch (err) { next(err); }
+});
+
+router.patch("/:id/engineering-handover", requireAuth, async (req, res, next) => {
+  try {
+    const request = await getRequest(parseIdParam(req.params.id));
+    if (!request || !(await hasSignedHandoverField(request.id, req.session.userId, "engineering_final"))) {
+      res.status(403).json({ error: "Only the signed engineering representative can save the engineering date" });
+      return;
+    }
+    const event = await ensureEventForRequest(request);
+    const body = req.body as { engineeringDate?: string };
+    await db.update(correctiveMaintenanceEventsTable).set({
+      engineeringDate: body.engineeringDate || null,
+      updatedAt: new Date(),
+    }).where(eq(correctiveMaintenanceEventsTable.id, event.id));
+    res.json(await getRequestDetail(await completeRequestWhenHandoverReady(request)));
+  } catch (err) { next(err); }
+});
 
 async function handoverHandler(
   req: Request,
@@ -1904,9 +2613,23 @@ async function handoverHandler(
       !request ||
       (request.status !== STATUS.COMPLETED &&
         request.status !== STATUS.IN_PROGRESS) ||
-      !isAssignedTechnician(req, request)
+      !canWorkOnCorrectiveMaintenance(req)
     ) {
       res.status(400).json({ error: "Request is not ready for handover" });
+      return;
+    }
+    const finalSignatures = await db
+      .select({ fieldName: signaturesTable.fieldName })
+      .from(signaturesTable)
+      .where(
+        and(
+          eq(signaturesTable.documentType, "MAINTENANCE_REQUEST"),
+          eq(signaturesTable.documentId, request.id),
+        ),
+      );
+    const signedFields = new Set(finalSignatures.map((signature) => signature.fieldName));
+    if (!signedFields.has("engineering_final") || !signedFields.has("receiver")) {
+      res.status(400).json({ error: "Engineering and receiver electronic signatures are required before closing" });
       return;
     }
     const event = await ensureEventForRequest(request);
@@ -1953,13 +2676,11 @@ async function handoverHandler(
 router.patch(
   "/:id/handover",
   requireAuth,
-  requirePermission("fill_corrective_maintenance"),
   handoverHandler,
 );
 router.put(
   "/:id/actions-handover",
   requireAuth,
-  requirePermission("fill_corrective_maintenance"),
   async (req, res, next) => {
     try {
       const request = await getRequest(parseIdParam(req.params.id));
@@ -1968,7 +2689,7 @@ router.put(
         (request.status !== STATUS.ACCEPTED &&
           request.status !== STATUS.IN_PROGRESS &&
           request.status !== STATUS.COMPLETED) ||
-        !isAssignedTechnician(req, request)
+      !canWorkOnCorrectiveMaintenance(req)
       ) {
         res.status(400).json({ error: "Request is not ready for completion" });
         return;

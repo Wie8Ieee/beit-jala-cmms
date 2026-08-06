@@ -149,9 +149,23 @@ router.post("/", requireActiveAuth, requirePermission("manage_users"), async (re
       const user = await getUserWithPermissions(newUser!.id);
       res.status(201).json(user);
     } catch (err: unknown) {
-      const e = err as { code?: string };
-      if (e.code === "23505") {
-        res.status(400).json({ error: "Username already exists" });
+      // Drizzle wraps PostgreSQL errors in a DrizzleQueryError, so the SQLSTATE
+      // and constraint name are exposed on `cause`, rather than on the error
+      // itself. Checking only `err.code` turned ordinary duplicate-value errors
+      // into HTTP 500 responses.
+      const e = err as {
+        code?: string;
+        constraint?: string;
+        cause?: { code?: string; constraint?: string };
+      };
+      const code = e.code ?? e.cause?.code;
+      const constraint = e.constraint ?? e.cause?.constraint;
+
+      if (code === "23505") {
+        const error = constraint === "users_employee_number_key"
+          ? "Employee number already exists"
+          : "Username already exists";
+        res.status(409).json({ error });
         return;
       }
       throw err;
@@ -292,20 +306,24 @@ router.put("/:id/permissions", requireActiveAuth, requirePermission("manage_user
       return;
     }
 
-    await db.delete(userPermissionsTable).where(eq(userPermissionsTable.userId, id));
+    const uniquePermissionNames = [...new Set(permissionNames)];
 
-    if (permissionNames.length > 0) {
+    await db.transaction(async (tx) => {
+      await tx.delete(userPermissionsTable).where(eq(userPermissionsTable.userId, id));
+
+    if (uniquePermissionNames.length > 0) {
       const perms = await db
         .select({ id: permissionsTable.id, name: permissionsTable.name })
         .from(permissionsTable)
-        .where(inArray(permissionsTable.name, permissionNames));
+        .where(inArray(permissionsTable.name, uniquePermissionNames));
 
       if (perms.length > 0) {
-        await db.insert(userPermissionsTable).values(
+        await tx.insert(userPermissionsTable).values(
           perms.map((p) => ({ userId: id, permissionId: p.id })),
         );
       }
     }
+    });
 
     const user = await getUserWithPermissions(id);
     if (!user) {

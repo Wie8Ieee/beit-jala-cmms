@@ -74,14 +74,6 @@ export default function MonthlyMaintenanceEvaluationPrintPage({ params }: { para
       </section>
       <p className="evaluation-question"><b>(7)</b> عدد طلبات الصيانة الخارجية = {numberValue(data?.totalExternalActivities)}</p>
       <table className="evaluation-table evaluation-external"><thead><tr><th>رقم أمر / طلب الصيانة</th><th>نشاطات أعمال الصيانة الخارجية</th><th>أسباب إرسالها للصيانة العلاجية</th><th>اسم القائم بالعمل</th></tr></thead><tbody>{externalRows.map((row, index) => <tr key={index}><td>{row.requestNo}</td><td>{row.activities}</td><td>{row.reason}</td><td>{row.performer}</td></tr>)}</tbody></table>
-    </div></PrintPage>
-    <PrintPage className="evaluation-print-page"><div className="evaluation-form" dir="rtl">
-      <Header page={2} />
-      <div className="evaluation-question evaluation-page-two"><p><b>(8)</b> هل حدث أن أُصيب أحد الموظفين أثناء تنفيذ أعمال الصيانة أو نتيجة خلل حدث للماكينة؟</p><Answer value={data?.employeeDelayImpact} /></div>
-      <section className="evaluation-impact">
-        <p className="evaluation-question"><b>(9)</b> عدد أيام العمل في هذا الشهر = {numberValue(data?.workingDays)}</p>
-        <p className="evaluation-question">النسبة المئوية لخسائر موظفي الدائرة خلال هذا الشهر = {ratio(data?.lostWorkDays, data?.workingDays) ? `(${numberValue(data?.lostWorkDays)} / ${numberValue(data?.workingDays)}) × 100% = ${ratio(data?.lostWorkDays, data?.workingDays)}%` : ""}</p>
-      </section>
       <div className="evaluation-signatures">
         <div className="evaluation-signature-row"><span><b>إعداد:</b> {data?.preparedBy ?? ""}</span><span><b>التاريخ:</b> {typeof data?.preparedDate === "string" ? data.preparedDate.split("-").reverse().join("/") : ""}</span></div>
         <div className="evaluation-signature-row"><span><b>توقيع مدير دائرة الهندسة:</b> {engineeringManagerSignature?.signatureData ? <img src={engineeringManagerSignature.signatureData} alt="توقيع مدير دائرة الهندسة" className="evaluation-electronic-signature" /> : (data?.engineeringManagerSignature ?? "")}</span><span><b>التاريخ:</b> {typeof data?.engineeringManagerDate === "string" && data.engineeringManagerDate ? data.engineeringManagerDate.split("-").reverse().join("/") : signatureDate(engineeringManagerSignature?.signedAt)}</span></div>

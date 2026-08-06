@@ -49,6 +49,8 @@ export const maintenanceRequestsTable = pgTable("maintenance_requests", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   closedAt: timestamp("closed_at"),
+  archivedAt: timestamp("archived_at"),
+  archivedByUserId: integer("archived_by_user_id").references(() => usersTable.id),
 });
 
 export const correctiveMaintenanceRecordsTable = pgTable("corrective_maintenance_records", {
@@ -103,6 +105,7 @@ export const correctiveMaintenanceEventsTable = pgTable(
     receiverSignature: text("receiver_signature"),
     handoverDate: text("handover_date"),
     engineeringSignature: text("engineering_signature"),
+    engineeringDate: text("engineering_date"),
     completedByUserId: integer("completed_by_user_id").references(() => usersTable.id),
     completedAt: timestamp("completed_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -220,6 +223,10 @@ export const monthlyMaintenanceEvaluationReportsTable = pgTable("monthly_mainten
   totalCorrectiveRequests: integer("total_corrective_requests").notNull().default(0),
   unclosedCorrectiveRequests: integer("unclosed_corrective_requests").notNull().default(0),
   completedCorrectiveRequests: integer("completed_corrective_requests").notNull().default(0),
+  // Controlled manual adjustments used only by annual summaries. These never
+  // alter the maintenance requests themselves.
+  manualCorrectiveAdjustments: text("manual_corrective_adjustments").notNull().default("[]"),
+  manualPreventiveAdjustments: text("manual_preventive_adjustments").notNull().default("[]"),
   externalMaintenanceDetails: text("external_maintenance_details"),
   totalExternalActivities: integer("total_external_activities").notNull().default(0),
   completedExternalActivities: integer("completed_external_activities").notNull().default(0),

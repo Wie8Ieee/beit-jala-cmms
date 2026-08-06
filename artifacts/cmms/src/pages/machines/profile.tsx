@@ -12,6 +12,7 @@ import { ArrowLeft, Edit, FileText, Settings2, Wrench, History, AlertCircle, Tra
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/api";
+import type { MaintenanceRequestSummary } from "../maintenance-requests/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,9 +25,28 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+type MachineHistoryEntry = {
+  id: number;
+  action: string;
+  details: unknown;
+  oldValue: unknown;
+  newValue: unknown;
+  createdAt: string;
+  userName: string;
+};
+
+function historyDetails(entry: MachineHistoryEntry) {
+  const value = entry.details ?? entry.newValue ?? entry.oldValue;
+  return value ? JSON.stringify(value) : "-";
+}
+
 export default function MachineProfile({ params }: { params: { id: string } }) {
   const machineId = parseInt(params.id, 10);
   const { hasPermission } = useAuth();
+  const canViewEquipment = hasPermission("view_equipment_information");
+  const canViewPm = hasPermission("view_pm_records") || hasPermission("fill_pm_record");
+  const canViewCm = hasPermission("view_corrective_maintenance");
+  const canViewHistory = hasPermission("view_machine_maintenance_history");
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
@@ -38,8 +58,18 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
   });
   const { data: nextPm } = useQuery({
     queryKey: ["machine-next-pm", machineId],
-    queryFn: () => apiRequest<{ nextPmDate: string | null; source: "monthly" | "annual" | null }>(`/machines/${machineId}/next-pm`),
-    enabled: !!machineId,
+    queryFn: () => apiRequest<{ nextPmDate: string | null; source: "monthly" | "annual" | null; isDue?: boolean }>(`/machines/${machineId}/next-pm`),
+    enabled: !!machineId && canViewPm,
+  });
+  const { data: maintenanceRequests = [] } = useQuery({
+    queryKey: ["machine-maintenance-requests", machineId],
+    queryFn: () => apiRequest<MaintenanceRequestSummary[]>("/maintenance-requests?scope=all"),
+    enabled: !!machineId && canViewCm,
+  });
+  const { data: machineHistory = [], isLoading: isHistoryLoading } = useQuery({
+    queryKey: ["machine-history", machineId],
+    queryFn: () => apiRequest<MachineHistoryEntry[]>(`/machines/${machineId}/history`),
+    enabled: !!machineId && canViewHistory,
   });
   const softDeleteMachine = useMutation({
     mutationFn: () => apiRequest(`/machines/${machineId}/soft-delete`, { method: "PATCH" }),
@@ -109,9 +139,14 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
     const days = Math.max(0, Math.ceil((monthStart.getTime() - todayStart.getTime()) / 86_400_000));
     return {
       date: target.toLocaleDateString(),
-      status: sameMonth ? "Due" : `${days} days until month start`,
+      status: nextPm.isDue || sameMonth ? "Due" : `${days} days until month start`,
     };
   })();
+
+  const openMaintenanceRequests = maintenanceRequests.filter((request) =>
+    request.machineId === machineId &&
+    !["closed", "completed"].includes(request.status.toLowerCase()),
+  );
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
@@ -167,77 +202,88 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
         )}
       </div>
 
-      <Card className="border-t-4 border-t-primary shadow-md">
-        <CardContent className="p-6 md:p-8">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="space-y-6 md:col-span-2">
-              <div className="grid grid-cols-2 gap-y-6 gap-x-12">
-                <div>
-                  <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground mb-1">Department</h3>
-                  <p className="font-medium text-lg">{machine.departmentName || "Unassigned"}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground mb-1">Location</h3>
-                  <p className="font-medium text-lg">{machine.location || "—"}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground mb-1">PM Frequency</h3>
-                  <p className="font-medium text-lg">{machine.pmFrequencyMonths ? `Every ${machine.pmFrequencyMonths} Months` : "Not scheduled"}</p>
-                </div>
+      <Card className="overflow-hidden border-primary/20 border-t-4 border-t-primary shadow-sm">
+        <CardContent className="p-5 md:p-6">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-stretch">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-xl border bg-muted/20 p-4">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Department</h3>
+                <p className="text-lg font-semibold leading-snug">{machine.departmentName || "Unassigned"}</p>
+              </div>
+              <div className="rounded-xl border bg-muted/20 p-4">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Location</h3>
+                <p className="text-lg font-semibold leading-snug">{machine.location || "—"}</p>
+              </div>
+              <div className="rounded-xl border bg-muted/20 p-4 sm:col-span-2 lg:col-span-1">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">PM Frequency</h3>
+                <p className="text-lg font-semibold leading-snug">{machine.pmFrequencyMonths ? `Every ${machine.pmFrequencyMonths} Months` : "Not scheduled"}</p>
               </div>
             </div>
-            
-            <div className="bg-muted/30 p-6 rounded-xl border flex flex-col justify-center">
-               <h3 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground mb-4">Quick Stats</h3>
-               <div className="space-y-4">
-                 <div className="flex justify-between items-center border-b pb-2">
-                   <span className="text-muted-foreground">Open WOs</span>
-                   <span className="font-mono font-medium text-amber-600">0</span>
-                 </div>
-                 <div className="flex justify-between items-center">
-                   <span className="text-muted-foreground">Next PM</span>
-                   {nextPmDisplay ? <span className="text-right"><span className="block font-mono text-lg font-bold text-primary">{nextPmDisplay.date}</span><span className={`text-sm font-medium ${nextPmDisplay.status === "Due" ? "text-amber-600" : "text-muted-foreground"}`}>{nextPmDisplay.status}</span></span> : <span className="font-mono font-medium text-muted-foreground">Not scheduled</span>}
-                 </div>
-               </div>
+
+            <div className="rounded-xl border border-primary/15 bg-primary/[0.035] p-5">
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-primary">Quick Stats</h3>
+              <div className="space-y-3">
+                {openMaintenanceRequests.length > 0 && (
+                  <Link
+                    href="/maintenance-requests"
+                    className="group flex items-center justify-between border-b border-primary/10 pb-3 transition-colors"
+                  >
+                    <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground group-hover:text-primary">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                      </span>
+                      Maintenance requests
+                    </span>
+                    <span className="flex items-center gap-2 text-sm font-semibold text-primary">
+                      View
+                      <Badge className="min-w-6 justify-center bg-red-500 px-1.5 text-white hover:bg-red-500">{openMaintenanceRequests.length}</Badge>
+                    </span>
+                  </Link>
+                )}
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm font-medium text-muted-foreground">Next PM</span>
+                  {nextPmDisplay ? <span className="text-right"><span className="block font-mono text-xl font-bold leading-tight text-primary">{nextPmDisplay.date}</span><span className={`mt-1 block text-sm font-medium ${nextPmDisplay.status === "Due" ? "text-amber-600" : "text-muted-foreground"}`}>{nextPmDisplay.status}</span></span> : <span className="font-mono text-sm font-medium text-muted-foreground">Not scheduled</span>}
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="equipment-info" className="w-full">
+      <Tabs defaultValue={canViewEquipment ? "equipment-info" : canViewPm ? "pm" : canViewCm ? "cm" : canViewHistory ? "history" : "equipment-info"} className="w-full">
         <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent gap-6">
-          <TabsTrigger 
+          {canViewEquipment && <TabsTrigger 
             value="equipment-info" 
             className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none py-3 px-1 data-[state=active]:bg-transparent"
           >
             <FileText className="mr-2 h-4 w-4" />
             Equipment Information Record
-          </TabsTrigger>
-          <TabsTrigger 
+          </TabsTrigger>}
+          {canViewPm && <TabsTrigger 
             value="pm" 
             className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none py-3 px-1 data-[state=active]:bg-transparent"
           >
             <Settings2 className="mr-2 h-4 w-4" />
             Preventive Maintenance
-          </TabsTrigger>
-          <TabsTrigger 
+          </TabsTrigger>}
+          {canViewCm && <TabsTrigger 
             value="cm" 
             className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none py-3 px-1 data-[state=active]:bg-transparent"
           >
             <Wrench className="mr-2 h-4 w-4" />
             Corrective Maintenance
-          </TabsTrigger>
-          <TabsTrigger 
+          </TabsTrigger>}
+          {canViewHistory && <TabsTrigger 
             value="history" 
             className="data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:shadow-none rounded-none py-3 px-1 data-[state=active]:bg-transparent"
           >
             <History className="mr-2 h-4 w-4" />
             Maintenance History
-          </TabsTrigger>
+          </TabsTrigger>}
         </TabsList>
 
         <div className="mt-6">
-          <TabsContent value="equipment-info" className="m-0 focus-visible:outline-none focus-visible:ring-0">
+          {canViewEquipment && <TabsContent value="equipment-info" className="m-0 focus-visible:outline-none focus-visible:ring-0">
             <Card>
               <CardHeader className="flex flex-row items-start justify-between">
                 <div>
@@ -261,9 +307,9 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="pm" className="m-0 focus-visible:outline-none focus-visible:ring-0">
+          {canViewPm && <TabsContent value="pm" className="m-0 focus-visible:outline-none focus-visible:ring-0">
             <Card>
               <CardHeader>
                 <CardTitle>Preventive Maintenance</CardTitle>
@@ -286,9 +332,9 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
                 </Button>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="cm" className="m-0 focus-visible:outline-none focus-visible:ring-0">
+          {canViewCm && <TabsContent value="cm" className="m-0 focus-visible:outline-none focus-visible:ring-0">
             <Card>
               <CardHeader>
                 <CardTitle>Corrective Maintenance</CardTitle>
@@ -306,17 +352,33 @@ export default function MachineProfile({ params }: { params: { id: string } }) {
                 </Button>
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="history" className="m-0 focus-visible:outline-none focus-visible:ring-0">
+          {canViewHistory && <TabsContent value="history" className="m-0 focus-visible:outline-none focus-visible:ring-0">
             <Card>
-              <CardContent className="flex flex-col items-center justify-center h-64 text-center">
-                <History className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <h3 className="text-lg font-medium">Maintenance History</h3>
-                <p className="text-muted-foreground mt-1">Historical logs and reporting coming in a later phase.</p>
+              <CardHeader>
+                <CardTitle>Maintenance History</CardTitle>
+                <CardDescription>All recorded changes and updates for this machine.</CardDescription>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                {isHistoryLoading ? <p className="text-muted-foreground">Loading history...</p> : machineHistory.length === 0 ? <p className="text-muted-foreground">No changes have been recorded for this machine yet.</p> : (
+                  <table className="w-full min-w-[760px] text-sm">
+                    <thead className="border-b text-left text-muted-foreground">
+                      <tr><th className="px-3 py-2 font-medium">Date and time</th><th className="px-3 py-2 font-medium">User</th><th className="px-3 py-2 font-medium">Change</th><th className="px-3 py-2 font-medium">Details</th></tr>
+                    </thead>
+                    <tbody>
+                      {machineHistory.map((entry) => <tr key={entry.id} className="border-b align-top">
+                        <td className="whitespace-nowrap px-3 py-3">{new Date(entry.createdAt).toLocaleString()}</td>
+                        <td className="px-3 py-3">{entry.userName}</td>
+                        <td className="px-3 py-3 font-medium">{entry.action.replaceAll("_", " ")}</td>
+                        <td className="max-w-xl break-words px-3 py-3 text-muted-foreground">{historyDetails(entry)}</td>
+                      </tr>)}
+                    </tbody>
+                  </table>
+                )}
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent>}
         </div>
       </Tabs>
     </div>

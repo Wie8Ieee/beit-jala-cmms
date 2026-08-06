@@ -1435,6 +1435,7 @@ export const CreateMaintenanceRequestResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -1478,7 +1479,7 @@ export const GetMaintenanceRequestTechniciansResponse = zod.array(GetMaintenance
  */
 export const GetClosedCorrectiveMaintenanceLogResponseItem = zod.object({
   "id": zod.string(),
-  "source": zod.enum(['automatic', 'manual']),
+  "source": zod.enum(['automatic', 'manual', 'corrective-record']),
   "machineName": zod.string(),
   "machineNumber": zod.string(),
   "requestDate": zod.string(),
@@ -1528,7 +1529,7 @@ export const CreateManualClosedCorrectiveMaintenanceLogEntryBody = zod.object({
 
 export const CreateManualClosedCorrectiveMaintenanceLogEntryResponse = zod.object({
   "id": zod.string(),
-  "source": zod.enum(['automatic', 'manual']),
+  "source": zod.enum(['automatic', 'manual', 'corrective-record']),
   "machineName": zod.string(),
   "machineNumber": zod.string(),
   "requestDate": zod.string(),
@@ -1950,6 +1951,7 @@ export const GetMaintenanceRequestResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2029,6 +2031,7 @@ export const GetMaintenanceRequestByNumberResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2117,6 +2120,7 @@ export const QaReviewMaintenanceRequestResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2205,6 +2209,7 @@ export const PatchQaReviewMaintenanceRequestResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2293,6 +2298,7 @@ export const EngineeringReviewMaintenanceRequestResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2381,6 +2387,7 @@ export const PatchEngineeringReviewMaintenanceRequestResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2464,6 +2471,7 @@ export const AssignMaintenanceRequestTechnicianResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2543,6 +2551,7 @@ export const StartCorrectiveMaintenanceWorkResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2631,6 +2640,7 @@ export const UpdatePreliminaryFindingsResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2719,6 +2729,7 @@ export const PatchPreliminaryFindingsResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2808,6 +2819,7 @@ export const UpdateCorrectiveMaintenanceActionsResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2894,6 +2906,7 @@ export const UpdateCorrectiveMaintenanceHandoverResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -2987,6 +3000,7 @@ export const UpdateActionsHandoverResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }),zod.null()]).optional(),
   "statusHistory": zod.array(zod.object({
@@ -3049,6 +3063,7 @@ export const GetMachineCorrectiveMaintenanceResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }))
 })
@@ -3108,6 +3123,7 @@ export const UpdateCorrectiveMaintenanceHeaderResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }))
 })
@@ -3161,6 +3177,7 @@ export const GetMachineCorrectiveMaintenanceHistoryResponseItem = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 }))
 })
@@ -3211,6 +3228,7 @@ export const UpdateCorrectiveMaintenanceLogRowResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 })
 
@@ -3258,6 +3276,7 @@ export const CreateCorrectiveMaintenanceLogRowResponse = zod.object({
   "receiverSignature": zod.string().nullish(),
   "handoverDate": zod.string().nullish(),
   "engineeringSignature": zod.string().nullish(),
+  "engineeringDate": zod.string().nullish(),
   "completedAt": zod.string().nullish()
 })
 

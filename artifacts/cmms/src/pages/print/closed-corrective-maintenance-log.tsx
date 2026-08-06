@@ -21,7 +21,7 @@ function formatDate(value: string) {
 }
 
 function maintenanceType(priority: string) {
-  return priority.toLowerCase() === "urgent" ? "مستعجل" : "عادي";
+  return priority.toLowerCase() === "urgent" || priority === "مستعجل" ? "مستعجل" : "عادي";
 }
 
 export default function ClosedCorrectiveMaintenanceLogPrintPage() {

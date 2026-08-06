@@ -19,10 +19,12 @@ type MachineOption = {
   departmentName: string | null;
 };
 
+type DepartmentOption = { id: number; name: string };
+
 export default function NewMaintenanceRequestPage() {
   const [, setLocation] = useLocation();
   const [machineId, setMachineId] = useState("");
-  const [departmentSection, setDepartmentSection] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
   const [priority, setPriority] = useState("normal");
   const [requestDate, setRequestDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [failureDescription, setFailureDescription] = useState("");
@@ -33,6 +35,10 @@ export default function NewMaintenanceRequestPage() {
     queryKey: ["request-machine-options"],
     queryFn: () => apiRequest<MachineOption[]>("/maintenance-requests/machines"),
   });
+  const { data: departments = [] } = useQuery({
+    queryKey: ["request-department-options"],
+    queryFn: () => apiRequest<DepartmentOption[]>("/departments"),
+  });
 
   const createRequest = useMutation({
     mutationFn: () =>
@@ -40,7 +46,7 @@ export default function NewMaintenanceRequestPage() {
         method: "POST",
         body: JSON.stringify({
           machineId: Number(machineId),
-          departmentSection,
+          departmentId: Number(departmentId),
           priority,
           requestDate,
           failureDescription,
@@ -92,7 +98,12 @@ export default function NewMaintenanceRequestPage() {
           </div>
           <div>
             <Label>Department / Section</Label>
-            <Input value={departmentSection} onChange={(event) => setDepartmentSection(event.target.value)} />
+            <Select value={departmentId} onValueChange={setDepartmentId}>
+              <SelectTrigger><SelectValue placeholder="اختر القسم" /></SelectTrigger>
+              <SelectContent>
+                {departments.map((department) => <SelectItem key={department.id} value={String(department.id)}>{department.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Priority</Label>
@@ -123,7 +134,7 @@ export default function NewMaintenanceRequestPage() {
             <Input value={supervisorName} onChange={(event) => setSupervisorName(event.target.value)} />
           </div>
           <p className="md:col-span-2 text-sm text-muted-foreground">تُضاف التواقيع الإلكترونية بعد إنشاء الطلب من خلال خانة التوقيع الخاصة بكل اسم.</p>
-          <Button type="submit" disabled={createRequest.isPending || !machineId || !failureDescription.trim()} className="w-fit">
+          <Button type="submit" disabled={createRequest.isPending || !machineId || !departmentId || !failureDescription.trim()} className="w-fit">
             <Save className="mr-2 h-4 w-4" />
             Submit Request
           </Button>

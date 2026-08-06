@@ -46,5 +46,7 @@ export interface CorrectiveMaintenanceEvent {
   /** @nullable */
   engineeringSignature?: string | null;
   /** @nullable */
+  engineeringDate?: string | null;
+  /** @nullable */
   completedAt?: string | null;
 }

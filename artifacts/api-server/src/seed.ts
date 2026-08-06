@@ -225,6 +225,13 @@ async function seed() {
     ["QA Supervisor", "Reviews submitted maintenance requests"],
     ["Engineering Manager", "Engineering management approval"],
     ["Production Manager", "Production management approval"],
+    ["Production Engineer", "Engineering support for production equipment and processes"],
+    ["Production Employee", "Production department employee"],
+    ["Production Supervisor", "Supervises the production department"],
+    ["Quality Assurance Employee", "Quality assurance department employee"],
+    ["Quality Assurance Supervisor", "Supervises the quality assurance department"],
+    ["Quality Control Employee", "Quality control department employee"],
+    ["Quality Control Supervisor", "Supervises the quality control department"],
     ["QC Manager", "QC management approval"],
     ["R&D Manager", "R&D management approval"],
     ["QA Manager", "QA management approval"],
@@ -234,23 +241,39 @@ async function seed() {
 
   const permissionData = [
     "view_dashboard",
+    "view_dashboard_notifications",
+    "view_dashboard_machines",
+    "view_dashboard_users",
+    "view_dashboard_departments",
+    "view_dashboard_preventive_maintenance",
+    "view_dashboard_maintenance_requests",
+    "view_dashboard_corrective_maintenance",
+    "view_dashboard_spare_parts",
+    "view_reports",
     "manage_users",
     "view_machines",
     "create_machine",
     "edit_machine",
     "soft_delete_machine",
     "view_equipment_information",
+    "view_machine_maintenance_history",
     "edit_equipment_information",
     "manage_pm_checklist",
     "fill_pm_record",
+    "edit_pm_inspection",
+    "delete_pm_inspection",
     "view_pm_records",
     "view_maintenance_plans",
     "edit_maintenance_plans",
+    "edit_monthly_pm_plan_rows",
+    "delete_monthly_pm_plan_rows",
     "submit_maintenance_request",
+    "review_department_requests",
     "view_own_requests",
     "qa_review_requests",
     "engineering_review_requests",
     "assign_technician",
+    "fill_preliminary_findings",
     "fill_corrective_maintenance",
     "view_corrective_maintenance",
     "manage_maintenance_requests",
@@ -262,9 +285,11 @@ async function seed() {
     "print_forms",
     "manage_signatures",
     "sign_assigned_fields",
-    "view_audit_logs",
     "review_qa_requests",
     "review_engineering_requests",
+    "archive_maintenance_requests",
+    "edit_closed_corrective_maintenance_log",
+    "set_maintenance_request_number_start",
   ];
   const permissions: Record<string, number> = {};
   for (const name of permissionData) permissions[name] = (await upsertPermission(name, name.replaceAll("_", " "))).id;
@@ -287,27 +312,33 @@ async function seed() {
   };
 
   const ids = (names: string[]) => names.map((name) => permissions[name]).filter((id): id is number => id !== undefined);
+  const dashboardSectionPermissions = permissionData.filter((name) => name.startsWith("view_dashboard_"));
   await setUserPermissions(users.admin.id, ids(permissionData));
   await setUserPermissions(users.supervisor.id, ids([
-    "view_dashboard", "view_machines", "create_machine", "edit_machine", "view_equipment_information",
+    "view_dashboard", ...dashboardSectionPermissions, "view_machines", "create_machine", "edit_machine", "view_equipment_information", "view_machine_maintenance_history",
     "edit_equipment_information", "manage_pm_checklist", "fill_pm_record", "view_pm_records",
     "view_maintenance_plans", "edit_maintenance_plans", "engineering_review_requests",
     "review_engineering_requests", "assign_technician", "view_corrective_maintenance",
     "manage_maintenance_requests", "manage_spare_parts", "view_spare_parts", "record_spare_part_usage",
     "adjust_spare_parts", "print_forms", "sign_assigned_fields",
+    "archive_maintenance_requests",
+    "set_maintenance_request_number_start",
   ]));
   await setUserPermissions(users.technician.id, ids([
-    "view_dashboard", "view_machines", "view_equipment_information", "fill_pm_record", "view_pm_records",
+    "view_dashboard", ...dashboardSectionPermissions, "view_machines", "view_equipment_information", "fill_pm_record", "view_pm_records",
     "fill_corrective_maintenance", "view_corrective_maintenance", "print_forms", "sign_assigned_fields",
   ]));
-  await setUserPermissions(users.employee.id, ids(["view_dashboard", "submit_maintenance_request", "view_own_requests", "sign_assigned_fields"]));
+  await setUserPermissions(users.employee.id, ids(["view_dashboard", ...dashboardSectionPermissions, "submit_maintenance_request", "view_own_requests", "sign_assigned_fields"]));
   await setUserPermissions(users.qa.id, ids([
-    "view_dashboard", "view_machines", "view_equipment_information", "view_pm_records",
+    "view_dashboard", ...dashboardSectionPermissions, "view_machines", "view_equipment_information", "view_pm_records",
     "view_maintenance_plans", "view_corrective_maintenance", "print_forms",
     "qa_review_requests", "review_qa_requests", "edit_header", "sign_assigned_fields",
   ]));
   for (const manager of [users.engineeringManager, users.productionManager, users.qcManager, users.rdManager, users.qaManager]) {
-    await setUserPermissions(manager.id, ids(["view_dashboard", "view_maintenance_plans", "sign_assigned_fields"]));
+    await setUserPermissions(manager.id, ids([
+      "view_dashboard", ...dashboardSectionPermissions, "view_maintenance_plans", "sign_assigned_fields",
+      ...(manager.id === users.engineeringManager.id ? ["review_engineering_requests", "fill_preliminary_findings"] : []),
+    ]));
   }
 
   const machineInputs = [

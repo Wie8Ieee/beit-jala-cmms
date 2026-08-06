@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Printer, Save } from "lucide-react";
+import { ArrowLeft, Printer, Save, Undo2 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -63,6 +63,10 @@ export default function ExternalMaintenanceRequestPage({ params }: { params: { i
     mutationFn: () => apiRequest(`/maintenance-requests/${requestId}/external-maintenance-receipt`, { method: "POST" }),
     onSuccess: () => setLocation(`/maintenance-requests/${requestId}/external-maintenance-receipt`),
   });
+  const cancelExternal = useMutation({
+    mutationFn: () => apiRequest(`/maintenance-requests/${requestId}/external-maintenance`, { method: "DELETE" }),
+    onSuccess: () => setLocation(`/maintenance-requests/${requestId}`),
+  });
 
   if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading external maintenance request…</div>;
   const { request, externalRequest } = data;
@@ -79,13 +83,14 @@ export default function ExternalMaintenanceRequestPage({ params }: { params: { i
         <Button variant="ghost" size="icon" asChild><Link href={`/maintenance-requests/${requestId}`}><ArrowLeft className="h-4 w-4" /></Link></Button>
         <div className="flex-1"><h1 className="text-3xl font-bold">طلب صيانة خارجية</h1><p className="text-muted-foreground">FORM-00-0077-1 — رقم طلب الصيانة: {request.requestReportNumber}</p></div>
         <Button variant="outline" asChild><Link href={`/print/external-maintenance/${requestId}`}><Printer className="ms-2 h-4 w-4" />طباعة</Link></Button>
+        {hasPermission("manage_maintenance_requests") && <Button variant="destructive" onClick={() => cancelExternal.mutate()} disabled={cancelExternal.isPending}><Undo2 className="ms-2 h-4 w-4" />إلغاء التحويل الخارجي</Button>}
         {hasPermission("manage_maintenance_requests") && <Button onClick={() => createReceipt.mutate()} disabled={createReceipt.isPending}>استلام أعمال الصيانة الخارجية</Button>}
       </div>
 
       <Card>
         <CardHeader><CardTitle>بيانات التحويل التلقائية</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <div><Label>رقم طلب الصيانة</Label><Input dir="ltr" value={request.requestReportNumber} readOnly /></div>
+          <div><Label>رقم طلب الصيانة الخارجية</Label><Input dir="ltr" value={externalRequest.externalRequestNumber} readOnly /></div>
           <div><Label>القسم الطالب للصيانة</Label><Input value={externalRequest.departmentSection ?? ""} readOnly /></div>
           <div><Label>اسم ورقم الجهاز</Label><Input dir="ltr" value={`${request.machineName} / ${request.machineNumber}`} readOnly /></div>
           <div className="md:col-span-2"><Label>الصيانة / النشاطات المطلوبة</Label><Textarea value={externalRequest.requiredMaintenance ?? ""} readOnly /></div>

@@ -143,7 +143,7 @@ export function OfficialPrintHeader({
             <br />
             Palestine
           </td>
-          <td className="w-[33%] text-center font-semibold">{title}</td>
+          <td className="w-[33%] whitespace-pre-line text-center font-semibold">{title}</td>
           <td className="w-[33%] text-left">
             <div>
               <strong>Doc. No.:</strong> {documentNumber}

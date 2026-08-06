@@ -38,7 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { t } = useTranslation();
   const [selectedPmSegment, setSelectedPmSegment] = useState<"Completed" | "Overdue / Not Completed" | null>(null);
   const { data: stats, isLoading } = useGetDashboardStats({
@@ -118,6 +118,14 @@ export default function DashboardPage() {
     completedCorrectiveThisMonth?: Array<{ id: number; requestReportNumber: string; machineId: number; machineName: string; machineNumber: string; completedDate: string }>;
   };
   const canViewSpareParts = !!user?.permissions.includes("view_spare_parts");
+  const canViewNotifications = hasPermission("view_dashboard_notifications");
+  const canViewMachines = hasPermission("view_dashboard_machines");
+  const canViewUsers = hasPermission("view_dashboard_users");
+  const canViewDepartments = hasPermission("view_dashboard_departments");
+  const canViewPm = hasPermission("view_dashboard_preventive_maintenance");
+  const canViewRequests = hasPermission("view_dashboard_maintenance_requests");
+  const canViewCorrective = hasPermission("view_dashboard_corrective_maintenance");
+  const canViewDashboardSpareParts = hasPermission("view_dashboard_spare_parts");
 
   const notifications = pmStats?.maintenanceRequestNotifications ?? [];
   const notificationIcon = (type: string) => {
@@ -127,19 +135,53 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-1">
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
           Welcome back, {user?.fullName || user?.username}. Here's what's happening today.
         </p>
       </div>
 
+      {stats && canViewNotifications && !isAdminOrSupervisor && !isQA && notifications.length > 0 && (
+        <Card className="overflow-hidden border-primary/20 border-l-4 border-l-primary bg-card shadow-sm">
+          <CardHeader className="pb-2 pt-4"><CardTitle className="flex items-center gap-2 text-base"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary"><Bell className="h-4 w-4" /></span>{t('dashboard.notifications')}<span className="ml-auto rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">{notifications.length}</span></CardTitle></CardHeader>
+          <CardContent className="pb-4"><div className="grid gap-2 md:grid-cols-2">{notifications.map((n, i) => <Link key={i} href={n.href}><div className="flex h-full items-start gap-3 rounded-lg border bg-muted/30 p-3 transition-colors hover:border-primary/30 hover:bg-primary/5 cursor-pointer">{notificationIcon(n.type)}<span className="text-sm font-medium leading-5">{n.message}</span></div></Link>)}</div></CardContent>
+        </Card>
+      )}
+
       {/* ADMIN & SUPERVISOR VIEW */}
       {(isAdminOrSupervisor || isQA) && stats && (
         <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="hover-elevate transition-all border-l-4 border-l-primary">
+          {/* NOTIFICATIONS PANEL — FR-2.8, FR-2.9, FR-2.10 */}
+          {canViewNotifications && notifications.length > 0 && (
+            <Card className="overflow-hidden border-primary/20 border-l-4 border-l-primary bg-card shadow-sm">
+              <CardHeader className="pb-2 pt-4">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Bell className="h-4 w-4" />
+                  </span>
+                  {t('dashboard.notifications')}
+                  <span className="ml-auto rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">{notifications.length}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pb-4">
+                <div className="grid gap-2 md:grid-cols-2">
+                  {notifications.map((n, i) => (
+                    <Link key={i} href={n.href}>
+                      <div className="flex h-full items-start gap-3 rounded-lg border bg-muted/30 p-3 transition-colors hover:border-primary/30 hover:bg-primary/5 cursor-pointer">
+                        {notificationIcon(n.type)}
+                        <span className="text-sm font-medium leading-5">{n.message}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+            <Card className={`${canViewMachines ? "" : "hidden"} h-full border-l-4 border-l-primary shadow-sm transition-shadow hover:shadow-md`}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">{t('dashboard.totalMachines')}</CardTitle>
                 <Server className="h-4 w-4 text-muted-foreground" />
@@ -152,7 +194,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
             
-            <Card className="hover-elevate transition-all">
+            <Card className={`${canViewUsers ? "" : "hidden"} h-full shadow-sm transition-shadow hover:shadow-md`}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">{t('dashboard.activeUsers')}</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -165,7 +207,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="hover-elevate transition-all">
+            <Card className={`${canViewDepartments ? "" : "hidden"} h-full shadow-sm transition-shadow hover:shadow-md`}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">{t('dashboard.departments')}</CardTitle>
                 <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -178,7 +220,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="hover-elevate transition-all">
+            <Card className={`${canViewPm ? "" : "hidden"} h-full shadow-sm transition-shadow hover:shadow-md`}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">{t('dashboard.pendingPM')}</CardTitle>
                 <Wrench className="h-4 w-4 text-muted-foreground" />
@@ -192,40 +234,15 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* NOTIFICATIONS PANEL — FR-2.8, FR-2.9, FR-2.10 */}
-          {notifications.length > 0 && (
-            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+          <div className="grid items-start gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <Card className={`${canViewMachines ? "" : "hidden"} md:col-span-2 lg:col-span-2 lg:order-5 overflow-hidden shadow-sm`}>
               <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base text-amber-800 dark:text-amber-300">
-                  <Bell className="h-4 w-4" />
-                  {t('dashboard.notifications')}
-                  <span className="ml-auto rounded-full bg-amber-500 text-white text-xs px-2 py-0.5">{notifications.length}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {notifications.map((n, i) => (
-                    <Link key={i} href={n.href}>
-                      <div className="flex items-start gap-3 rounded-md border border-amber-200 dark:border-amber-800 bg-white dark:bg-background p-3 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors cursor-pointer">
-                        {notificationIcon(n.type)}
-                        <span className="text-sm">{n.message}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="md:col-span-2 lg:col-span-2 lg:order-5">
-              <CardHeader>
                 <CardTitle>{t('dashboard.equipByDept')}</CardTitle>
                 <CardDescription>
                   {t('dashboard.equipByDeptDesc')}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pl-0">
+              <CardContent className="pt-0">
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stats.machinesByDepartment} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -258,9 +275,9 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {canViewSpareParts && isAdminOrSupervisor && (
-              <Card className="lg:order-4">
-                <CardHeader>
+            {canViewSpareParts && canViewDashboardSpareParts && isAdminOrSupervisor && (
+              <Card className="h-full lg:order-4 shadow-sm">
+                <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Package className="h-4 w-4 text-primary" />
                     {t('dashboard.lowStockParts')}
@@ -289,8 +306,8 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             )}
-            <Card className="lg:order-2">
-              <CardHeader>
+            <Card className={`${canViewRequests ? "" : "hidden"} h-full lg:order-2 shadow-sm`}>
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Activity className="h-4 w-4 text-primary" />
                   {t('dashboard.maintenanceRequests')}
@@ -323,21 +340,21 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="lg:order-3">
-              <CardHeader>
+            <Card className={`${canViewCorrective ? "" : "hidden"} lg:col-span-3 lg:order-6 shadow-sm`}>
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   Corrective Maintenance Completed This Month
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {pmStats?.completedCorrectiveThisMonth?.length ? <div className="space-y-2 max-h-64 overflow-y-auto">
+                {pmStats?.completedCorrectiveThisMonth?.length ? <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {pmStats.completedCorrectiveThisMonth.map((item) => <Link key={item.id} href={`/maintenance-requests/${item.id}`}><div className="rounded-md border p-3 hover:bg-muted/50"><div className="font-medium">{item.machineName}</div><div className="text-xs text-muted-foreground">{item.requestReportNumber} · {item.machineNumber} · {item.completedDate}</div></div></Link>)}
                 </div> : <p className="py-8 text-center text-sm text-muted-foreground">No corrective maintenance was completed this month.</p>}
               </CardContent>
             </Card>
-            <Card className="lg:order-3">
-              <CardHeader>
+            <Card className={`${canViewPm ? "" : "hidden"} h-full lg:order-3 shadow-sm`}>
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Clock className="h-4 w-4 text-amber-500" />
                   {t('dashboard.thisWeekPMs')}
@@ -368,8 +385,8 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-            <Card className="lg:order-1">
-              <CardHeader>
+            <Card className={`${canViewPm ? "" : "hidden"} h-full lg:order-1 shadow-sm`}>
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   {t('dashboard.monthlyPMCompletion')}
@@ -441,9 +458,9 @@ export default function DashboardPage() {
       )}
 
       {/* TECHNICIAN VIEW */}
-      {isTechnician && (
+      {isTechnician && (canViewRequests || canViewPm) && (
         <div className="grid gap-4 md:grid-cols-2">
-           <Card>
+           <Card className={canViewRequests ? "" : "hidden"}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Wrench className="h-4 w-4 text-primary" />
@@ -460,7 +477,7 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className={canViewPm ? "" : "hidden"}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Clock className="h-4 w-4 text-amber-500" />
@@ -492,7 +509,7 @@ export default function DashboardPage() {
       )}
 
       {/* DEPARTMENT EMPLOYEE VIEW */}
-      {isEmployee && (
+      {isEmployee && canViewRequests && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card className="bg-primary/5 border-primary/20 shadow-sm col-span-full md:col-span-1">
             <CardHeader>

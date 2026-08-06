@@ -3138,7 +3138,7 @@ components:
           type: string
         source:
           type: string
-          enum: [automatic, manual]
+          enum: [automatic, manual, corrective-record]
         machineName:
           type: string
         machineNumber:
@@ -3431,6 +3431,8 @@ components:
         handoverDate:
           type: ["string", "null"]
         engineeringSignature:
+          type: ["string", "null"]
+        engineeringDate:
           type: ["string", "null"]
         completedAt:
           type: ["string", "null"]

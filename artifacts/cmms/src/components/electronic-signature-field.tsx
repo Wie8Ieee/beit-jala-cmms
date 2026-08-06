@@ -45,6 +45,7 @@ type ElectronicSignatureFieldProps = {
   documentType: string;
   documentId: number;
   fieldName: string;
+  permissionFieldName?: string;
   label: string;
   signatureType?: string;
 };
@@ -53,6 +54,7 @@ export function ElectronicSignatureField({
   documentType,
   documentId,
   fieldName,
+  permissionFieldName,
   label,
   signatureType = "electronic",
 }: ElectronicSignatureFieldProps) {
@@ -62,10 +64,11 @@ export function ElectronicSignatureField({
   const [profileOpen, setProfileOpen] = useState(false);
   const [drawnSignature, setDrawnSignature] = useState("");
   const normalizedDocumentType = documentType.toUpperCase();
+  const authorizationFieldName = permissionFieldName ?? fieldName;
   const query = `documentType=${encodeURIComponent(normalizedDocumentType)}&documentId=${documentId}`;
   const signaturesKey = ["signatures", normalizedDocumentType, documentId];
   const eligibleKey = ["eligible-signers", normalizedDocumentType, documentId];
-  const permanentKey = ["signature-field-permissions", normalizedDocumentType, fieldName];
+  const permanentKey = ["signature-field-permissions", normalizedDocumentType, authorizationFieldName];
 
   const { data: signatures = [] } = useQuery({
     queryKey: signaturesKey,
@@ -80,13 +83,13 @@ export function ElectronicSignatureField({
   });
   const { data: permanentPermissions = [] } = useQuery({
     queryKey: permanentKey,
-    queryFn: () => apiRequest<SignatureFieldPermission[]>(`/signatures/field-permissions?documentType=${encodeURIComponent(normalizedDocumentType)}&fieldName=${encodeURIComponent(fieldName)}`),
+    queryFn: () => apiRequest<SignatureFieldPermission[]>(`/signatures/field-permissions?documentType=${encodeURIComponent(normalizedDocumentType)}&fieldName=${encodeURIComponent(authorizationFieldName)}`),
     enabled: Number.isFinite(documentId) && documentId > 0,
   });
   const { data: profile } = useQuery({ queryKey: ["signature-profile"], queryFn: () => apiRequest<{ signatureData: string | null }>("/signatures/profile") });
 
   const signature = signatures.find((item) => item.fieldName === fieldName);
-  const activeAssignments = assignments.filter((item) => item.fieldName === fieldName && !item.revokedAt);
+  const activeAssignments = assignments.filter((item) => (item.fieldName === fieldName || item.fieldName === authorizationFieldName) && !item.revokedAt);
   const canSign = useMemo(
     () =>
       !signature &&
@@ -111,6 +114,7 @@ export function ElectronicSignatureField({
           documentType: normalizedDocumentType,
           documentId,
           fieldName,
+          authorizationFieldName,
           signatureType,
         }),
       }),
@@ -138,15 +142,14 @@ export function ElectronicSignatureField({
                 <CheckCircle2 className="h-4 w-4 text-green-700" />
                 {signature.userName}
               </div>
-              {signature.signatureData && <img src={signature.signatureData} alt="Signature" className="mt-2 h-12 max-w-40 object-contain object-left" />}
               <div className="mt-1 text-xs text-muted-foreground print:text-black">
                 Signed {new Date(signature.signedAt).toLocaleString()} · Immutable
               </div>
             </div>
           ) : (
-            <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground print:text-black">
-              <Lock className="h-4 w-4" />
-              Awaiting eligible electronic signature
+            <div className="mt-2 space-y-1 text-sm text-muted-foreground print:text-black">
+              <div className="flex items-center gap-2"><Lock className="h-4 w-4" />Awaiting eligible electronic signature</div>
+              {!canSign && <p className="text-xs print:hidden">يجب أن يمنح المسؤول هذا المستخدم صلاحية هذا التوقيع من صفحة صلاحيات التواقيع.</p>}
             </div>
           )}
         </div>

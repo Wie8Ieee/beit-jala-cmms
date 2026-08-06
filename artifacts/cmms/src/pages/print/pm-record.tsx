@@ -76,6 +76,11 @@ function checklistRowHeight(pointCount: number, orientation: "portrait" | "lands
 function nameAndSignature(name: string | null, signature: string | null) {
   const normalizedName = name?.trim() ?? "";
   const normalizedSignature = signature?.trim() ?? "";
+  // Drawn signatures are stored as data:image URLs.  They must be rendered as
+  // an image in the printable form, not inserted as their Base64 text.
+  if (normalizedSignature.startsWith("data:image/")) {
+    return <div className="flex flex-col items-center gap-1"><span>{normalizedName}</span><img src={normalizedSignature} alt="Signature" className="h-8 max-w-full object-contain" /></div>;
+  }
   return normalizedSignature && normalizedSignature !== normalizedName
     ? [normalizedName, normalizedSignature].filter(Boolean).join(" - ")
     : normalizedName || normalizedSignature;

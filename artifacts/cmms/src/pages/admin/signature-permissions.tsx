@@ -11,20 +11,14 @@ import { useToast } from "@/hooks/use-toast";
 
 const formFields = {
   MAINTENANCE_REQUEST: [
-    ["reporting_person", "Person reporting failure"],
-    ["department_supervisor", "Department supervisor"],
-    ["qa_supervisor_approval", "QA supervisor approval"],
-    ["engineering_supervisor_approval", "Engineering supervisor approval"],
-  ],
-  CORRECTIVE_MAINTENANCE: [
-    ["maintenance_technician", "Maintenance technician"],
-    ["concerned_section_supervisor", "Concerned section supervisor"],
-    ["performing_staff_1", "Performing staff 1"],
-    ["performing_staff_2", "Performing staff 2"],
-    ["performing_staff_3", "Performing staff 3"],
-    ["performing_staff_4", "Performing staff 4"],
-    ["receiver", "Machine receiver"],
-    ["engineering_final", "Engineering final approval"],
+    ["reporting_person", "توقيع مُبلّغ العطل"],
+    ["department_supervisor", "توقيع مشرف القسم"],
+    ["qa_supervisor_approval", "توقيع مسؤول الجودة"],
+    ["maintenance_technician", "التوقيع الإلكتروني لفني الصيانة"],
+    ["concerned_section_supervisor", "التوقيع الإلكتروني لمشرف القسم المعني"],
+    ["performing_staff", "التوقيع الإلكتروني للقائم بالعمل"],
+    ["receiver", "التوقيع الإلكتروني لمستلم الماكنة"],
+    ["engineering_final", "التوقيع الإلكتروني للهندسة"],
   ],
   PM_RECORD: [
     ["examiner", "Examiner"],
@@ -47,6 +41,9 @@ const formFields = {
     ["maintenance_supervisor", "Maintenance supervisor"],
     ["department_manager", "Department manager"],
     ["approved_by", "Approved by"],
+  ],
+  MONTHLY_MAINTENANCE_EVALUATION: [
+    ["engineering_manager", "التوقيع الإلكتروني لمدير دائرة الهندسة"],
   ],
   ANNUAL_PLAN: [
     ["prepared_by", "Prepared by"],

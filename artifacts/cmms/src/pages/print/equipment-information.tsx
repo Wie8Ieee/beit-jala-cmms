@@ -120,12 +120,12 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
   const safetyIssueDetailRows = value(data, "safetyIssuesDetails")
     .split(/\r?\n/)
     .map((item) => item.trim());
-  const otherRowCount = Math.max(2, otherRows.length, otherDetailRows.length);
-  const safetyRowCount = Math.max(4, safetyIssueRows.length, safetyIssueDetailRows.length);
+  const otherRowCount = Math.max(otherRows.length, otherDetailRows.filter(Boolean).length);
+  const safetyRowCount = Math.max(safetyIssueRows.length, safetyIssueDetailRows.filter(Boolean).length);
   // The controlled form remains a single sheet: extra user-entered rows share
   // the reserved space of the Others and Safety blocks instead of pushing the
   // footer onto a second page.
-  const flexibleExtraRowHeight = Math.max(3, Math.min(6, 36 / (otherRowCount + safetyRowCount)));
+  const flexibleExtraRowHeight = Math.max(3, Math.min(6, 36 / Math.max(1, otherRowCount + safetyRowCount)));
   const formGridStyle = { "--equipment-extra-row-height": `${flexibleExtraRowHeight}mm` } as CSSProperties;
 
   return (
@@ -181,7 +181,7 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
                 <td className="font-semibold">
                   {L.f6a}<br />{L.f6b}<br />{L.f6c}
                 </td>
-                <td>
+                <td className="whitespace-pre-line">
                   {value(data, "purchasedFromName")}<br />{value(data, "purchasedFromAddress")}
                 </td>
               </tr>
@@ -201,7 +201,7 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
                     <>8. Equipment Dimensions<br />(in cm):<br />Width (W) X Height (H) X Depth (D)</>
                   )}
                 </td>
-                <td>
+                <td className="whitespace-pre-line">
                   {value(data, "dimensionWidthCm")} × {value(data, "dimensionHeightCm")} × {value(data, "dimensionDepthCm")}
                 </td>
               </tr>
@@ -229,6 +229,7 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
             </tbody>
           </table>
 
+          {otherRowCount > 0 && <>
           <div className="official-print-section-title">{L.f11}</div>
           <table className="official-print-table equipment-information-others">
             <tbody>
@@ -240,7 +241,9 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
               ))}
             </tbody>
           </table>
+          </>}
 
+          {safetyRowCount > 0 && <>
           <div className="official-print-section-title">{L.f12}</div>
           <table className="official-print-table equipment-information-safety">
             <tbody>
@@ -252,6 +255,7 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
               ))}
             </tbody>
           </table>
+          </>}
           </div>
 
           <div className="mt-4">

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { getErrorMessage } from "@/lib/error-message";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,15 +15,28 @@ import { ArrowLeft, Pencil, Plus, Save, X } from "lucide-react";
 import type { CorrectiveMaintenanceRecord } from "../maintenance-requests/types";
 import { OfficialFormHeader } from "@/components/official-form-header";
 
+function maintenanceTypeValue(value: string | null | undefined) {
+  return value?.toLowerCase() === "urgent" || value === "مستعجل" ? "urgent" : "normal";
+}
+
+function maintenanceTypeLabel(value: string | null | undefined) {
+  if (value?.toLowerCase() === "urgent" || value === "مستعجل") return "مستعجل";
+  if (value?.toLowerCase() === "normal" || value === "عادي") return "عادي";
+  return value || "-";
+}
+
 export default function MachineCorrectiveMaintenancePage({ params }: { params: { id: string; recordId?: string } }) {
   const machineId = Number(params.id);
   const historicalRecordId = params.recordId ? Number(params.recordId) : undefined;
   const isHistorical = historicalRecordId !== undefined;
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
   const { hasPermission } = useAuth();
   const [isEditingHeader, setIsEditingHeader] = useState(false);
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
-  const [eventDraft, setEventDraft] = useState({ requestReportNumber: "", requestDate: "", maintenanceType: "", preliminaryCheckResults: "", expectedWorkTimeFrom: "", expectedWorkTimeTo: "", repairTimeSlots: [{ date: "", from: "", to: "" }], actionsTaken: "", technicianName: "", sparePartsUsed: "", receiverName: "", handoverDate: "" });
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [eventDraft, setEventDraft] = useState({ requestReportNumber: "", requestDate: "", maintenanceType: "normal", preliminaryCheckResults: "", expectedWorkTimeFrom: "", expectedWorkTimeTo: "", repairTimeSlots: [{ date: "", from: "", to: "" }], actionsTaken: "", technicianName: "", sparePartsUsed: "", receiverName: "", handoverDate: "" });
   const [headerDraft, setHeaderDraft] = useState({
     documentNumber: "",
     executionDate: "",
@@ -33,8 +48,13 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
       if (historicalRecordId) {
         return apiRequest<CorrectiveMaintenanceRecord[]>(`/machines/${machineId}/corrective-maintenance/history`);
       }
-      const record = await apiRequest<CorrectiveMaintenanceRecord>(`/machines/${machineId}/corrective-maintenance`);
-      return [record];
+      try {
+        const record = await apiRequest<CorrectiveMaintenanceRecord>(`/machines/${machineId}/corrective-maintenance`);
+        return [record];
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("until Engineering approves")) return [];
+        throw error;
+      }
     },
   });
 
@@ -69,23 +89,42 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
       setEditingEventId(null);
       queryClient.invalidateQueries({ queryKey: ["machine-cm-record", machineId] });
     },
+    onError: (error) => toast({
+      variant: "destructive",
+      title: "تعذر حفظ صف الصيانة",
+      description: getErrorMessage(error, "تعذر حفظ التعديلات. حاول مرة أخرى."),
+    }),
+  });
+  const openLinkedRequest = useMutation({
+    mutationFn: (requestNumber: string) => apiRequest<{ request: { id: number } }>(`/maintenance-requests/by-number/${encodeURIComponent(requestNumber)}`),
+    onSuccess: (data) => navigate(`/maintenance-requests/${data.request.id}`),
+    onError: (error) => toast({
+      variant: "destructive",
+      title: "تعذر فتح طلب الصيانة",
+      description: getErrorMessage(error, "لا يوجد طلب صيانة يحمل هذا الرقم."),
+    }),
   });
   const addLogRow = useMutation({
     mutationFn: () => apiRequest(`/machines/${machineId}/corrective-maintenance/events`, { method: "POST", body: JSON.stringify({}) }),
     onSuccess: (event: { id: number; requestReportNumber: string | null; requestDate?: string | null; maintenanceType?: string | null; priority?: string | null; preliminaryCheckResults: string | null; expectedWorkTimeFrom: string | null; expectedWorkTimeTo: string | null; repairTimeSlots?: Array<{ date: string; from: string; to: string }>; actionsTaken: string | null; technicianName?: string | null; sparePartsUsed?: string | null; receiverName: string | null; handoverDate: string | null }) => {
       queryClient.invalidateQueries({ queryKey: ["machine-cm-record", machineId] });
       setEditingEventId(event.id);
-      setEventDraft({ requestReportNumber: event.requestReportNumber ?? "", requestDate: event.requestDate ?? "", maintenanceType: event.maintenanceType ?? event.priority ?? "", preliminaryCheckResults: event.preliminaryCheckResults ?? "", expectedWorkTimeFrom: event.expectedWorkTimeFrom ?? "", expectedWorkTimeTo: event.expectedWorkTimeTo ?? "", repairTimeSlots: event.repairTimeSlots?.length ? event.repairTimeSlots : [{ date: "", from: event.expectedWorkTimeFrom ?? "", to: event.expectedWorkTimeTo ?? "" }], actionsTaken: event.actionsTaken ?? "", technicianName: event.technicianName ?? "", sparePartsUsed: event.sparePartsUsed ?? "", receiverName: event.receiverName ?? "", handoverDate: event.handoverDate ?? "" });
+      setEventDraft({ requestReportNumber: event.requestReportNumber ?? "", requestDate: event.requestDate ?? "", maintenanceType: maintenanceTypeValue(event.maintenanceType ?? event.priority), preliminaryCheckResults: event.preliminaryCheckResults ?? "", expectedWorkTimeFrom: event.expectedWorkTimeFrom ?? "", expectedWorkTimeTo: event.expectedWorkTimeTo ?? "", repairTimeSlots: event.repairTimeSlots?.length ? event.repairTimeSlots : [{ date: "", from: event.expectedWorkTimeFrom ?? "", to: event.expectedWorkTimeTo ?? "" }], actionsTaken: event.actionsTaken ?? "", technicianName: event.technicianName ?? "", sparePartsUsed: event.sparePartsUsed ?? "", receiverName: event.receiverName ?? "", handoverDate: event.handoverDate ?? "" });
     },
   });
   const canEditLog = !isHistorical && (hasPermission("fill_corrective_maintenance") || hasPermission("manage_maintenance_requests"));
+  const visibleEvents = active?.events.filter((event) => {
+    if (!selectedMonth) return true;
+    const repairDate = event.repairTimeSlots?.find((slot) => /^\d{4}-\d{2}-\d{2}$/.test(slot.date))?.date;
+    return (repairDate ?? event.requestDate ?? "").startsWith(selectedMonth);
+  }) ?? [];
 
   const beginEventEdit = (event: CorrectiveMaintenanceRecord["events"][number]) => {
     setEditingEventId(event.id);
     setEventDraft({
       requestReportNumber: event.requestReportNumber ?? "",
       requestDate: event.requestDate ?? "",
-      maintenanceType: event.maintenanceType ?? event.priority ?? "",
+      maintenanceType: maintenanceTypeValue(event.maintenanceType ?? event.priority),
       preliminaryCheckResults: event.preliminaryCheckResults ?? "",
       expectedWorkTimeFrom: event.expectedWorkTimeFrom ?? "",
       expectedWorkTimeTo: event.expectedWorkTimeTo ?? "",
@@ -169,6 +208,13 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
             </CardHeader>
             <CardContent dir="rtl" className="overflow-x-auto">
               {isHistorical && <p className="mb-4 text-sm text-muted-foreground">هذا السجل مؤرشف ومحفوظ للرجوع إليه فقط.</p>}
+              <div className="mb-4 flex flex-wrap items-end gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="current-record-month">فلترة حسب الشهر</Label>
+                  <Input id="current-record-month" type="month" value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)} />
+                </div>
+                {selectedMonth && <Button type="button" variant="outline" onClick={() => setSelectedMonth("")}>إظهار كل الأشهر</Button>}
+              </div>
               <Table dir="rtl" className="min-w-max text-right">
                 <TableHeader>
                   <TableRow>
@@ -190,7 +236,7 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {active.events.map((event) => {
+                  {visibleEvents.map((event) => {
                     const isEditingEvent = editingEventId === event.id;
                     const repairSlots = event.repairTimeSlots?.filter((slot) => slot.date || slot.from || slot.to) ?? [];
                     return <TableRow key={event.id} className="align-top">
@@ -199,7 +245,7 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
                       <TableCell className="font-mono">
                         {isEditingEvent && !event.requestId ? <Input className="min-w-32" value={eventDraft.requestReportNumber} onChange={(input) => setEventDraft((draft) => ({ ...draft, requestReportNumber: input.target.value }))} /> : event.requestId ? <Link href={`/maintenance-requests/${event.requestId}`}>{event.requestReportNumber}</Link> : event.requestReportNumber || "-"}
                       </TableCell>
-                      <TableCell>{isEditingEvent ? <Input className="min-w-28" value={eventDraft.maintenanceType} placeholder="عادي / مستعجل" onChange={(input) => setEventDraft((draft) => ({ ...draft, maintenanceType: input.target.value }))} /> : event.maintenanceType || event.priority || "-"}</TableCell>
+                      <TableCell>{isEditingEvent ? <select className="flex h-10 min-w-28 rounded-md border border-input bg-background px-3 text-sm" value={eventDraft.maintenanceType} onChange={(input) => setEventDraft((draft) => ({ ...draft, maintenanceType: input.target.value }))}><option value="normal">عادي</option><option value="urgent">مستعجل</option></select> : maintenanceTypeLabel(event.maintenanceType ?? event.priority)}</TableCell>
                       <TableCell>{isEditingEvent ? <Textarea className="min-w-40" value={eventDraft.preliminaryCheckResults} onChange={(input) => setEventDraft((draft) => ({ ...draft, preliminaryCheckResults: input.target.value }))} /> : event.preliminaryCheckResults || "-"}</TableCell>
                       <TableCell>{isEditingEvent ? <div className="space-y-1">{eventDraft.repairTimeSlots.map((slot, index) => <Input key={index} className="min-w-36" type="date" value={slot.date} onChange={(input) => setEventDraft((draft) => ({ ...draft, repairTimeSlots: draft.repairTimeSlots.map((item, slotIndex) => slotIndex === index ? { ...item, date: input.target.value } : item) }))} />)}</div> : (repairSlots.length ? <div className="space-y-1 whitespace-nowrap">{repairSlots.map((slot, index) => <div key={index}>{slot.date || "-"}</div>)}</div> : "-")}</TableCell>
                       <TableCell>{isEditingEvent ? <div className="space-y-1">{eventDraft.repairTimeSlots.map((slot, index) => <Input key={index} className="min-w-28" type="time" value={slot.from} onChange={(input) => setEventDraft((draft) => ({ ...draft, repairTimeSlots: draft.repairTimeSlots.map((item, slotIndex) => slotIndex === index ? { ...item, from: input.target.value } : item) }))} />)}{eventDraft.repairTimeSlots.length < 5 && <Button type="button" size="sm" variant="outline" onClick={() => setEventDraft((draft) => ({ ...draft, repairTimeSlots: [...draft.repairTimeSlots, { date: "", from: "", to: "" }] }))}><Plus className="ml-1 h-3 w-3" />إضافة وقت</Button>}</div> : (repairSlots.length ? <div className="space-y-1 whitespace-nowrap">{repairSlots.map((slot, index) => <div key={index}>{slot.from || "-"}</div>)}</div> : event.expectedWorkTimeFrom || "-")}</TableCell>
@@ -210,9 +256,17 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
                       <TableCell>{isEditingEvent ? <Input className="min-w-32" value={eventDraft.receiverName} onChange={(input) => setEventDraft((draft) => ({ ...draft, receiverName: input.target.value }))} /> : event.receiverName || "-"}</TableCell>
                       <TableCell>{isEditingEvent ? <Input className="min-w-36" type="date" value={eventDraft.handoverDate} onChange={(input) => setEventDraft((draft) => ({ ...draft, handoverDate: input.target.value }))} /> : event.handoverDate || "-"}</TableCell>
                       <TableCell>
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={`/maintenance-requests/${event.requestId}`}>Open</Link>
-                        </Button>
+                        {event.requestReportNumber ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={openLinkedRequest.isPending}
+                            onClick={() => openLinkedRequest.mutate(event.requestReportNumber!)}
+                          >
+                            Open
+                          </Button>
+                        ) : "-"}
                       </TableCell>
                       {canEditLog && <TableCell className="text-right whitespace-nowrap">
                         {isEditingEvent ? <>
@@ -229,7 +283,7 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
         </>
       ) : (
         <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">No corrective maintenance records have been created for this machine yet.</CardContent>
+          <CardContent dir="rtl" className="p-8 text-center text-muted-foreground">لا يُفتح سجل الصيانة العلاجية إلا بعد موافقة قسم الهندسة على طلب صيانة مرتبط بهذه الماكينة.</CardContent>
         </Card>
       )}
 

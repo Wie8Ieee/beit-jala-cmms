@@ -1,13 +1,15 @@
-import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "wouter";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BookOpen, Plus } from "lucide-react";
+import { Archive, ArrowLeft, BookOpen, Plus, Save } from "lucide-react";
 import type { MaintenanceRequestSummary } from "./types";
 
 function titleForScope(scope: string, t: (k: string) => string) {
@@ -15,6 +17,7 @@ function titleForScope(scope: string, t: (k: string) => string) {
   if (scope === "qa") return t("maintenanceRequests.qaQueue");
   if (scope === "engineering") return t("maintenanceRequests.engineeringQueue");
   if (scope === "technician") return t("maintenanceRequests.technicianQueue");
+  if (scope === "archived") return t("maintenanceRequests.archivedTitle");
   return t("maintenanceRequests.title");
 }
 
@@ -28,22 +31,62 @@ function StatusBadge({ status }: { status: string }) {
 export default function MaintenanceRequestsListPage({ scope = "all" }: { scope?: string }) {
   const { hasPermission } = useAuth();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
+  const canSetNumberingStart = hasPermission("set_maintenance_request_number_start");
+  const [numberingStart, setNumberingStart] = useState("");
   const { data = [], isLoading } = useQuery({
     queryKey: ["maintenance-requests", scope],
     queryFn: () => apiRequest<MaintenanceRequestSummary[]>(`/maintenance-requests?scope=${scope}`),
+  });
+  const { data: numberingSetting } = useQuery({
+    queryKey: ["maintenance-request-numbering-start"],
+    queryFn: () => apiRequest<{ lastSequence: number | null }>("/maintenance-requests/numbering-start"),
+    enabled: canSetNumberingStart,
+  });
+  useEffect(() => {
+    if (numberingSetting?.lastSequence !== null && numberingSetting?.lastSequence !== undefined) {
+      setNumberingStart(String(numberingSetting.lastSequence));
+    }
+  }, [numberingSetting]);
+  const saveNumberingStart = useMutation({
+    mutationFn: () => apiRequest<{ lastSequence: number }>("/maintenance-requests/numbering-start", {
+      method: "PUT",
+      body: JSON.stringify({ lastSequence: numberingStart }),
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maintenance-request-numbering-start"] }),
   });
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4">
-        <div>
+        <div className="flex items-start gap-3">
+          {scope === "archived" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t("maintenanceRequests.backToRequests")}
+              title={t("maintenanceRequests.back")}
+              onClick={() => window.history.length > 1 ? window.history.back() : navigate("/maintenance-requests")}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+          <div>
           <h1 className="text-3xl font-bold tracking-tight">{titleForScope(scope, t)}</h1>
           <p className="text-muted-foreground">FORM-10-0975 {t("maintenanceRequests.title").toLowerCase()}.</p>
+          </div>
         </div>
         <div className="flex gap-2">
           {hasPermission("manage_maintenance_requests") && (
             <Button variant="outline" asChild>
-              <Link href="/maintenance-requests/closed-log"><BookOpen className="me-2 h-4 w-4" />سجل الطلبات المغلقة</Link>
+              <Link href="/maintenance-requests/closed-log"><BookOpen className="me-2 h-4 w-4" />{t("maintenanceRequests.closedLog")}</Link>
+            </Button>
+          )}
+          {hasPermission("archive_maintenance_requests") && scope !== "archived" && (
+            <Button variant="outline" asChild>
+              <Link href="/maintenance-requests/archive"><Archive className="me-2 h-4 w-4" />{t("maintenanceRequests.archive")}</Link>
             </Button>
           )}
           {hasPermission("submit_maintenance_request") && (
@@ -56,6 +99,21 @@ export default function MaintenanceRequestsListPage({ scope = "all" }: { scope?:
           )}
         </div>
       </div>
+
+      {canSetNumberingStart && (
+        <Card>
+          <CardContent className="flex flex-wrap items-end gap-3 p-4" dir="rtl">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">رقم طلب الصيانة</label>
+              <Input dir="ltr" inputMode="numeric" value={numberingStart} onChange={(event) => setNumberingStart(event.target.value)} placeholder="400" className="w-40" />
+            </div>
+            <Button type="button" onClick={() => saveNumberingStart.mutate()} disabled={!numberingStart.trim() || saveNumberingStart.isPending}>
+              <Save className="ms-2 h-4 w-4" />حفظ
+            </Button>
+            <p className="pb-2 text-sm text-muted-foreground">أدخل آخر رقم ورقي مستخدم؛ مثلاً 400 يجعل أول طلب معتمد في التطبيق 401/MM/YYYY.</p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-0">
