@@ -36,7 +36,7 @@ export default function ExternalMaintenanceReceiptPage({ params }: { params: { i
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["external-maintenance-receipt", requestId] }),
   });
   if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading external maintenance receipt…</div>;
-  const canEdit = hasPermission("manage_maintenance_requests");
+  const canEdit = hasPermission("edit_external_maintenance");
   function submit(event: FormEvent) { event.preventDefault(); save.mutate(); }
 
   return <div className="mx-auto max-w-5xl space-y-6" dir="rtl">

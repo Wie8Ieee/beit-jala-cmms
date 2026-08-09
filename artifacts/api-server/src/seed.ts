@@ -266,6 +266,10 @@ async function seed() {
     "view_maintenance_plans",
     "edit_maintenance_plans",
     "edit_monthly_pm_plan_rows",
+    "view_annual_maintenance_plan",
+    "edit_annual_maintenance_plan",
+    "view_monthly_maintenance_plan",
+    "edit_monthly_maintenance_plan",
     "delete_monthly_pm_plan_rows",
     "submit_maintenance_request",
     "review_department_requests",
@@ -275,8 +279,11 @@ async function seed() {
     "assign_technician",
     "fill_preliminary_findings",
     "fill_corrective_maintenance",
+    "delete_corrective_maintenance",
     "view_corrective_maintenance",
     "manage_maintenance_requests",
+    "view_external_maintenance",
+    "edit_external_maintenance",
     "view_spare_parts",
     "manage_spare_parts",
     "record_spare_part_usage",
@@ -317,9 +324,9 @@ async function seed() {
   await setUserPermissions(users.supervisor.id, ids([
     "view_dashboard", ...dashboardSectionPermissions, "view_machines", "create_machine", "edit_machine", "view_equipment_information", "view_machine_maintenance_history",
     "edit_equipment_information", "manage_pm_checklist", "fill_pm_record", "view_pm_records",
-    "view_maintenance_plans", "edit_maintenance_plans", "engineering_review_requests",
+    "view_maintenance_plans", "edit_maintenance_plans", "view_annual_maintenance_plan", "edit_annual_maintenance_plan", "view_monthly_maintenance_plan", "edit_monthly_maintenance_plan", "engineering_review_requests",
     "review_engineering_requests", "assign_technician", "view_corrective_maintenance",
-    "manage_maintenance_requests", "manage_spare_parts", "view_spare_parts", "record_spare_part_usage",
+    "manage_maintenance_requests", "view_external_maintenance", "edit_external_maintenance", "manage_spare_parts", "view_spare_parts", "record_spare_part_usage",
     "adjust_spare_parts", "print_forms", "sign_assigned_fields",
     "archive_maintenance_requests",
     "set_maintenance_request_number_start",
@@ -331,12 +338,12 @@ async function seed() {
   await setUserPermissions(users.employee.id, ids(["view_dashboard", ...dashboardSectionPermissions, "submit_maintenance_request", "view_own_requests", "sign_assigned_fields"]));
   await setUserPermissions(users.qa.id, ids([
     "view_dashboard", ...dashboardSectionPermissions, "view_machines", "view_equipment_information", "view_pm_records",
-    "view_maintenance_plans", "view_corrective_maintenance", "print_forms",
+    "view_maintenance_plans", "view_annual_maintenance_plan", "view_monthly_maintenance_plan", "view_corrective_maintenance", "print_forms",
     "qa_review_requests", "review_qa_requests", "edit_header", "sign_assigned_fields",
   ]));
   for (const manager of [users.engineeringManager, users.productionManager, users.qcManager, users.rdManager, users.qaManager]) {
     await setUserPermissions(manager.id, ids([
-      "view_dashboard", ...dashboardSectionPermissions, "view_maintenance_plans", "sign_assigned_fields",
+      "view_dashboard", ...dashboardSectionPermissions, "view_maintenance_plans", "view_annual_maintenance_plan", "view_monthly_maintenance_plan", "sign_assigned_fields",
       ...(manager.id === users.engineeringManager.id ? ["review_engineering_requests", "fill_preliminary_findings"] : []),
     ]));
   }

@@ -2,7 +2,9 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import {
   correctiveMaintenanceEventsTable,
+  correctiveMaintenanceHandoverTable,
   correctiveMaintenanceRecordsTable,
+  correctiveMaintenanceStaffTable,
   maintenanceRequestsTable,
   machinesTable,
   auditLogsTable,
@@ -227,10 +229,36 @@ async function recordDetail(record: typeof correctiveMaintenanceRecordsTable.$in
   };
 }
 
-async function getRecordForNewEvent(machineId: number) {
+async function ensureActiveRecord(machineId: number) {
   const [active] = await db.select().from(correctiveMaintenanceRecordsTable)
     .where(and(eq(correctiveMaintenanceRecordsTable.machineId, machineId), eq(correctiveMaintenanceRecordsTable.status, "active")))
-    .orderBy(desc(correctiveMaintenanceRecordsTable.sequenceNumber)).limit(1);
+    .orderBy(desc(correctiveMaintenanceRecordsTable.sequenceNumber))
+    .limit(1);
+  if (active) return active;
+
+  const [machine] = await db.select().from(machinesTable).where(eq(machinesTable.id, machineId));
+  if (!machine) return null;
+  const [latest] = await db.select().from(correctiveMaintenanceRecordsTable)
+    .where(eq(correctiveMaintenanceRecordsTable.machineId, machineId))
+    .orderBy(desc(correctiveMaintenanceRecordsTable.sequenceNumber))
+    .limit(1);
+  const [created] = await db.insert(correctiveMaintenanceRecordsTable).values({
+    machineId,
+    sequenceNumber: (latest?.sequenceNumber ?? 0) + 1,
+    previousRecordId: latest?.id ?? null,
+    executionDate: new Date().toISOString().slice(0, 10),
+    machineName: machine.machineName,
+    machineNumber: machine.machineNumber,
+    machineLocation: machine.location,
+    startupDate: machine.pmStartDate,
+    maxRows: CORRECTIVE_RECORD_CAPACITY,
+    status: "active",
+  }).returning();
+  return created!;
+}
+
+async function getRecordForNewEvent(machineId: number) {
+  const active = await ensureActiveRecord(machineId);
   if (!active) return null;
   const [countResult] = await db.select({ total: count() }).from(correctiveMaintenanceEventsTable).where(eq(correctiveMaintenanceEventsTable.recordId, active.id));
   if (Number(countResult?.total ?? 0) < CORRECTIVE_RECORD_CAPACITY) return active;
@@ -311,24 +339,8 @@ router.get("/", requireAuth, requirePermission("view_corrective_maintenance"), a
       return;
     }
 
-    const [record] = await db
-      .select()
-      .from(correctiveMaintenanceRecordsTable)
-      .where(and(eq(correctiveMaintenanceRecordsTable.machineId, machineId), eq(correctiveMaintenanceRecordsTable.status, "active")))
-      .orderBy(desc(correctiveMaintenanceRecordsTable.sequenceNumber))
-      .limit(1);
-
-    if (record) {
-      res.json(await recordDetail(record));
-      return;
-    }
-
-    // A corrective-maintenance record is opened only by accepting a linked
-    // maintenance request in Engineering. Visiting this page must never create
-    // an empty log for a machine with no approved request.
-    res.status(404).json({
-      error: "No corrective maintenance record exists until Engineering approves a maintenance request",
-    });
+    const record = await ensureActiveRecord(machineId);
+    res.json(await recordDetail(record!));
   } catch (err) {
     next(err);
   }
@@ -514,6 +526,45 @@ router.post("/events", requireAuth, requireAnyPermission(["fill_corrective_maint
       details: { eventId: created!.id, recordId: record.id, requestReportNumber: created!.requestReportNumber },
     });
     res.status(201).json(formatEvent(created!));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/events/:eventId", requireAuth, requirePermission("delete_corrective_maintenance"), async (req, res, next) => {
+  try {
+    const machineId = parseIdParam(req.params.id);
+    const eventId = parseIdParam(req.params.eventId);
+    const [event] = await db.select().from(correctiveMaintenanceEventsTable)
+      .where(and(eq(correctiveMaintenanceEventsTable.id, eventId), eq(correctiveMaintenanceEventsTable.machineId, machineId)))
+      .limit(1);
+    if (!event) {
+      res.status(404).json({ error: "Corrective maintenance row not found" });
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.delete(correctiveMaintenanceHandoverTable).where(eq(correctiveMaintenanceHandoverTable.eventId, event.id));
+      await tx.delete(correctiveMaintenanceStaffTable).where(eq(correctiveMaintenanceStaffTable.eventId, event.id));
+      await tx.delete(correctiveMaintenanceEventsTable).where(eq(correctiveMaintenanceEventsTable.id, event.id));
+      const remaining = await tx.select({ id: correctiveMaintenanceEventsTable.id })
+        .from(correctiveMaintenanceEventsTable)
+        .where(eq(correctiveMaintenanceEventsTable.recordId, event.recordId))
+        .orderBy(asc(correctiveMaintenanceEventsTable.rowNumber));
+      for (const [index, row] of remaining.entries()) {
+        await tx.update(correctiveMaintenanceEventsTable)
+          .set({ rowNumber: index + 1, updatedAt: new Date() })
+          .where(eq(correctiveMaintenanceEventsTable.id, row.id));
+      }
+      await tx.insert(auditLogsTable).values({
+        userId: req.session.userId ?? null,
+        action: "corrective_maintenance_record_deleted",
+        entityType: "machine",
+        entityId: machineId,
+        details: { eventId: event.id, recordId: event.recordId, requestReportNumber: event.requestReportNumber },
+      });
+    });
+    res.status(204).send();
   } catch (err) {
     next(err);
   }

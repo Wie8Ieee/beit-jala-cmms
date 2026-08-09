@@ -189,7 +189,7 @@ export default function EquipmentInformationPrintPage({ params }: { params: { id
                 <td className="font-semibold">
                   {L.f7a}<br />{L.f7b}<br />{L.f7c}
                 </td>
-                <td>
+                <td className="whitespace-pre-line">
                   {value(data, "manufacturingCompanyName")}<br />{value(data, "manufacturingCompanyAddress")}
                 </td>
               </tr>

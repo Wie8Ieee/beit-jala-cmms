@@ -45,7 +45,7 @@ export default function MonthlyPlansIndexPage({ params }: { params: { year: stri
         </div>
       </div>
 
-      {hasPermission("edit_header") && <Card>
+      {hasPermission("edit_monthly_maintenance_plan") && <Card>
         <CardHeader><CardTitle>Monthly Plan Header Settings</CardTitle></CardHeader>
         <CardContent className="grid max-w-2xl gap-4 md:grid-cols-2">
           <div><Label>Document number</Label><Input value={header.documentNumber} onChange={(event) => setHeader({ ...header, documentNumber: event.target.value })} /></div>

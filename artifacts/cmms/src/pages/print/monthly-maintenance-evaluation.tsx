@@ -52,6 +52,7 @@ export default function MonthlyMaintenanceEvaluationPrintPage({ params }: { para
     queryFn: () => apiRequest<ElectronicSignature[]>(`/signatures?documentType=MONTHLY_MAINTENANCE_EVALUATION&documentId=${reportId}`),
     enabled: reportId > 0,
   });
+  const preparedBySignature = signatures.find((signature) => signature.fieldName === "prepared_by");
   const engineeringManagerSignature = signatures.find((signature) => signature.fieldName === "engineering_manager");
   const delayedRows = rowsFrom(data?.delayedActivities, ["activity", "reason"], { activity: String(data?.delayedActivities ?? ""), reason: String(data?.delayReason ?? "") });
   const correctiveRows = rowsFrom(data?.correctiveMaintenanceDetails, ["machineArea", "requestNo", "reason"]);
@@ -75,7 +76,7 @@ export default function MonthlyMaintenanceEvaluationPrintPage({ params }: { para
       <p className="evaluation-question"><b>(7)</b> عدد طلبات الصيانة الخارجية = {numberValue(data?.totalExternalActivities)}</p>
       <table className="evaluation-table evaluation-external"><thead><tr><th>رقم أمر / طلب الصيانة</th><th>نشاطات أعمال الصيانة الخارجية</th><th>أسباب إرسالها للصيانة العلاجية</th><th>اسم القائم بالعمل</th></tr></thead><tbody>{externalRows.map((row, index) => <tr key={index}><td>{row.requestNo}</td><td>{row.activities}</td><td>{row.reason}</td><td>{row.performer}</td></tr>)}</tbody></table>
       <div className="evaluation-signatures">
-        <div className="evaluation-signature-row"><span><b>إعداد:</b> {data?.preparedBy ?? ""}</span><span><b>التاريخ:</b> {typeof data?.preparedDate === "string" ? data.preparedDate.split("-").reverse().join("/") : ""}</span></div>
+        <div className="evaluation-signature-row"><span><b>إعداد:</b> {data?.preparedBy ?? ""}{preparedBySignature?.signatureData && <img src={preparedBySignature.signatureData} alt="توقيع مُعدّ التقرير" className="evaluation-electronic-signature" />}</span><span><b>التاريخ:</b> {typeof data?.preparedDate === "string" && data.preparedDate ? data.preparedDate.split("-").reverse().join("/") : signatureDate(preparedBySignature?.signedAt)}</span></div>
         <div className="evaluation-signature-row"><span><b>توقيع مدير دائرة الهندسة:</b> {engineeringManagerSignature?.signatureData ? <img src={engineeringManagerSignature.signatureData} alt="توقيع مدير دائرة الهندسة" className="evaluation-electronic-signature" /> : (data?.engineeringManagerSignature ?? "")}</span><span><b>التاريخ:</b> {typeof data?.engineeringManagerDate === "string" && data.engineeringManagerDate ? data.engineeringManagerDate.split("-").reverse().join("/") : signatureDate(engineeringManagerSignature?.signedAt)}</span></div>
       </div>
     </div></PrintPage>

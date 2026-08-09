@@ -363,7 +363,7 @@ router.patch(
   },
 );
 
-router.post("/sign", requireAuth, requirePermission("sign_assigned_fields"), async (req, res, next) => {
+router.post("/sign", requireAuth, async (req, res, next) => {
   try {
     const documentType = normalizeDocumentType(req.body.documentType);
     const documentId = Number(req.body.documentId);

@@ -306,7 +306,10 @@ router.put("/:id/permissions", requireActiveAuth, requirePermission("manage_user
       return;
     }
 
-    const uniquePermissionNames = [...new Set(permissionNames)];
+    const normalizedPermissionNames = new Set(permissionNames);
+    if (normalizedPermissionNames.has("edit_annual_maintenance_plan")) normalizedPermissionNames.add("view_annual_maintenance_plan");
+    if (normalizedPermissionNames.has("edit_monthly_maintenance_plan") || normalizedPermissionNames.has("delete_monthly_pm_plan_rows")) normalizedPermissionNames.add("view_monthly_maintenance_plan");
+    const uniquePermissionNames = [...normalizedPermissionNames];
 
     await db.transaction(async (tx) => {
       await tx.delete(userPermissionsTable).where(eq(userPermissionsTable.userId, id));

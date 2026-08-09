@@ -62,7 +62,7 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const { hasPermission } = useAuth();
-  const canEdit = hasPermission("edit_maintenance_plans");
+  const canEdit = hasPermission("edit_annual_maintenance_plan");
   const canEditHeader = hasPermission("edit_header");
   const [form, setForm] = useState<AnnualPlan | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);

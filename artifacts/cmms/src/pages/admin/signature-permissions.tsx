@@ -43,6 +43,7 @@ const formFields = {
     ["approved_by", "Approved by"],
   ],
   MONTHLY_MAINTENANCE_EVALUATION: [
+    ["prepared_by", "التوقيع الإلكتروني للمُعدّ"],
     ["engineering_manager", "التوقيع الإلكتروني لمدير دائرة الهندسة"],
   ],
   ANNUAL_PLAN: [

@@ -236,7 +236,8 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
   const canHandover = canManageCorrectiveWork && (request.status === "In Progress" || request.status === "Completed");
   const receiverSignedByCurrentUser = handoverSignatures.some((signature) => signature.fieldName === "receiver" && signature.userId === user?.id);
   const engineeringSignedByCurrentUser = handoverSignatures.some((signature) => signature.fieldName === "engineering_final" && signature.userId === user?.id);
-  const canConvertToExternal = hasPermission("manage_maintenance_requests") && !["Closed", "Rejected", "QA Rejected", "External Maintenance"].includes(request.status);
+  const canViewExternal = hasPermission("view_external_maintenance");
+  const canConvertToExternal = canViewExternal && hasPermission("edit_external_maintenance") && !["Closed", "Rejected", "QA Rejected", "External Maintenance"].includes(request.status);
   const canEditRequestDetails = data.requestedByUserId === user?.id && ["Submitted", "Pending Department Supervisor Approval", "Pending QA Approval", "QA Rejected"].includes(request.status);
 
   function submitPreliminary(event: FormEvent) {
@@ -281,7 +282,7 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
         <Button asChild variant="outline">
           <Link href={`/print/maintenance-request/${requestId}`}>Official Print</Link>
         </Button>
-        {request.status === "External Maintenance" ? (
+        {request.status === "External Maintenance" && canViewExternal ? (
           <Button asChild variant="outline"><Link href={`/maintenance-requests/${requestId}/external-maintenance`}>External Maintenance Request</Link></Button>
         ) : canConvertToExternal ? (
           <Button variant="outline" onClick={() => setExternalDialogOpen(true)}>Convert to External Maintenance</Button>

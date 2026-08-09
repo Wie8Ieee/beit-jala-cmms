@@ -21,6 +21,7 @@ export default function ExternalMaintenanceRequestPage({ params }: { params: { i
     queryKey: ["external-maintenance-request", requestId],
     queryFn: () => apiRequest<ExternalMaintenanceRequestDetail>(`/maintenance-requests/${requestId}/external-maintenance`),
   });
+  const [preliminaryFindings, setPreliminaryFindings] = useState("");
   const [suggestions, setSuggestions] = useState("");
   const [technicianSignature, setTechnicianSignature] = useState("");
   const [technicianDate, setTechnicianDate] = useState("");
@@ -32,6 +33,7 @@ export default function ExternalMaintenanceRequestPage({ params }: { params: { i
   useEffect(() => {
     if (!data) return;
     const form = data.externalRequest;
+    setPreliminaryFindings(form.preliminaryFindings ?? "");
     setSuggestions(form.technicianSuggestions ?? "");
     setTechnicianSignature(form.maintenanceTechnicianSignature ?? "");
     setTechnicianDate(form.maintenanceTechnicianDate ?? "");
@@ -45,6 +47,7 @@ export default function ExternalMaintenanceRequestPage({ params }: { params: { i
     mutationFn: () => apiRequest<ExternalMaintenanceRequestDetail>(`/maintenance-requests/${requestId}/external-maintenance`, {
       method: "PATCH",
       body: JSON.stringify({
+        preliminaryFindings,
         technicianSuggestions: suggestions,
         maintenanceTechnicianSignature: technicianSignature,
         maintenanceTechnicianDate: technicianDate,
@@ -70,7 +73,7 @@ export default function ExternalMaintenanceRequestPage({ params }: { params: { i
 
   if (isLoading || !data) return <div className="p-8 text-muted-foreground">Loading external maintenance request…</div>;
   const { request, externalRequest } = data;
-  const canEdit = hasPermission("manage_maintenance_requests");
+  const canEdit = hasPermission("edit_external_maintenance");
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -83,8 +86,8 @@ export default function ExternalMaintenanceRequestPage({ params }: { params: { i
         <Button variant="ghost" size="icon" asChild><Link href={`/maintenance-requests/${requestId}`}><ArrowLeft className="h-4 w-4" /></Link></Button>
         <div className="flex-1"><h1 className="text-3xl font-bold">طلب صيانة خارجية</h1><p className="text-muted-foreground">FORM-00-0077-1 — رقم طلب الصيانة: {request.requestReportNumber}</p></div>
         <Button variant="outline" asChild><Link href={`/print/external-maintenance/${requestId}`}><Printer className="ms-2 h-4 w-4" />طباعة</Link></Button>
-        {hasPermission("manage_maintenance_requests") && <Button variant="destructive" onClick={() => cancelExternal.mutate()} disabled={cancelExternal.isPending}><Undo2 className="ms-2 h-4 w-4" />إلغاء التحويل الخارجي</Button>}
-        {hasPermission("manage_maintenance_requests") && <Button onClick={() => createReceipt.mutate()} disabled={createReceipt.isPending}>استلام أعمال الصيانة الخارجية</Button>}
+        {canEdit && <Button variant="destructive" onClick={() => cancelExternal.mutate()} disabled={cancelExternal.isPending}><Undo2 className="ms-2 h-4 w-4" />إلغاء التحويل الخارجي</Button>}
+        {canEdit && <Button onClick={() => createReceipt.mutate()} disabled={createReceipt.isPending}>استلام أعمال الصيانة الخارجية</Button>}
       </div>
 
       <Card>
@@ -94,7 +97,7 @@ export default function ExternalMaintenanceRequestPage({ params }: { params: { i
           <div><Label>القسم الطالب للصيانة</Label><Input value={externalRequest.departmentSection ?? ""} readOnly /></div>
           <div><Label>اسم ورقم الجهاز</Label><Input dir="ltr" value={`${request.machineName} / ${request.machineNumber}`} readOnly /></div>
           <div className="md:col-span-2"><Label>الصيانة / النشاطات المطلوبة</Label><Textarea value={externalRequest.requiredMaintenance ?? ""} readOnly /></div>
-          <div className="md:col-span-2"><Label>نتائج الكشف الأولي</Label><Textarea value={externalRequest.preliminaryFindings ?? ""} readOnly /></div>
+          <div className="md:col-span-2"><Label>نتائج الكشف الأولي</Label><Textarea value={preliminaryFindings} readOnly={!canEdit} onChange={(event) => setPreliminaryFindings(event.target.value)} /></div>
         </CardContent>
       </Card>
 

@@ -63,8 +63,8 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const { hasPermission } = useAuth();
-  const canEditPlan = hasPermission("edit_maintenance_plans");
-  const canEditRows = hasPermission("edit_monthly_pm_plan_rows");
+  const canEditPlan = hasPermission("edit_monthly_maintenance_plan");
+  const canEditRows = hasPermission("edit_monthly_maintenance_plan");
   const canDeleteRows = hasPermission("delete_monthly_pm_plan_rows");
   const [isEditingRows, setIsEditingRows] = useState(false);
   const [form, setForm] = useState<MonthlyPlan | null>(null);

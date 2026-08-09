@@ -29,6 +29,13 @@ type AnnualPlanHeader = {
   totalPages: number;
 };
 
+type ElectronicSignature = {
+  fieldName: string;
+  signatureData: string | null;
+  userName: string;
+  signedAt: string;
+};
+
 function formatSignatureDate(date: string | null | undefined) {
   if (!date) return "     /     /     ";
   const [year, month, day] = date.split("-");
@@ -45,14 +52,20 @@ export default function AnnualPlanPrintPage({ params }: { params: { year: string
     queryKey: ["annual-pm-header"],
     queryFn: () => apiRequest<AnnualPlanHeader>("/maintenance-plans/annual/header"),
   });
+  const planId = data?.id ?? 0;
+  const { data: signatures = [] } = useQuery({
+    queryKey: ["print-annual-plan-signatures", planId],
+    queryFn: () => apiRequest<ElectronicSignature[]>(`/signatures?documentType=ANNUAL_PLAN&documentId=${planId}`),
+    enabled: planId > 0,
+  });
 
   const approvals = [
-    ["Prepared By", "Maintenance Supervisor", data?.preparedByName, data?.preparedByDate],
-    ["Approved By", "Eng. Department Manager", data?.approvedEngineeringName, data?.approvedEngineeringDate],
-    ["Approved By", "Production Department Manager", data?.approvedProductionName, data?.approvedProductionDate],
-    ["Approved By", "QC Department Manager", data?.approvedQcName, data?.approvedQcDate],
-    ["Approved By", "R & D Department Manager", data?.approvedRdName, data?.approvedRdDate],
-    ["Approved By", "QA Department Manager", data?.approvedQaName, data?.approvedQaDate],
+    ["Prepared By", "Maintenance Supervisor", data?.preparedByName, data?.preparedByDate, "prepared_by"],
+    ["Approved By", "Eng. Department Manager", data?.approvedEngineeringName, data?.approvedEngineeringDate, "engineering_manager"],
+    ["Approved By", "Production Department Manager", data?.approvedProductionName, data?.approvedProductionDate, "production_manager"],
+    ["Approved By", "QC Department Manager", data?.approvedQcName, data?.approvedQcDate, "qc_manager"],
+    ["Approved By", "R & D Department Manager", data?.approvedRdName, data?.approvedRdDate, "rd_manager"],
+    ["Approved By", "QA Department Manager", data?.approvedQaName, data?.approvedQaDate, "qa_manager"],
   ];
 
   if (params.schedule) {
@@ -96,20 +109,21 @@ export default function AnnualPlanPrintPage({ params }: { params: { year: string
           </table>
           </div>
           <div className="official-print-annual-approvals">
-          {approvals.map(([role, jobTitle, name, date], index) => (
-            <div key={index} className="official-print-annual-approval grid grid-cols-2 gap-12">
+          {approvals.map(([role, jobTitle, name, date, fieldName], index) => {
+            const signature = signatures.find((item) => item.fieldName === fieldName);
+            return <div key={index} className="official-print-annual-approval grid grid-cols-2 gap-12">
               <div>
-                <strong>{role}:</strong> {name}
+                <strong>{role}:</strong> {name || signature?.userName}
                 <br />
                 <div className="official-print-annual-job-line"><strong>Job title:</strong> <em className="official-print-annual-job-title">{jobTitle}</em></div>
               </div>
               <div>
-                <strong>Signature:</strong> <DottedLine />
+                <strong>Signature:</strong> {signature?.signatureData ? <img src={signature.signatureData} alt={`${jobTitle} signature`} className="inline-block h-10 max-w-40 object-contain align-middle" /> : <DottedLine />}
                 <br />
-                <strong>Date:</strong> <span className="official-print-annual-date">{formatSignatureDate(date as string | null | undefined)}</span>
+                <strong>Date:</strong> <span className="official-print-annual-date">{formatSignatureDate((date as string | null | undefined) || signature?.signedAt.slice(0, 10))}</span>
               </div>
-            </div>
-          ))}
+            </div>;
+          })}
           </div>
         </div>
       </PrintPage>

@@ -30,7 +30,7 @@ import {
   usersTable,
 } from "@workspace/db";
 import { and, asc, count, desc, eq, isNull, like } from "drizzle-orm";
-import { parseIdParam, requireAuth, requirePermission } from "../lib/auth.js";
+import { parseIdParam, requireAnyPermission, requireAuth, requirePermission } from "../lib/auth.js";
 
 const router = Router();
 
@@ -343,6 +343,11 @@ function ensureCanView(
   request: typeof maintenanceRequestsTable.$inferSelect,
 ) {
   if (req.session.roleName === "Admin") return true;
+  if (
+    request.status === STATUS.EXTERNAL_MAINTENANCE &&
+    hasPermission(req, "view_external_maintenance")
+  )
+    return true;
   if (
     hasPermission(req, "manage_maintenance_requests") ||
     hasPermission(req, "review_department_requests") ||
@@ -1783,13 +1788,12 @@ router.patch("/:id/supervisor-review", requireAuth, requirePermission("review_de
   } catch (err) { next(err); }
 });
 
-router.get("/:id/external-maintenance", requireAuth, async (req, res, next) => {
+router.get("/:id/external-maintenance", requireAuth, requirePermission("view_external_maintenance"), async (req, res, next) => {
   try {
     const request = await getRequest(parseIdParam(req.params.id));
     if (
       !request ||
-      (!ensureCanView(req, request) &&
-        !(await hasAssignedSignatureAccess(req.session.userId, request.id)))
+      !ensureCanView(req, request)
     ) {
       res.status(404).json({ error: "Maintenance request not found" });
       return;
@@ -1818,7 +1822,7 @@ router.get("/:id/external-maintenance", requireAuth, async (req, res, next) => {
 router.post(
   "/:id/external-maintenance",
   requireAuth,
-  requirePermission("manage_maintenance_requests"),
+  requirePermission("edit_external_maintenance"),
   async (req, res, next) => {
     try {
       const request = await getRequest(parseIdParam(req.params.id));
@@ -1897,7 +1901,7 @@ router.post(
 router.patch(
   "/:id/external-maintenance",
   requireAuth,
-  requirePermission("manage_maintenance_requests"),
+  requirePermission("edit_external_maintenance"),
   async (req, res, next) => {
     try {
       const request = await getRequest(parseIdParam(req.params.id));
@@ -1906,6 +1910,7 @@ router.patch(
         return;
       }
       const body = req.body as Partial<{
+        preliminaryFindings: string;
         technicianSuggestions: string;
         maintenanceTechnicianSignature: string;
         maintenanceTechnicianDate: string;
@@ -1917,6 +1922,7 @@ router.patch(
       const [updated] = await db
         .update(externalMaintenanceRequestsTable)
         .set({
+          preliminaryFindings: body.preliminaryFindings ?? null,
           technicianSuggestions: body.technicianSuggestions ?? null,
           maintenanceTechnicianSignature:
             body.maintenanceTechnicianSignature ?? null,
@@ -1947,7 +1953,7 @@ router.patch(
   },
 );
 
-router.delete("/:id/external-maintenance", requireAuth, requirePermission("manage_maintenance_requests"), async (req, res, next) => {
+router.delete("/:id/external-maintenance", requireAuth, requirePermission("edit_external_maintenance"), async (req, res, next) => {
   try {
     const request = await getRequest(parseIdParam(req.params.id));
     if (!request || request.status !== STATUS.EXTERNAL_MAINTENANCE) { res.status(400).json({ error: "Request is not in external maintenance" }); return; }
@@ -1968,13 +1974,13 @@ router.delete("/:id/external-maintenance", requireAuth, requirePermission("manag
 router.get(
   "/:id/external-maintenance-receipt",
   requireAuth,
+  requirePermission("view_external_maintenance"),
   async (req, res, next) => {
     try {
       const request = await getRequest(parseIdParam(req.params.id));
       if (
         !request ||
-        (!ensureCanView(req, request) &&
-          !(await hasAssignedSignatureAccess(req.session.userId, request.id)))
+        !ensureCanView(req, request)
       ) {
         res.status(404).json({ error: "Maintenance request not found" });
         return;
@@ -2020,7 +2026,7 @@ router.get(
 router.post(
   "/:id/external-maintenance-receipt",
   requireAuth,
-  requirePermission("manage_maintenance_requests"),
+  requirePermission("edit_external_maintenance"),
   async (req, res, next) => {
     try {
       const request = await getRequest(parseIdParam(req.params.id));
@@ -2084,7 +2090,7 @@ router.post(
 router.patch(
   "/:id/external-maintenance-receipt",
   requireAuth,
-  requirePermission("manage_maintenance_requests"),
+  requirePermission("edit_external_maintenance"),
   async (req, res, next) => {
     try {
       const request = await getRequest(parseIdParam(req.params.id));

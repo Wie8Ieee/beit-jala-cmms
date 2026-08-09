@@ -7,9 +7,10 @@ import { Loader2 } from "lucide-react";
 type ProtectedRouteProps = {
   children: ReactNode;
   permission?: string;
+  permissions?: string[];
 };
 
-export function ProtectedRoute({ children, permission }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, permission, permissions }: ProtectedRouteProps) {
   const { user, isLoading, hasPermission } = useAuth();
 
   if (isLoading) {
@@ -24,7 +25,7 @@ export function ProtectedRoute({ children, permission }: ProtectedRouteProps) {
     return <Redirect to="/login" />;
   }
 
-  if (permission && !hasPermission(permission)) {
+  if ((permission && !hasPermission(permission)) || (permissions?.length && !permissions.some(hasPermission))) {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-4">

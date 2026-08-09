@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "../../contexts/AuthContext";
 import { useLang } from "../../contexts/LanguageContext";
 import { useTranslation } from "react-i18next";
-import { ReactNode } from "react";
+import { ComponentPropsWithoutRef, ComponentType, ReactNode } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -13,6 +13,7 @@ import {
   SidebarMenuButton,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -38,6 +39,36 @@ import {
   ScrollText,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+
+type SidebarNavLinkProps = Omit<ComponentPropsWithoutRef<"a">, "href"> & {
+  href: string;
+};
+
+const StyledLink = Link as unknown as ComponentType<SidebarNavLinkProps>;
+
+function SidebarNavLink({
+  href,
+  children,
+  className,
+  onClick,
+  ...props
+}: SidebarNavLinkProps) {
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  return (
+    <StyledLink
+      href={href}
+      className={className}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented && isMobile) setOpenMobile(false);
+      }}
+      {...props}
+    >
+      {children}
+    </StyledLink>
+  );
+}
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isLoading, hasPermission, logout } = useAuth();
@@ -78,16 +109,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </SidebarHeader>
 
           <SidebarContent className="px-2 py-4">
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
                   isActive={location === "/dashboard" || location === "/"}
                 >
-                  <Link href="/dashboard">
-                    <LayoutDashboard className="size-4" />
-                    <span>{t("nav.dashboard")}</span>
-                  </Link>
+                  <SidebarNavLink href="/dashboard">
+                    <LayoutDashboard className="size-4 shrink-0" />
+                    <span className="min-w-0 truncate">{t("nav.dashboard")}</span>
+                  </SidebarNavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
@@ -97,24 +128,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     asChild
                     isActive={location.startsWith("/machines")}
                   >
-                    <Link href="/machines">
-                      <Activity className="size-4" />
-                      <span>{t("nav.equipment")}</span>
-                    </Link>
+                    <SidebarNavLink href="/machines">
+                      <Activity className="size-4 shrink-0" />
+                      <span className="min-w-0 truncate">{t("nav.equipment")}</span>
+                    </SidebarNavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
 
-              {hasPermission("view_maintenance_plans") && (
+              {(hasPermission("view_annual_maintenance_plan") || hasPermission("view_monthly_maintenance_plan")) && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
                     isActive={location.startsWith("/maintenance-plans")}
                   >
-                    <Link href="/maintenance-plans">
-                      <CalendarDays className="size-4" />
-                      <span>{t("nav.maintenancePlans")}</span>
-                    </Link>
+                    <SidebarNavLink href="/maintenance-plans">
+                      <CalendarDays className="size-4 shrink-0" />
+                      <span className="min-w-0 truncate">{t("nav.maintenancePlans")}</span>
+                    </SidebarNavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
@@ -130,20 +161,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     asChild
                     isActive={location.startsWith("/maintenance-requests")}
                   >
-                    <Link href="/maintenance-requests">
-                      <ClipboardList className="size-4" />
-                      <span>{t("nav.maintenanceRequests")}</span>
-                    </Link>
+                    <SidebarNavLink href="/maintenance-requests">
+                      <ClipboardList className="size-4 shrink-0" />
+                      <span className="min-w-0 truncate">{t("nav.maintenanceRequests")}</span>
+                    </SidebarNavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
 
               {hasPermission("view_reports") && <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={location.startsWith("/reports")}>
-                  <Link href="/reports">
-                    <BarChart3 className="size-4" />
-                    <span>Reports</span>
-                  </Link>
+                  <SidebarNavLink href="/reports">
+                    <BarChart3 className="size-4 shrink-0" />
+                    <span className="min-w-0 truncate">Reports</span>
+                  </SidebarNavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>}
 
@@ -153,10 +184,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     asChild
                     isActive={location.startsWith("/spare-parts")}
                   >
-                    <Link href="/spare-parts">
-                      <Package className="size-4" />
-                      <span>{t("nav.spareParts")}</span>
-                    </Link>
+                    <SidebarNavLink href="/spare-parts">
+                      <Package className="size-4 shrink-0" />
+                      <span className="min-w-0 truncate">{t("nav.spareParts")}</span>
+                    </SidebarNavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
@@ -167,10 +198,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     asChild
                     isActive={location.startsWith("/admin")}
                   >
-                    <Link href="/admin/users">
-                      <Settings className="size-4" />
-                      <span>{t("nav.admin")}</span>
-                    </Link>
+                    <SidebarNavLink href="/admin/users">
+                      <Settings className="size-4 shrink-0" />
+                      <span className="min-w-0 truncate">{t("nav.admin")}</span>
+                    </SidebarNavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
@@ -240,7 +271,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </Sidebar>
 
         <main className="flex-1 flex flex-col min-h-[100dvh] overflow-x-hidden">
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-card px-4 shadow-sm z-10">
+          <header className="sticky top-0 flex h-14 shrink-0 items-center gap-2 border-b bg-card/95 px-3 shadow-sm backdrop-blur z-20 sm:px-4">
             <SidebarTrigger className="-ml-1" />
             <div className="flex-1" />
             {/* Language toggle */}
@@ -255,7 +286,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               {lang === "en" ? "العربية" : "English"}
             </Button>
           </header>
-          <div className="flex-1 p-6 lg:p-8 max-w-[1600px] mx-auto w-full">
+          <div className="app-content min-w-0 flex-1 p-3 sm:p-5 lg:p-8 max-w-[1600px] mx-auto w-full">
             {children}
           </div>
         </main>

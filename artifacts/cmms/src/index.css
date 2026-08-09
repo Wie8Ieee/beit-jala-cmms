@@ -1908,6 +1908,79 @@ main:has([data-permissions-page='true']) > div:last-child {
   margin-top: 6mm;
 }
 
+/* Phone and tablet usability. Wide controlled-document tables stay intact and
+   scroll inside their card instead of forcing the whole application wider. */
+.app-content,
+.app-content > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mobile-table-scroll {
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 639px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .app-content h1 {
+    font-size: 1.5rem;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .app-content h2 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+
+  .app-content > * > :first-child:is(.flex),
+  .app-content form > :first-child:is(.flex) {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .app-content > * > :first-child:is(.flex) > :is(.flex-1, [class*="grow"]) {
+    min-width: calc(100% - 3.5rem);
+  }
+
+  .app-content :is(input, select, textarea) {
+    font-size: 16px;
+  }
+
+  .app-content button,
+  .app-content a[role="button"] {
+    min-height: 2.75rem;
+  }
+
+  .app-content [data-slot="card-header"],
+  .app-content [data-slot="card-content"] {
+    padding-inline: 1rem;
+  }
+
+  .app-content .mobile-table-scroll {
+    margin-inline: -0.25rem;
+    width: calc(100% + 0.5rem);
+  }
+
+  .app-content table {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .app-content th,
+  .app-content td {
+    max-width: min(17rem, 72vw);
+  }
+
+  [data-radix-popper-content-wrapper] {
+    max-width: calc(100vw - 1rem) !important;
+  }
+}
+
 @media print {
   .official-print-annual-plan-page {
     page-break-after: avoid !important;

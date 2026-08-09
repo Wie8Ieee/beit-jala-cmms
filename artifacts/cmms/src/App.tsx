@@ -264,7 +264,7 @@ function Router() {
 
       <Route path="/maintenance-plans/annual/:year">
         {(params) => (
-          <ProtectedRoute permission="view_maintenance_plans">
+          <ProtectedRoute permission="view_annual_maintenance_plan">
             <AnnualPlanPage params={params} />
           </ProtectedRoute>
         )}
@@ -272,7 +272,7 @@ function Router() {
 
       <Route path="/maintenance-plans/monthly/:year/:month">
         {(params) => (
-          <ProtectedRoute permission="view_maintenance_plans">
+          <ProtectedRoute permission="view_monthly_maintenance_plan">
             <MonthlyPlanPage params={params} />
           </ProtectedRoute>
         )}
@@ -280,7 +280,7 @@ function Router() {
 
       <Route path="/maintenance-plans/monthly/:year">
         {(params) => (
-          <ProtectedRoute permission="view_maintenance_plans">
+          <ProtectedRoute permission="view_monthly_maintenance_plan">
             <MonthlyPlansIndexPage params={params} />
           </ProtectedRoute>
         )}
@@ -295,7 +295,7 @@ function Router() {
       </Route>
 
       <Route path="/maintenance-plans">
-        <ProtectedRoute permission="view_maintenance_plans">
+        <ProtectedRoute permissions={["view_annual_maintenance_plan", "view_monthly_maintenance_plan"]}>
           <MaintenancePlansPage />
         </ProtectedRoute>
       </Route>

@@ -58,7 +58,7 @@ export function ElectronicSignatureField({
   label,
   signatureType = "electronic",
 }: ElectronicSignatureFieldProps) {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -93,9 +93,8 @@ export function ElectronicSignatureField({
   const canSign = useMemo(
     () =>
       !signature &&
-      hasPermission("sign_assigned_fields") &&
       (activeAssignments.some((item) => item.eligibleUserId === user?.id) || permanentPermissions.some((item) => item.eligibleUserId === user?.id)),
-    [activeAssignments, hasPermission, permanentPermissions, signature, user?.id],
+    [activeAssignments, permanentPermissions, signature, user?.id],
   );
 
   const invalidate = async () => {

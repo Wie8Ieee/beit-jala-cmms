@@ -182,6 +182,7 @@ export const monthlyPmPlanRowsTable = pgTable("monthly_pm_plan_rows", {
   identificationNumber: text("identification_number"),
   plannedDateFrom: text("planned_date_from"),
   plannedDateTo: text("planned_date_to"),
+  plannedDateIsOverride: boolean("planned_date_is_override").notNull().default(false),
   actualDate: text("actual_date"),
   actualDateIsOverride: boolean("actual_date_is_override").notNull().default(false),
   isManuallyRemoved: boolean("is_manually_removed").notNull().default(false),

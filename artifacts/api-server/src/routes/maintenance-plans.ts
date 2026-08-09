@@ -285,7 +285,9 @@ async function getOrCreateMonthlyPlan(year: number, month: number) {
         sectionName: values.sectionName,
         machineName: values.machineName,
         identificationNumber: values.identificationNumber,
-        ...(!current.actualDate ? { plannedDateFrom: plannedDate, plannedDateTo: plannedDate } : {}),
+        ...(!current.actualDate && !current.plannedDateIsOverride
+          ? { plannedDateFrom: plannedDate, plannedDateTo: plannedDate }
+          : {}),
       }).where(eq(monthlyPmPlanRowsTable.id, current.id));
   }
   const scheduledIds = new Set(scheduledRows.map((row) => row.id));
@@ -337,7 +339,7 @@ export async function syncAutomaticMaintenancePlans(year = new Date().getFullYea
 router.get(
   "/monthly/header",
   requireAuth,
-  requirePermission("view_maintenance_plans"),
+  requirePermission("view_monthly_maintenance_plan"),
   async (_req, res, next) => {
     try {
       res.json(await getMonthlyPlanHeader());
@@ -350,7 +352,7 @@ router.get(
 router.put(
   "/monthly/header",
   requireAuth,
-  requirePermission("edit_header"),
+  requirePermission("edit_monthly_maintenance_plan"),
   async (req, res, next) => {
     try {
       const current = await getMonthlyPlanHeader();
@@ -385,7 +387,7 @@ router.put(
 router.get(
   "/annual/header",
   requireAuth,
-  requirePermission("view_maintenance_plans"),
+  requirePermission("view_annual_maintenance_plan"),
   async (_req, res, next) => {
     try {
       res.json(await getAnnualPlanHeader());
@@ -398,7 +400,7 @@ router.get(
 router.put(
   "/annual/header",
   requireAuth,
-  requirePermission("edit_header"),
+  requirePermission("edit_annual_maintenance_plan"),
   async (req, res, next) => {
     try {
       const current = await getAnnualPlanHeader();
@@ -423,7 +425,7 @@ router.put(
 router.get(
   "/annual/:year",
   requireAuth,
-  requirePermission("view_maintenance_plans"),
+  requirePermission("view_annual_maintenance_plan"),
   async (req, res, next) => {
     try {
       const year = parseYear(req.params.year);
@@ -443,7 +445,7 @@ router.get(
 router.put(
   "/annual/:year",
   requireAuth,
-  requirePermission("edit_maintenance_plans"),
+  requirePermission("edit_annual_maintenance_plan"),
   async (req, res, next) => {
     try {
       const year = parseYear(req.params.year);
@@ -534,7 +536,7 @@ router.put(
 router.post(
   "/monthly/:year/:month/rows",
   requireAuth,
-  requirePermission("edit_monthly_pm_plan_rows"),
+  requirePermission("edit_monthly_maintenance_plan"),
   async (req, res, next) => {
     try {
       const year = parseYear(req.params.year);
@@ -669,7 +671,7 @@ router.post(
 router.get(
   "/monthly/:year/:month",
   requireAuth,
-  requirePermission("view_maintenance_plans"),
+  requirePermission("view_monthly_maintenance_plan"),
   async (req, res, next) => {
     try {
       const year = parseYear(req.params.year);
@@ -699,7 +701,7 @@ router.get(
 router.put(
   "/monthly/:year/:month",
   requireAuth,
-  requireAnyPermission(["edit_maintenance_plans", "edit_monthly_pm_plan_rows"]),
+  requirePermission("edit_monthly_maintenance_plan"),
   async (req, res, next) => {
     try {
       const year = parseYear(req.params.year);
@@ -707,8 +709,8 @@ router.put(
       const plan = await getOrCreateMonthlyPlan(year, month);
       const permissions = req.session.permissions ?? [];
       const isAdmin = req.session.roleName === "Admin";
-      const canEditHeader = isAdmin || permissions.includes("edit_maintenance_plans");
-      const canEditRows = isAdmin || permissions.includes("edit_monthly_pm_plan_rows");
+      const canEditHeader = isAdmin || permissions.includes("edit_monthly_maintenance_plan");
+      const canEditRows = isAdmin || permissions.includes("edit_monthly_maintenance_plan");
       const body = req.body as Record<string, unknown> & {
         rows?: Array<{
           id: number;
@@ -748,6 +750,7 @@ router.put(
           machineId: monthlyPmPlanRowsTable.machineId,
           plannedDateFrom: monthlyPmPlanRowsTable.plannedDateFrom,
           plannedDateTo: monthlyPmPlanRowsTable.plannedDateTo,
+          plannedDateIsOverride: monthlyPmPlanRowsTable.plannedDateIsOverride,
           actualDate: monthlyPmPlanRowsTable.actualDate,
           actualDateIsOverride: monthlyPmPlanRowsTable.actualDateIsOverride,
         }).from(monthlyPmPlanRowsTable).where(and(
@@ -759,6 +762,11 @@ router.put(
           .set({
             plannedDateFrom: row.plannedDateFrom ?? null,
             plannedDateTo: row.plannedDateTo ?? null,
+            plannedDateIsOverride: currentRow
+              ? (row.plannedDateFrom ?? null) !== currentRow.plannedDateFrom
+                || (row.plannedDateTo ?? null) !== currentRow.plannedDateTo
+                || currentRow.plannedDateIsOverride
+              : false,
             actualDate: row.actualDate ?? null,
             actualDateIsOverride: currentRow && (row.actualDate ?? null) !== currentRow.actualDate
               ? true

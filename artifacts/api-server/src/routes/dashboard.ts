@@ -134,43 +134,67 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
   );
   const overdueCount = overdueRows.length;
 
-  const [currentUser] = await db.select({ departmentName: departmentsTable.name })
-    .from(usersTable).leftJoin(departmentsTable, eq(usersTable.departmentId, departmentsTable.id))
-    .where(eq(usersTable.id, currentUserId!));
-  const isEngineeringMaintenance = currentUser?.departmentName?.toLowerCase().includes("engineering") || req.session.roleName === "Maintenance Supervisor";
-  const requestNotifications = [
-    ...(requestSummary.pendingQa
-      ? [{ type: "qa", message: `${requestSummary.pendingQa} maintenance request(s) pending QA approval`, href: "/maintenance-requests/qa" }]
-      : []),
-    ...(requestSummary.pendingEngineering
-      ? [{ type: "engineering", message: `${requestSummary.pendingEngineering} QA-approved request(s) pending engineering review`, href: "/maintenance-requests/engineering" }]
-      : []),
-    ...(overdueCount > 0
-      ? [{ type: "overdue_pm", message: `${overdueCount} PM activity(ies) overdue this month`, href: "/maintenance-plans" }]
-      : []),
-  ];
+  // Dashboard notifications are actionable queues, so each item is shown only
+  // to a user who can perform that action (plus the request owner for updates).
+  const permissions = req.session.permissions ?? [];
+  const isAdmin = req.session.roleName === "Admin";
+  const requestNotifications: Array<{ type: string; message: string; href: string }> = [];
 
-  if (!isEngineeringMaintenance && currentUserId) {
-    const ownRequestNotifications = requestRows
+  if ((isAdmin || permissions.includes("review_qa_requests")) && requestSummary.pendingQa) {
+    requestNotifications.push({
+      type: "qa",
+      message: `${requestSummary.pendingQa} طلب صيانة بانتظار موافقة QA`,
+      href: "/maintenance-requests/qa",
+    });
+  }
+  if ((isAdmin || permissions.includes("review_engineering_requests")) && requestSummary.pendingEngineering) {
+    requestNotifications.push({
+      type: "engineering",
+      message: `${requestSummary.pendingEngineering} طلب معتمد من QA بانتظار موافقة الهندسة`,
+      href: "/maintenance-requests/engineering",
+    });
+  }
+  if ((isAdmin || ["Maintenance Supervisor", "Maintenance Technician"].includes(req.session.roleName ?? "")) && overdueCount > 0) {
+    requestNotifications.push({
+      type: "overdue_pm",
+      message: `${overdueCount} نشاط صيانة وقائية متأخر هذا الشهر`,
+      href: "/maintenance-plans",
+    });
+  }
+
+  if (currentUserId) {
+    const [receiverPermission] = await db.select({ id: signatureFieldPermissionsTable.id })
+      .from(signatureFieldPermissionsTable)
+      .where(and(eq(signatureFieldPermissionsTable.documentType, "PM_RECORD"), eq(signatureFieldPermissionsTable.fieldName, "machine_receiver"), eq(signatureFieldPermissionsTable.eligibleUserId, currentUserId), isNull(signatureFieldPermissionsTable.revokedAt)));
+    if (receiverPermission) {
+      const pendingReceipts = await db.select({ inspectionId: pmInspectionsTable.id, machineId: pmInspectionsTable.machineId, machineName: machinesTable.machineName, machineNumber: machinesTable.machineNumber, completedByUserId: pmInspectionsTable.completedByUserId })
+        .from(pmInspectionsTable).innerJoin(machinesTable, eq(pmInspectionsTable.machineId, machinesTable.id))
+        .where(isNull(pmInspectionsTable.machineReceiverSignature));
+      requestNotifications.push(...pendingReceipts
+        .filter((inspection) => inspection.completedByUserId !== currentUserId)
+        .map((inspection) => ({ type: "signature", message: `صيانة وقائية بانتظار استلامك للماكينة: ${inspection.machineName} (${inspection.machineNumber})`, href: `/machines/${inspection.machineId}/pm` })));
+    }
+
+    const statusLabels: Record<string, string> = {
+      "Pending Department Supervisor Approval": "بانتظار موافقة مشرف القسم",
+      "Pending QA Approval": "بانتظار موافقة QA",
+      "QA Approved": "تمت الموافقة عليه من QA",
+      "QA Rejected": "تم رفضه من QA",
+      "Accepted": "تمت الموافقة عليه من الهندسة",
+      "Rejected": "تم رفضه من الهندسة",
+      "In Progress": "قيد التنفيذ",
+      "Completed": "مكتمل",
+      "Closed": "مغلق",
+    };
+    requestNotifications.push(...requestRows
       .filter((row) => row.requestedByUserId === currentUserId)
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
       .slice(0, 8)
       .map((row) => ({
         type: "request_status",
-        message: `طلب الصيانة ${row.requestReportNumber.startsWith("PENDING-") ? "قيد المراجعة" : row.requestReportNumber} للماكينة ${row.machineName}: ${row.status}`,
+        message: `حالة طلبك ${row.requestReportNumber.startsWith("PENDING-") ? "قيد المراجعة" : row.requestReportNumber}: ${statusLabels[row.status] ?? row.status}`,
         href: `/maintenance-requests/${row.id}`,
-      }));
-    const [receiverPermission] = await db.select({ id: signatureFieldPermissionsTable.id })
-      .from(signatureFieldPermissionsTable)
-      .where(and(eq(signatureFieldPermissionsTable.documentType, "PM_RECORD"), eq(signatureFieldPermissionsTable.fieldName, "machine_receiver"), eq(signatureFieldPermissionsTable.eligibleUserId, currentUserId), isNull(signatureFieldPermissionsTable.revokedAt)));
-    const signatureNotifications = receiverPermission
-      ? (await db.select({ inspectionId: pmInspectionsTable.id, machineId: pmInspectionsTable.machineId, machineName: machinesTable.machineName, machineNumber: machinesTable.machineNumber, completedByUserId: pmInspectionsTable.completedByUserId })
-        .from(pmInspectionsTable).innerJoin(machinesTable, eq(pmInspectionsTable.machineId, machinesTable.id))
-        .where(isNull(pmInspectionsTable.machineReceiverSignature)))
-        .filter((inspection) => inspection.completedByUserId !== currentUserId)
-        .map((inspection) => ({ type: "signature", message: `مطلوب توقيع استلام الماكينة: ${inspection.machineName} (${inspection.machineNumber})`, href: `/machines/${inspection.machineId}/pm` }))
-      : [];
-    requestNotifications.splice(0, requestNotifications.length, ...signatureNotifications, ...ownRequestNotifications);
+      })));
   }
 
   const monthlyPmCompletionMachines = {

@@ -2,9 +2,13 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Table2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function MaintenancePlansPage() {
   const year = new Date().getFullYear();
+  const { hasPermission } = useAuth();
+  const canViewAnnual = hasPermission("view_annual_maintenance_plan");
+  const canViewMonthly = hasPermission("view_monthly_maintenance_plan");
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -14,7 +18,7 @@ export default function MaintenancePlansPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        {canViewAnnual && <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Table2 className="h-5 w-5 text-primary" />
@@ -27,9 +31,9 @@ export default function MaintenancePlansPage() {
               <Link href={`/maintenance-plans/annual/${year}`}>Open {year} Annual Plan</Link>
             </Button>
           </CardContent>
-        </Card>
+        </Card>}
 
-        <Card>
+        {canViewMonthly && <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-primary" />
@@ -42,7 +46,7 @@ export default function MaintenancePlansPage() {
               <Link href={`/maintenance-plans/monthly/${year}`}>Select Month</Link>
             </Button>
           </CardContent>
-        </Card>
+        </Card>}
       </div>
     </div>
   );

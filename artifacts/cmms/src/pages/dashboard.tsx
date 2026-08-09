@@ -151,10 +151,10 @@ export default function DashboardPage() {
       )}
 
       {/* ADMIN & SUPERVISOR VIEW */}
-      {(isAdminOrSupervisor || isQA) && stats && (
+      {!isTechnician && !isEmployee && stats && (
         <>
           {/* NOTIFICATIONS PANEL — FR-2.8, FR-2.9, FR-2.10 */}
-          {canViewNotifications && notifications.length > 0 && (
+          {canViewNotifications && (isAdminOrSupervisor || isQA) && notifications.length > 0 && (
             <Card className="overflow-hidden border-primary/20 border-l-4 border-l-primary bg-card shadow-sm">
               <CardHeader className="pb-2 pt-4">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -275,7 +275,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {canViewSpareParts && canViewDashboardSpareParts && isAdminOrSupervisor && (
+            {canViewSpareParts && canViewDashboardSpareParts && (
               <Card className="h-full lg:order-4 shadow-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">

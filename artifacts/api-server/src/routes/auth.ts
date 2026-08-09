@@ -135,6 +135,13 @@ router.get("/me", requireActiveAuth, async (req, res) => {
     ? (await db.select({ name: permissionsTable.name }).from(permissionsTable)).map((permission) => permission.name)
     : perms.map((p) => p.name);
 
+  // Keep the server-side authorization snapshot in sync when an administrator
+  // changes this account's role or permissions. A page refresh is sufficient;
+  // users no longer need to log out and back in for new permissions to work.
+  req.session.roleId = user.roleId;
+  req.session.roleName = user.roleName;
+  req.session.permissions = permissionNames;
+
   res.json({
     id: user.id,
     username: user.username,
