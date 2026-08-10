@@ -89,14 +89,6 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
       description: getErrorMessage(error, "تعذر حفظ التعديلات. حاول مرة أخرى."),
     }),
   });
-  const addLogRow = useMutation({
-    mutationFn: () => apiRequest(`/machines/${machineId}/corrective-maintenance/events`, { method: "POST", body: JSON.stringify({}) }),
-    onSuccess: (event: { id: number; requestReportNumber: string | null; requestDate?: string | null; maintenanceType?: string | null; priority?: string | null; preliminaryCheckResults: string | null; expectedWorkTimeFrom: string | null; expectedWorkTimeTo: string | null; repairTimeSlots?: Array<{ date: string; from: string; to: string }>; actionsTaken: string | null; technicianName?: string | null; sparePartsUsed?: string | null; receiverName: string | null; handoverDate: string | null }) => {
-      queryClient.invalidateQueries({ queryKey: ["machine-cm-record", machineId] });
-      setEditingEventId(event.id);
-      setEventDraft({ requestReportNumber: event.requestReportNumber ?? "", requestDate: event.requestDate ?? "", maintenanceType: maintenanceTypeValue(event.maintenanceType ?? event.priority), preliminaryCheckResults: event.preliminaryCheckResults ?? "", expectedWorkTimeFrom: event.expectedWorkTimeFrom ?? "", expectedWorkTimeTo: event.expectedWorkTimeTo ?? "", repairTimeSlots: event.repairTimeSlots?.length ? event.repairTimeSlots : [{ date: "", from: event.expectedWorkTimeFrom ?? "", to: event.expectedWorkTimeTo ?? "" }], actionsTaken: event.actionsTaken ?? "", technicianName: event.technicianName ?? "", sparePartsUsed: event.sparePartsUsed ?? "", receiverName: event.receiverName ?? "", handoverDate: event.handoverDate ?? "" });
-    },
-  });
   const deleteLogRow = useMutation({
     mutationFn: (eventId: number) => apiRequest(`/machines/${machineId}/corrective-maintenance/events/${eventId}`, { method: "DELETE" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["machine-cm-record", machineId] }),
@@ -106,7 +98,7 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
       description: getErrorMessage(error, "تعذر حذف الصف. حاول مرة أخرى."),
     }),
   });
-  const canEditLog = !isHistorical && (hasPermission("fill_corrective_maintenance") || hasPermission("manage_maintenance_requests"));
+  const canEditLog = !isHistorical && hasPermission("edit_corrective_maintenance");
   const canDeleteLog = !isHistorical && hasPermission("delete_corrective_maintenance");
   const visibleEvents = active?.events.filter((event) => {
     if (!selectedMonth) return true;
@@ -199,7 +191,7 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
           <Card>
             <CardHeader dir="rtl" className="flex-row items-center justify-between space-y-0">
               <CardTitle>سجل أعمال الصيانة العلاجية</CardTitle>
-              {canEditLog && <Button size="sm" onClick={() => addLogRow.mutate()} disabled={addLogRow.isPending}><Plus className="ml-1 h-4 w-4" />إضافة صف</Button>}
+              {!isHistorical && <p className="text-sm font-normal text-muted-foreground">تُضاف الصفوف تلقائياً بعد قبول الهندسة لطلب الصيانة.</p>}
             </CardHeader>
             <CardContent dir="rtl" className="overflow-x-auto">
               {isHistorical && <p className="mb-4 text-sm text-muted-foreground">هذا السجل مؤرشف ومحفوظ للرجوع إليه فقط.</p>}
@@ -222,15 +214,16 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
                     <TableHead className="whitespace-nowrap text-right">تاريخ التصليح</TableHead>
                     <TableHead className="whitespace-nowrap text-right">وقت التصليح<br />من</TableHead>
                     <TableHead className="whitespace-nowrap text-right">وقت التصليح<br />إلى</TableHead>
+                    {canDeleteLog && <TableHead className="whitespace-nowrap text-center">حذف</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {visibleEvents.length === 0 && <TableRow><TableCell colSpan={9} className="h-24 text-center text-muted-foreground">لا توجد أعمال صيانة علاجية مسجلة حتى الآن.</TableCell></TableRow>}
+                  {visibleEvents.length === 0 && <TableRow><TableCell colSpan={canDeleteLog ? 10 : 9} className="h-24 text-center text-muted-foreground">لا توجد أعمال صيانة علاجية مسجلة حتى الآن.</TableCell></TableRow>}
                   {visibleEvents.map((event) => {
                     const isEditingEvent = editingEventId === event.id;
                     const repairSlots = event.repairTimeSlots?.filter((slot) => slot.date || slot.from || slot.to) ?? [];
                     return <TableRow key={event.id} className="align-top">
-                      <TableCell><div className="flex min-w-40 items-center gap-2">{isEditingEvent ? <Input className="min-w-36" type="date" value={eventDraft.requestDate} onChange={(input) => setEventDraft((draft) => ({ ...draft, requestDate: input.target.value }))} /> : <span>{event.requestDate || "-"}</span>}{canEditLog && (isEditingEvent ? <><Button size="sm" onClick={() => updateEvent.mutate()} disabled={updateEvent.isPending}><Save className="h-3 w-3" /></Button><Button size="sm" variant="ghost" onClick={() => setEditingEventId(null)}><X className="h-3 w-3" /></Button></> : <Button size="icon" variant="ghost" onClick={() => beginEventEdit(event)} title="تعديل الصف"><Pencil className="h-4 w-4" /></Button>)}{canDeleteLog && !isEditingEvent && <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" disabled={deleteLogRow.isPending} title="حذف الصف" onClick={() => { if (window.confirm("هل أنت متأكد من حذف صف الصيانة العلاجية؟")) deleteLogRow.mutate(event.id); }}><Trash2 className="h-4 w-4" /></Button>}</div></TableCell>
+                      <TableCell><div className="flex min-w-40 items-center gap-2">{isEditingEvent ? <Input className="min-w-36" type="date" value={eventDraft.requestDate} onChange={(input) => setEventDraft((draft) => ({ ...draft, requestDate: input.target.value }))} /> : <span>{event.requestDate || "-"}</span>}{canEditLog && (isEditingEvent ? <><Button size="sm" onClick={() => updateEvent.mutate()} disabled={updateEvent.isPending}><Save className="h-3 w-3" /></Button><Button size="sm" variant="ghost" onClick={() => setEditingEventId(null)}><X className="h-3 w-3" /></Button></> : <Button size="icon" variant="ghost" onClick={() => beginEventEdit(event)} title="تعديل الصف"><Pencil className="h-4 w-4" /></Button>)}</div></TableCell>
                       <TableCell className="font-mono">
                         {isEditingEvent && !event.requestId ? <Input className="min-w-32" value={eventDraft.requestReportNumber} onChange={(input) => setEventDraft((draft) => ({ ...draft, requestReportNumber: input.target.value }))} /> : event.requestId ? <Link href={`/maintenance-requests/${event.requestId}`}>{event.requestReportNumber}</Link> : event.requestReportNumber || "-"}
                       </TableCell>
@@ -241,6 +234,7 @@ export default function MachineCorrectiveMaintenancePage({ params }: { params: {
                       <TableCell>{isEditingEvent ? <div className="space-y-1">{eventDraft.repairTimeSlots.map((slot, index) => <Input key={index} className="min-w-36" type="date" value={slot.date} onChange={(input) => setEventDraft((draft) => ({ ...draft, repairTimeSlots: draft.repairTimeSlots.map((item, slotIndex) => slotIndex === index ? { ...item, date: input.target.value } : item) }))} />)}</div> : (repairSlots.length ? <div className="space-y-1 whitespace-nowrap">{repairSlots.map((slot, index) => <div key={index}>{slot.date || "-"}</div>)}</div> : "-")}</TableCell>
                       <TableCell>{isEditingEvent ? <div className="space-y-1">{eventDraft.repairTimeSlots.map((slot, index) => <Input key={index} className="min-w-28" type="time" value={slot.from} onChange={(input) => setEventDraft((draft) => ({ ...draft, repairTimeSlots: draft.repairTimeSlots.map((item, slotIndex) => slotIndex === index ? { ...item, from: input.target.value } : item) }))} />)}{eventDraft.repairTimeSlots.length < 5 && <Button type="button" size="sm" variant="outline" onClick={() => setEventDraft((draft) => ({ ...draft, repairTimeSlots: [...draft.repairTimeSlots, { date: "", from: "", to: "" }] }))}><Plus className="ml-1 h-3 w-3" />إضافة وقت</Button>}</div> : (repairSlots.length ? <div className="space-y-1 whitespace-nowrap">{repairSlots.map((slot, index) => <div key={index}>{slot.from || "-"}</div>)}</div> : event.expectedWorkTimeFrom || "-")}</TableCell>
                       <TableCell>{isEditingEvent ? <div className="space-y-1">{eventDraft.repairTimeSlots.map((slot, index) => <Input key={index} className="min-w-28" type="time" value={slot.to} onChange={(input) => setEventDraft((draft) => ({ ...draft, repairTimeSlots: draft.repairTimeSlots.map((item, slotIndex) => slotIndex === index ? { ...item, to: input.target.value } : item) }))} />)}</div> : (repairSlots.length ? <div className="space-y-1 whitespace-nowrap">{repairSlots.map((slot, index) => <div key={index}>{slot.to || "-"}</div>)}</div> : event.expectedWorkTimeTo || "-")}</TableCell>
+                      {canDeleteLog && <TableCell className="text-center"><Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" disabled={deleteLogRow.isPending} title="حذف الصف" onClick={() => { if (window.confirm("هل أنت متأكد من حذف صف الصيانة العلاجية؟")) deleteLogRow.mutate(event.id); }}><Trash2 className="h-4 w-4" /></Button></TableCell>}
                     </TableRow>;
                   })}
                 </TableBody>

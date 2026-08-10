@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getGetDashboardStatsQueryKey } from "@workspace/api-client-react";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
   const [engineeringDate, setEngineeringDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [externalDialogOpen, setExternalDialogOpen] = useState(false);
   const [manualRequestReportNumber, setManualRequestReportNumber] = useState("");
+  const [approvedRequestReportNumber, setApprovedRequestReportNumber] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["maintenance-request", requestId],
@@ -54,6 +56,11 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
     queryKey: ["maintenance-request-technicians"],
     queryFn: () => apiRequest<TechnicianOption[]>("/maintenance-requests/technicians"),
     enabled: hasPermission("review_engineering_requests"),
+  });
+  const { data: numberingPreview } = useQuery({
+    queryKey: ["maintenance-request-numbering-next", data?.request.requestDate],
+    queryFn: () => apiRequest<{ nextNumber: string | null }>(`/maintenance-requests/numbering-next?requestDate=${encodeURIComponent(data!.request.requestDate)}`),
+    enabled: hasPermission("review_engineering_requests") && data?.request.status === "QA Approved",
   });
   const { data: handoverSignatures = [] } = useQuery({
     queryKey: ["signatures", "MAINTENANCE_REQUEST", requestId],
@@ -80,11 +87,19 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
     setReceiverName(event?.receiverName ?? "");
     setHandoverDate(event?.handoverDate ?? new Date().toISOString().slice(0, 10));
     setEngineeringDate(event?.engineeringDate ?? new Date().toISOString().slice(0, 10));
+    setApprovedRequestReportNumber(data.request.requestReportNumber ?? "");
   }, [data]);
+
+  useEffect(() => {
+    if (numberingPreview?.nextNumber) setManualRequestReportNumber(numberingPreview.nextNumber);
+  }, [numberingPreview]);
 
   function refresh() {
     queryClient.invalidateQueries({ queryKey: ["maintenance-request", requestId] });
     queryClient.invalidateQueries({ queryKey: ["maintenance-requests"] });
+    queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: ["machine-cm-record"] });
+    queryClient.invalidateQueries({ queryKey: ["closed-corrective-maintenance-log"] });
   }
 
   const qaReview = useMutation({
@@ -119,6 +134,15 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
       }),
     onSuccess: () => { refresh(); toast({ title: "تمت مراجعة الهندسة" }); },
     onError: (error) => toast({ variant: "destructive", title: "تعذرت مراجعة الهندسة", description: getErrorMessage(error, "تعذرت مراجعة الطلب.") }),
+  });
+
+  const updateApprovedNumber = useMutation({
+    mutationFn: () => apiRequest<MaintenanceRequestDetail>(`/maintenance-requests/${requestId}/request-number`, {
+      method: "PATCH",
+      body: JSON.stringify({ requestReportNumber: approvedRequestReportNumber }),
+    }),
+    onSuccess: () => { refresh(); toast({ title: "تم تعديل رقم طلب الصيانة المعتمد" }); },
+    onError: (error) => toast({ variant: "destructive", title: "تعذر تعديل الرقم", description: getErrorMessage(error, "تحقق من الرقم وأنه غير مستخدم.") }),
   });
 
   const startWork = useMutation({
@@ -226,6 +250,7 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
   const canSupervisorReview = hasPermission("review_department_requests") && request.status === "Submitted";
   const canQaReview = hasPermission("review_qa_requests") && request.status === "Pending QA Approval";
   const canEngineeringReview = hasPermission("review_engineering_requests") && request.status === "QA Approved";
+  const canEditApprovedNumber = hasPermission("edit_approved_maintenance_request_number") && Boolean(request.requestReportNumber);
   const canStartWork = canManageCorrectiveWork && request.status === "Accepted";
   // Approval is required only to receive the request initially. Once engineering
   // accepted it (or a corrective event was already created), later status changes
@@ -370,9 +395,20 @@ export default function MaintenanceRequestDetailPage({ params }: { params: { id:
           <CardHeader><CardTitle>مراجعة قسم الهندسة والصيانة</CardTitle></CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div><Label>فني الصيانة المكلّف</Label><select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={assignedTechnicianUserId} onChange={(event) => setAssignedTechnicianUserId(event.target.value)}><option value="">غير محدد</option>{technicians.map((technician) => <option key={technician.id} value={technician.id}>{technician.fullName || technician.username}</option>)}</select></div>
-            <div><Label>رقم طلب الصيانة (يدوي عند عدم ضبط التسلسل)</Label><Input dir="ltr" value={manualRequestReportNumber} onChange={(event) => setManualRequestReportNumber(event.target.value)} placeholder="مثال: 401/08/2026" /></div>
-            <p className="md:col-span-2 text-sm text-muted-foreground">إذا ضبط مشرف الصيانة رقم بدء التسلسل، يُنشأ الرقم تلقائياً. خلاف ذلك أدخل الرقم يدوياً بالصيغة 1/MM/YYYY عند القبول.</p>
+            <div><Label>رقم طلب الصيانة المقترح تلقائياً</Label><Input dir="ltr" value={manualRequestReportNumber} onChange={(event) => setManualRequestReportNumber(event.target.value)} placeholder="مثال: 401/08/2026" /></div>
+            <p className="md:col-span-2 text-sm text-muted-foreground">يظهر الرقم التالي في التسلسل تلقائياً، ويمكن تعديله قبل الاعتماد. بعد الاعتماد يحتاج تعديله إلى صلاحية خاصة.</p>
             <div className="flex gap-2"><Button type="button" onClick={() => engineeringReview.mutate("accept")}>قبول وإرسال للصيانة</Button><Button type="button" variant="destructive" onClick={() => engineeringReview.mutate("reject")}>رفض</Button></div>
+          </CardContent>
+        </Card>
+      )}
+
+      {canEditApprovedNumber && (
+        <Card>
+          <CardHeader><CardTitle>تعديل رقم طلب الصيانة المعتمد</CardTitle></CardHeader>
+          <CardContent className="flex flex-wrap items-end gap-3">
+            <div className="space-y-2"><Label>الرقم المعتمد</Label><Input dir="ltr" className="w-56" value={approvedRequestReportNumber} onChange={(event) => setApprovedRequestReportNumber(event.target.value)} /></div>
+            <Button type="button" onClick={() => updateApprovedNumber.mutate()} disabled={!approvedRequestReportNumber.trim() || updateApprovedNumber.isPending}><Save className="mr-2 h-4 w-4" />حفظ الرقم</Button>
+            <p className="text-sm text-muted-foreground">يُحدّث الرقم أيضاً في سجل الصيانة العلاجية المرتبط.</p>
           </CardContent>
         </Card>
       )}

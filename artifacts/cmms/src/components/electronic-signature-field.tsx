@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getGetDashboardStatsQueryKey } from "@workspace/api-client-react";
 import { CheckCircle2, KeyRound, Lock } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -102,6 +103,7 @@ export function ElectronicSignatureField({
       queryClient.invalidateQueries({ queryKey: signaturesKey }),
       queryClient.invalidateQueries({ queryKey: eligibleKey }),
       queryClient.invalidateQueries({ queryKey: permanentKey }),
+      queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() }),
     ]);
   };
 

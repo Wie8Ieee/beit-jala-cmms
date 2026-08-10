@@ -108,7 +108,7 @@ export default function ReportsPage() {
       completion: total > 0 ? completionRate(total, achieved) : "",
     };
   });
-  const canEdit = hasPermission("edit_maintenance_plans");
+  const canEdit = hasPermission("edit_reports");
   const activeAdjustments = (data?.months ?? []).flatMap((month) =>
     (month.manualAdjustments?.[type] ?? []).map((adjustment) => ({ ...adjustment, month: month.month })),
   );

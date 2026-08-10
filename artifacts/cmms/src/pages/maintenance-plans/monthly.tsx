@@ -57,6 +57,13 @@ type MonthlyPlan = {
   rows: MonthlyRow[];
 };
 
+type MachineOption = {
+  id: number;
+  machineName: string;
+  machineNumber: string;
+  departmentName: string | null;
+};
+
 export default function MonthlyPlanPage({ params }: { params: { year: string; month: string } }) {
   const year = Number(params.year);
   const month = Number(params.month);
@@ -70,6 +77,8 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
   const [form, setForm] = useState<MonthlyPlan | null>(null);
   const [carryOverMachineId, setCarryOverMachineId] = useState("");
   const [carryOverDate, setCarryOverDate] = useState(`${year}-${String(month).padStart(2, "0")}-01`);
+  const [newMachineId, setNewMachineId] = useState("");
+  const [newMachineDate, setNewMachineDate] = useState(`${year}-${String(month).padStart(2, "0")}-01`);
   const [changedActualDateRows, setChangedActualDateRows] = useState<Set<number>>(new Set());
 
   const { data, isLoading } = useQuery({
@@ -94,6 +103,11 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
+  const { data: machineOptions = [] } = useQuery({
+    queryKey: ["monthly-plan-machine-options", year, month],
+    queryFn: () => apiRequest<MachineOption[]>(`/maintenance-plans/monthly/${year}/${month}/machine-options`),
+    enabled: canEditRows && isEditingRows,
+  });
 
   const addCarryOverRow = useMutation({
     mutationFn: () => {
@@ -114,6 +128,23 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
       setCarryOverMachineId("");
       queryClient.invalidateQueries({ queryKey: ["monthly-plan", targetYear, targetMonth] });
       navigate(`/maintenance-plans/monthly/${targetYear}/${targetMonth}`);
+    },
+  });
+
+  const addMachineRow = useMutation({
+    mutationFn: () => apiRequest<MonthlyRow>(`/maintenance-plans/monthly/${year}/${month}/rows`, {
+      method: "POST",
+      body: JSON.stringify({
+        machineId: Number(newMachineId),
+        plannedDateFrom: newMachineDate,
+        plannedDateTo: newMachineDate,
+      }),
+    }),
+    onSuccess: () => {
+      setNewMachineId("");
+      queryClient.invalidateQueries({ queryKey: ["monthly-plan", year, month] });
+      queryClient.invalidateQueries({ queryKey: ["monthly-plan-machine-options", year, month] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 
@@ -190,23 +221,11 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
         <CardHeader>
           <CardTitle>Sign-Off Fields</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[ 
-            ["preparedByName", "Prepared by"],
-            ["maintenanceSupervisorName", "Maintenance Section Supervisor"],
-            ["departmentManagerName", "Department Manager"],
-            ["approvedByName", "Approved by"],
-          ].map(([field, label]) => (
-            <div key={field}>
-              <Label>{label}</Label>
-              <Input value={(form[field as keyof MonthlyPlan] as string | null) ?? ""} readOnly={!canEditPlan} onChange={(event) => updateField(field as keyof MonthlyPlan, event.target.value)} />
-            </div>
-          ))}
+        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[
             ["preparedByDate", "Prepared date"],
             ["maintenanceSupervisorDate", "Supervisor date"],
             ["departmentManagerDate", "Manager date"],
-            ["approvedByDate", "Approved date"],
           ].map(([field, label]) => (
             <div key={field}>
               <Label>{label}</Label>
@@ -217,7 +236,6 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
             ["prepared_by", "Prepared By Electronic Signature"],
             ["maintenance_supervisor", "Maintenance Supervisor Electronic Signature"],
             ["department_manager", "Department Manager Electronic Signature"],
-            ["approved_by", "Approved By Electronic Signature"],
           ].map(([fieldName, label]) => (
             <ElectronicSignatureField
               key={fieldName}
@@ -242,7 +260,28 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {canEditRows && isEditingRows && (
-            <div className="mb-5 grid gap-3 rounded-md border bg-muted/30 p-4 md:grid-cols-[1fr_180px_auto] md:items-end">
+            <div className="mb-5 space-y-4 rounded-md border bg-muted/30 p-4">
+              <div className="grid gap-3 md:grid-cols-[1fr_180px_auto] md:items-end">
+                <div>
+                  <Label>Add machine to this month</Label>
+                  <select value={newMachineId} onChange={(event) => setNewMachineId(event.target.value)} className="mt-2 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                    <option value="">Select a machine not in this plan</option>
+                    {machineOptions.map((machine) => (
+                      <option key={machine.id} value={machine.id}>
+                        {machine.machineName} / {machine.machineNumber}{machine.departmentName ? ` — ${machine.departmentName}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>Planned date</Label>
+                  <Input className="mt-2" type="date" value={newMachineDate} onChange={(event) => setNewMachineDate(event.target.value)} />
+                </div>
+                <Button type="button" onClick={() => addMachineRow.mutate()} disabled={!newMachineId || addMachineRow.isPending}>
+                  <Plus className="mr-2 h-4 w-4" />Add to this month
+                </Button>
+              </div>
+              <div className="border-t pt-4 grid gap-3 md:grid-cols-[1fr_180px_auto] md:items-end">
               <div>
                 <Label>Machine to reschedule</Label>
                 <select value={carryOverMachineId} onChange={(event) => setCarryOverMachineId(event.target.value)} className="mt-2 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
@@ -268,6 +307,7 @@ export default function MonthlyPlanPage({ params }: { params: { year: string; mo
               <Button type="button" onClick={() => addCarryOverRow.mutate()} disabled={!carryOverMachineId || addCarryOverRow.isPending}>
                 <Plus className="mr-2 h-4 w-4" />Reschedule and shift following months
               </Button>
+              </div>
             </div>
           )}
           <Table>

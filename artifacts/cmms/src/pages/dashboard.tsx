@@ -75,7 +75,10 @@ export default function DashboardPage() {
   }
 
   // Colors for charts
-  const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
+  // A single coordinated blue/teal family keeps department bars distinct
+  // without mixing unrelated traffic-light colors.
+  const DEPARTMENT_COLORS = ["#0b1f3a", "#164e7a", "#1f78b4", "#4b9bd3", "#8ac3e8"];
+  const PM_STATUS_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))'];
 
   type MachineRef = { id: number; machineId: number; machineName: string; machineNumber: string };
   const pmStats = stats as typeof stats & {
@@ -126,6 +129,7 @@ export default function DashboardPage() {
   const canViewRequests = hasPermission("view_dashboard_maintenance_requests");
   const canViewCorrective = hasPermission("view_dashboard_corrective_maintenance");
   const canViewDashboardSpareParts = hasPermission("view_dashboard_spare_parts");
+  const hasExpandedDashboard = canViewMachines || canViewUsers || canViewDepartments || canViewCorrective || canViewDashboardSpareParts;
 
   const notifications = pmStats?.maintenanceRequestNotifications ?? [];
   const notificationIcon = (type: string) => {
@@ -151,7 +155,7 @@ export default function DashboardPage() {
       )}
 
       {/* ADMIN & SUPERVISOR VIEW */}
-      {!isTechnician && !isEmployee && stats && (
+      {stats && (!isTechnician && !isEmployee || hasExpandedDashboard) && (
         <>
           {/* NOTIFICATIONS PANEL — FR-2.8, FR-2.9, FR-2.10 */}
           {canViewNotifications && (isAdminOrSupervisor || isQA) && notifications.length > 0 && (
@@ -264,9 +268,9 @@ export default function DashboardPage() {
                         cursor={{fill: 'hsl(var(--muted)/0.5)'}}
                         contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--card))' }}
                       />
-                      <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                      <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                         {stats.machinesByDepartment.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell key={`cell-${index}`} fill={DEPARTMENT_COLORS[index % DEPARTMENT_COLORS.length]} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -413,7 +417,7 @@ export default function DashboardPage() {
                         {(pmStats?.monthlyPmCompletion ?? []).map((entry, index) => (
                           <Cell
                             key={entry.label}
-                            fill={COLORS[index % COLORS.length]}
+                            fill={PM_STATUS_COLORS[index % PM_STATUS_COLORS.length]}
                             opacity={!selectedPmSegment || selectedPmSegment === entry.label ? 1 : 0.35}
                           />
                         ))}
@@ -458,7 +462,7 @@ export default function DashboardPage() {
       )}
 
       {/* TECHNICIAN VIEW */}
-      {isTechnician && (canViewRequests || canViewPm) && (
+      {isTechnician && !hasExpandedDashboard && (canViewRequests || canViewPm) && (
         <div className="grid gap-4 md:grid-cols-2">
            <Card className={canViewRequests ? "" : "hidden"}>
               <CardHeader>
@@ -509,7 +513,7 @@ export default function DashboardPage() {
       )}
 
       {/* DEPARTMENT EMPLOYEE VIEW */}
-      {isEmployee && canViewRequests && (
+      {isEmployee && !hasExpandedDashboard && canViewRequests && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card className="bg-primary/5 border-primary/20 shadow-sm col-span-full md:col-span-1">
             <CardHeader>

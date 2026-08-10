@@ -32,6 +32,17 @@ type MonthlyPlan = {
 
 type MonthlyPlanHeader = { companyName: string; documentName: string; documentNumber: string; effectiveOrExecutionDate: string | null; pageNumber: number; totalPages: number };
 
+type ElectronicSignature = {
+  fieldName: string;
+  signatureData: string | null;
+  userName: string;
+  signedAt: string;
+};
+
+function signatureDate(savedDate: string | null | undefined, signedAt: string | undefined) {
+  return savedDate || signedAt?.slice(0, 10) || "";
+}
+
 export default function MonthlyPlanPrintPage({ params }: { params: { year: string; month: string } }) {
   const year = Number(params.year);
   const month = Number(params.month);
@@ -40,6 +51,16 @@ export default function MonthlyPlanPrintPage({ params }: { params: { year: strin
     queryFn: () => apiRequest<MonthlyPlan>(`/maintenance-plans/monthly/${year}/${month}`),
   });
   const { data: header } = useQuery({ queryKey: ["monthly-pm-header"], queryFn: () => apiRequest<MonthlyPlanHeader>("/maintenance-plans/monthly/header") });
+  const planId = data?.id ?? 0;
+  const { data: signatures = [] } = useQuery({
+    queryKey: ["print-monthly-plan-signatures", planId],
+    queryFn: () => apiRequest<ElectronicSignature[]>(`/signatures?documentType=MONTHLY_PLAN&documentId=${planId}`),
+    enabled: planId > 0,
+  });
+  const signature = (fieldName: string) => signatures.find((item) => item.fieldName === fieldName);
+  const preparedBySignature = signature("prepared_by");
+  const supervisorSignature = signature("maintenance_supervisor");
+  const managerSignature = signature("department_manager");
   // The official form starts with twelve slots, but generated plans can have
   // more machines. Keep the minimum form capacity while allowing every real
   // row to print, and let CSS distribute the available page height evenly.
@@ -97,18 +118,18 @@ export default function MonthlyPlanPrintPage({ params }: { params: { year: strin
         </table>
         <div className="mt-6 grid grid-cols-[1fr_0.55fr] gap-12 text-[12px]">
           <div>
-            Prepared by: <DottedLine text={data?.preparedByName} />
+            Prepared by: {preparedBySignature?.signatureData ? <img src={preparedBySignature.signatureData} alt="Prepared by signature" className="monthly-pm-print-signature" /> : <DottedLine />}
             <br />
-            Maintenance Section Supervisor Signature: <DottedLine text={data?.maintenanceSupervisorName} />
+            Maintenance Section Supervisor Signature: {supervisorSignature?.signatureData ? <img src={supervisorSignature.signatureData} alt="Maintenance supervisor signature" className="monthly-pm-print-signature" /> : <DottedLine />}
             <br />
-            Department Manager Sign: <DottedLine text={data?.departmentManagerName} />
+            Department Manager Sign: {managerSignature?.signatureData ? <img src={managerSignature.signatureData} alt="Department manager signature" className="monthly-pm-print-signature" /> : <DottedLine />}
           </div>
           <div>
-            Date: <DottedLine text={data?.preparedByDate} />
+            Date: <DottedLine text={signatureDate(data?.preparedByDate, preparedBySignature?.signedAt)} />
             <br />
-            Date: <DottedLine text={data?.maintenanceSupervisorDate} />
+            Date: <DottedLine text={signatureDate(data?.maintenanceSupervisorDate, supervisorSignature?.signedAt)} />
             <br />
-            Date: <DottedLine text={data?.departmentManagerDate} />
+            Date: <DottedLine text={signatureDate(data?.departmentManagerDate, managerSignature?.signedAt)} />
           </div>
         </div>
       </PrintPage>

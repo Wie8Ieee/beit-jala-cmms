@@ -206,6 +206,7 @@ async function recordDetail(record: typeof correctiveMaintenanceRecordsTable.$in
           priority: maintenanceRequestsTable.priority,
           expectedWorkTimeFrom: maintenanceRequestsTable.expectedWorkTimeFrom,
           expectedWorkTimeTo: maintenanceRequestsTable.expectedWorkTimeTo,
+          archivedAt: maintenanceRequestsTable.archivedAt,
         })
         .from(maintenanceRequestsTable)
         .where(inArray(maintenanceRequestsTable.id, requestIds))
@@ -216,7 +217,10 @@ async function recordDetail(record: typeof correctiveMaintenanceRecordsTable.$in
     ...record,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
-    events: events.map((event) => {
+    events: events.filter((event) => {
+      const request = event.requestId ? requestById.get(event.requestId) : undefined;
+      return !request?.archivedAt;
+    }).map((event) => {
       const request = event.requestId ? requestById.get(event.requestId) : undefined;
       return {
         ...formatEvent(event),
@@ -383,7 +387,7 @@ router.put("/header", requireAuth, requirePermission("edit_header"), async (req,
   }
 });
 
-router.put("/events/:eventId", requireAuth, requireAnyPermission(["fill_corrective_maintenance", "manage_maintenance_requests"]), async (req, res, next) => {
+router.put("/events/:eventId", requireAuth, requirePermission("edit_corrective_maintenance"), async (req, res, next) => {
   try {
     const machineId = parseIdParam(req.params.id);
     const eventId = parseIdParam(req.params.eventId);
@@ -410,8 +414,6 @@ router.put("/events/:eventId", requireAuth, requireAnyPermission(["fill_correcti
       requestDate?: string | null;
       maintenanceType?: string | null;
       preliminaryCheckResults?: string | null;
-      expectedWorkTimeFrom?: string | null;
-      expectedWorkTimeTo?: string | null;
       repairTimeSlots?: Array<{ date?: string; from?: string; to?: string }>;
       actionsTaken?: string | null;
       technicianName?: string | null;
@@ -455,8 +457,6 @@ router.put("/events/:eventId", requireAuth, requireAnyPermission(["fill_correcti
         requestDate: body.requestDate ?? event.requestDate,
         maintenanceType: body.maintenanceType ?? event.maintenanceType,
         preliminaryCheckResults: body.preliminaryCheckResults ?? event.preliminaryCheckResults,
-        expectedWorkTimeFrom: body.expectedWorkTimeFrom ?? event.expectedWorkTimeFrom,
-        expectedWorkTimeTo: body.expectedWorkTimeTo ?? event.expectedWorkTimeTo,
         repairTimeSlots: slots ? JSON.stringify(slots) : event.repairTimeSlots,
         actionsTaken: body.actionsTaken ?? event.actionsTaken,
         technicianName: body.technicianName ?? event.technicianName,
@@ -483,54 +483,6 @@ router.put("/events/:eventId", requireAuth, requireAnyPermission(["fill_correcti
   }
 });
 
-router.post("/events", requireAuth, requireAnyPermission(["fill_corrective_maintenance", "manage_maintenance_requests"]), async (req, res, next) => {
-  try {
-    const machineId = parseIdParam(req.params.id);
-    const record = await getRecordForNewEvent(machineId);
-    if (!record) {
-      res.status(404).json({ error: "No active corrective maintenance record found" });
-      return;
-    }
-    const [lastEvent] = await db
-      .select({ rowNumber: correctiveMaintenanceEventsTable.rowNumber })
-      .from(correctiveMaintenanceEventsTable)
-      .where(eq(correctiveMaintenanceEventsTable.recordId, record.id))
-      .orderBy(desc(correctiveMaintenanceEventsTable.rowNumber))
-      .limit(1);
-    const body = req.body as { requestReportNumber?: string; requestDate?: string; maintenanceType?: string; preliminaryCheckResults?: string; expectedWorkTimeFrom?: string; expectedWorkTimeTo?: string; actionsTaken?: string; technicianName?: string; sparePartsUsed?: string; receiverName?: string; handoverDate?: string };
-    const [created] = await db
-      .insert(correctiveMaintenanceEventsTable)
-      .values({
-        recordId: record.id,
-        requestId: null,
-        machineId,
-        requestReportNumber: body.requestReportNumber?.trim() || null,
-        requestDate: body.requestDate?.trim() || null,
-        maintenanceType: body.maintenanceType?.trim() || null,
-        rowNumber: (lastEvent?.rowNumber ?? 0) + 1,
-        preliminaryCheckResults: body.preliminaryCheckResults ?? null,
-        expectedWorkTimeFrom: body.expectedWorkTimeFrom ?? null,
-        expectedWorkTimeTo: body.expectedWorkTimeTo ?? null,
-        actionsTaken: body.actionsTaken ?? null,
-        technicianName: body.technicianName?.trim() || null,
-        sparePartsUsed: body.sparePartsUsed?.trim() || null,
-        receiverName: body.receiverName ?? null,
-        handoverDate: body.handoverDate ?? null,
-      })
-      .returning();
-    await db.insert(auditLogsTable).values({
-      userId: req.session.userId ?? null,
-      action: "corrective_maintenance_record_filled",
-      entityType: "machine",
-      entityId: machineId,
-      details: { eventId: created!.id, recordId: record.id, requestReportNumber: created!.requestReportNumber },
-    });
-    res.status(201).json(formatEvent(created!));
-  } catch (err) {
-    next(err);
-  }
-});
-
 router.delete("/events/:eventId", requireAuth, requirePermission("delete_corrective_maintenance"), async (req, res, next) => {
   try {
     const machineId = parseIdParam(req.params.id);
@@ -542,7 +494,6 @@ router.delete("/events/:eventId", requireAuth, requirePermission("delete_correct
       res.status(404).json({ error: "Corrective maintenance row not found" });
       return;
     }
-
     await db.transaction(async (tx) => {
       await tx.delete(correctiveMaintenanceHandoverTable).where(eq(correctiveMaintenanceHandoverTable.eventId, event.id));
       await tx.delete(correctiveMaintenanceStaffTable).where(eq(correctiveMaintenanceStaffTable.eventId, event.id));

@@ -585,7 +585,9 @@ router.get("/reports/corrective-maintenance-time", requireAuth, requirePermissio
         repairTimeSlots: correctiveMaintenanceEventsTable.repairTimeSlots,
       })
       .from(correctiveMaintenanceEventsTable)
-      .innerJoin(correctiveMaintenanceRecordsTable, eq(correctiveMaintenanceEventsTable.recordId, correctiveMaintenanceRecordsTable.id));
+      .innerJoin(correctiveMaintenanceRecordsTable, eq(correctiveMaintenanceEventsTable.recordId, correctiveMaintenanceRecordsTable.id))
+      .leftJoin(maintenanceRequestsTable, eq(correctiveMaintenanceEventsTable.requestId, maintenanceRequestsTable.id))
+      .where(isNull(maintenanceRequestsTable.archivedAt));
 
     const byMachine = new Map<number, { machineId: number; machineName: string; machineNumber: string; totalMinutes: number; intervals: Array<{ date: string; from: string; to: string; minutes: number }> }>();
     for (const row of eventRows) {
@@ -629,7 +631,10 @@ router.get(
         requestedYear <= 2100
           ? requestedYear
           : new Date().getFullYear();
-      const requests = (await db.select().from(maintenanceRequestsTable))
+      const requests = (await db
+        .select()
+        .from(maintenanceRequestsTable)
+        .where(isNull(maintenanceRequestsTable.archivedAt)))
         .filter((item) => item.requestDate?.startsWith(`${year}-`))
         .sort((a, b) =>
           (a.requestDate ?? "").localeCompare(b.requestDate ?? ""),
@@ -732,7 +737,10 @@ router.get(
           .select()
           .from(monthlyMaintenanceEvaluationReportsTable)
           .where(eq(monthlyMaintenanceEvaluationReportsTable.year, year)),
-        db.select().from(maintenanceRequestsTable),
+        db
+          .select()
+          .from(maintenanceRequestsTable)
+          .where(isNull(maintenanceRequestsTable.archivedAt)),
       ]);
       const evaluationByMonth = new Map(
         evaluations.map((evaluation) => [evaluation.month, evaluation]),
@@ -782,7 +790,7 @@ router.get(
 router.post(
   "/reports/annual-maintenance-summary/adjustments",
   requireAuth,
-  requirePermission("edit_maintenance_plans"),
+  requirePermission("edit_reports"),
   async (req, res, next) => {
     try {
       const body = req.body ?? {};
@@ -866,7 +874,7 @@ router.patch("/:id/request-details", requireAuth, async (req, res, next) => {
 router.delete(
   "/reports/annual-maintenance-summary/adjustments/:year/:month/:type/:adjustmentId",
   requireAuth,
-  requirePermission("edit_maintenance_plans"),
+  requirePermission("edit_reports"),
   async (req, res, next) => {
     try {
       const year = Number(req.params.year);
@@ -916,6 +924,35 @@ async function preventiveEvaluationMetrics(year: number, month: number) {
   };
 }
 
+async function maintenanceRequestEvaluationMetrics(year: number, month: number) {
+  const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+  const correctiveRequests = await db
+    .select({ status: maintenanceRequestsTable.status })
+    .from(maintenanceRequestsTable)
+    .where(and(
+      like(maintenanceRequestsTable.requestDate, `${monthKey}-%`),
+      isNull(maintenanceRequestsTable.archivedAt),
+    ));
+  const completedCorrectiveRequests = correctiveRequests.filter((request) =>
+    request.status !== STATUS.EXTERNAL_MAINTENANCE && (request.status === STATUS.COMPLETED || request.status === STATUS.CLOSED)
+  ).length;
+  const correctiveOnlyRequests = correctiveRequests.filter((request) => request.status !== STATUS.EXTERNAL_MAINTENANCE);
+  const externalRequests = await db
+    .select({ id: externalMaintenanceRequestsTable.id })
+    .from(externalMaintenanceRequestsTable)
+    .innerJoin(maintenanceRequestsTable, eq(externalMaintenanceRequestsTable.maintenanceRequestId, maintenanceRequestsTable.id))
+    .where(and(
+      like(externalMaintenanceRequestsTable.requestDate, `${monthKey}-%`),
+      isNull(maintenanceRequestsTable.archivedAt),
+    ));
+  return {
+    totalCorrectiveRequests: correctiveOnlyRequests.length,
+    unclosedCorrectiveRequests: correctiveOnlyRequests.length - completedCorrectiveRequests,
+    completedCorrectiveRequests,
+    totalExternalActivities: externalRequests.length,
+  };
+}
+
 router.get(
   "/reports/monthly-maintenance-evaluation",
   requireAuth,
@@ -935,8 +972,18 @@ router.get(
           ),
         );
       const preventiveMetrics = await preventiveEvaluationMetrics(year, month);
+      const requestMetrics = await maintenanceRequestEvaluationMetrics(year, month);
       res.json(
-        report ? { ...report, ...preventiveMetrics } : {
+        report ? {
+          ...report,
+          delayedActivities: preventiveMetrics.delayedActivities,
+          totalPmActivities: report.totalPmActivitiesIsOverride ? report.totalPmActivities : preventiveMetrics.totalPmActivities,
+          completedPmOnTime: report.completedPmOnTimeIsOverride ? report.completedPmOnTime : preventiveMetrics.completedPmOnTime,
+          totalCorrectiveRequests: report.totalCorrectiveRequestsIsOverride ? report.totalCorrectiveRequests : requestMetrics.totalCorrectiveRequests,
+          unclosedCorrectiveRequests: report.unclosedCorrectiveRequestsIsOverride ? report.unclosedCorrectiveRequests : requestMetrics.unclosedCorrectiveRequests,
+          completedCorrectiveRequests: report.completedCorrectiveRequestsIsOverride ? report.completedCorrectiveRequests : requestMetrics.completedCorrectiveRequests,
+          totalExternalActivities: report.totalExternalActivitiesIsOverride ? report.totalExternalActivities : requestMetrics.totalExternalActivities,
+        } : {
           year,
           month,
           delayReason: "",
@@ -945,11 +992,8 @@ router.get(
           productionImpact: "",
           sparePartShortage: "",
           correctiveMaintenanceDetails: "",
-          totalCorrectiveRequests: 0,
-          unclosedCorrectiveRequests: 0,
-          completedCorrectiveRequests: 0,
+          ...requestMetrics,
           externalMaintenanceDetails: "",
-          totalExternalActivities: 0,
           completedExternalActivities: 0,
           employeeDelayImpact: "",
           workingDays: 0,
@@ -969,7 +1013,7 @@ router.get(
 router.put(
   "/reports/monthly-maintenance-evaluation",
   requireAuth,
-  requirePermission("edit_maintenance_plans"),
+  requirePermission("edit_reports"),
   async (req, res, next) => {
     try {
       const body = req.body as Record<string, unknown>;
@@ -984,10 +1028,15 @@ router.put(
         res.status(400).json({ error: "A valid month and year are required" });
         return;
       }
+      const preventiveMetrics = await preventiveEvaluationMetrics(year, month);
       const values = {
         delayReason: String(body.delayReason ?? ""),
         followUpIncluded: String(body.followUpIncluded ?? ""),
-        ...(await preventiveEvaluationMetrics(year, month)),
+        delayedActivities: preventiveMetrics.delayedActivities,
+        totalPmActivities: Math.max(0, Number(body.totalPmActivities) || 0),
+        totalPmActivitiesIsOverride: Boolean(body.totalPmActivitiesIsOverride),
+        completedPmOnTime: Math.max(0, Number(body.completedPmOnTime) || 0),
+        completedPmOnTimeIsOverride: Boolean(body.completedPmOnTimeIsOverride),
         productionImpact: String(body.productionImpact ?? ""),
         sparePartShortage: String(body.sparePartShortage ?? ""),
         correctiveMaintenanceDetails: String(
@@ -997,14 +1046,17 @@ router.put(
           0,
           Number(body.totalCorrectiveRequests) || 0,
         ),
+        totalCorrectiveRequestsIsOverride: Boolean(body.totalCorrectiveRequestsIsOverride),
         unclosedCorrectiveRequests: Math.max(
           0,
           Number(body.unclosedCorrectiveRequests) || 0,
         ),
+        unclosedCorrectiveRequestsIsOverride: Boolean(body.unclosedCorrectiveRequestsIsOverride),
         completedCorrectiveRequests: Math.max(
           0,
           Number(body.completedCorrectiveRequests) || 0,
         ),
+        completedCorrectiveRequestsIsOverride: Boolean(body.completedCorrectiveRequestsIsOverride),
         externalMaintenanceDetails: String(
           body.externalMaintenanceDetails ?? "",
         ),
@@ -1012,6 +1064,7 @@ router.put(
           0,
           Number(body.totalExternalActivities) || 0,
         ),
+        totalExternalActivitiesIsOverride: Boolean(body.totalExternalActivitiesIsOverride),
         completedExternalActivities: Math.max(
           0,
           Number(body.completedExternalActivities) || 0,
@@ -1096,6 +1149,10 @@ async function ensureEventForRequest(
       requestId: request.id,
       machineId: request.machineId,
       requestReportNumber: request.requestReportNumber,
+      requestDate: request.requestDate,
+      maintenanceType: request.priority,
+      expectedWorkTimeFrom: request.expectedWorkTimeFrom,
+      expectedWorkTimeTo: request.expectedWorkTimeTo,
       rowNumber: Number(eventStats?.total ?? 0) + 1,
     })
     .returning();
@@ -1109,7 +1166,10 @@ router.get(
   requirePermission("set_maintenance_request_number_start"),
   async (_req, res, next) => {
     try {
-      res.json({ lastSequence: await getMaintenanceRequestNumberingStart() });
+      res.json({
+        lastSequence: await getMaintenanceRequestNumberingStart(),
+        nextNumber: await nextApprovedRequestNumber(todayString()),
+      });
     } catch (err) {
       next(err);
     }
@@ -1149,7 +1209,69 @@ router.put(
           documentNumber: value,
         });
       }
-      res.json({ lastSequence: Number(value) });
+      res.json({
+        lastSequence: Number(value),
+        nextNumber: await nextApprovedRequestNumber(todayString()),
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.get(
+  "/numbering-next",
+  requireAuth,
+  requirePermission("review_engineering_requests"),
+  async (req, res, next) => {
+    try {
+      res.json({ nextNumber: await nextApprovedRequestNumber(String(req.query.requestDate ?? todayString())) });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+router.patch(
+  "/:id/request-number",
+  requireAuth,
+  requirePermission("edit_approved_maintenance_request_number"),
+  async (req, res, next) => {
+    try {
+      const request = await getRequest(parseIdParam(req.params.id));
+      if (!request || isPendingRequestNumber(request.requestReportNumber)) {
+        res.status(400).json({ error: "The request does not have an approved number yet" });
+        return;
+      }
+      const requestReportNumber = String(req.body?.requestReportNumber ?? "").trim();
+      if (!/^\d+\/\d{2}\/\d{4}$/.test(requestReportNumber)) {
+        res.status(400).json({ error: "Maintenance request number must use the format 401/MM/YYYY" });
+        return;
+      }
+      const [duplicate] = await db.select({ id: maintenanceRequestsTable.id })
+        .from(maintenanceRequestsTable)
+        .where(eq(maintenanceRequestsTable.requestReportNumber, requestReportNumber));
+      if (duplicate && duplicate.id !== request.id) {
+        res.status(409).json({ error: "This maintenance request number is already in use" });
+        return;
+      }
+      const oldNumber = request.requestReportNumber;
+      const [updated] = await db.update(maintenanceRequestsTable)
+        .set({ requestReportNumber, updatedAt: new Date() })
+        .where(eq(maintenanceRequestsTable.id, request.id))
+        .returning();
+      await db.update(correctiveMaintenanceEventsTable)
+        .set({ requestReportNumber, updatedAt: new Date() })
+        .where(eq(correctiveMaintenanceEventsTable.requestId, request.id));
+      await db.insert(auditLogsTable).values({
+        userId: req.session.userId ?? null,
+        action: "approved_maintenance_request_number_changed",
+        entityType: "maintenance_request",
+        entityId: request.id,
+        oldValue: { requestReportNumber: oldNumber },
+        newValue: { requestReportNumber },
+      });
+      res.json(await getRequestDetail(updated!));
     } catch (err) {
       next(err);
     }
@@ -1390,6 +1512,7 @@ router.get(
             requestReportNumber: maintenanceRequestsTable.requestReportNumber,
             priority: maintenanceRequestsTable.priority,
             status: maintenanceRequestsTable.status,
+            archivedAt: maintenanceRequestsTable.archivedAt,
             handoverDate: correctiveMaintenanceEventsTable.handoverDate,
             remarks: correctiveMaintenanceEventsTable.remarksRecommendations,
           })
@@ -1429,6 +1552,7 @@ router.get(
         // corrective-maintenance record alone must never create a log row.
         if (
           (row.status !== STATUS.COMPLETED && row.status !== STATUS.CLOSED) ||
+          Boolean(row.archivedAt) ||
           !row.handoverDate ||
           excludedRequestIds.has(row.requestId)
         ) return [];
@@ -2203,6 +2327,8 @@ async function qaReviewHandler(
         qaReviewNotes: body.notes ?? null,
         qaReviewedByUserId: req.session.userId,
         qaReviewedAt: new Date(),
+        archivedAt: toStatus === STATUS.QA_REJECTED ? new Date() : null,
+        archivedByUserId: toStatus === STATUS.QA_REJECTED ? (req.session.userId ?? null) : null,
         updatedAt: new Date(),
       })
       .where(eq(maintenanceRequestsTable.id, request.id))
@@ -2301,6 +2427,8 @@ async function engineeringReviewHandler(
         engineeringReviewNotes: body.notes ?? null,
         engineeringReviewedByUserId: req.session.userId,
         engineeringReviewedAt: new Date(),
+        archivedAt: toStatus === STATUS.REJECTED ? new Date() : null,
+        archivedByUserId: toStatus === STATUS.REJECTED ? (req.session.userId ?? null) : null,
         updatedAt: new Date(),
       })
       .where(eq(maintenanceRequestsTable.id, request.id))

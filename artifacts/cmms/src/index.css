@@ -332,6 +332,39 @@ main:has([data-permissions-page='true']) > div:last-child {
   box-shadow: 0 10px 35px rgba(15, 23, 42, 0.18);
 }
 
+/* Printed values must always stay inside the physical page. Table cells and
+   the shared value-line components are used by all official records, so long
+   text (including an uninterrupted pasted string) wraps instead of widening
+   the document or being clipped outside the printable area. */
+.official-print-page,
+.official-print-page * {
+  box-sizing: border-box;
+}
+
+.official-print-page td,
+.official-print-page th,
+.official-print-page .official-print-line,
+.official-print-page .official-print-external-fill,
+.official-print-page .official-print-receipt-fill {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.official-print-page td > *,
+.official-print-page th > *,
+.official-print-page .official-print-line,
+.official-print-page .official-print-external-fill,
+.official-print-page .official-print-receipt-fill {
+  min-width: 0;
+}
+
+.official-print-page img,
+.official-print-page svg {
+  max-width: 100%;
+}
+
 .official-print-landscape {
   width: 297mm;
   min-height: 210mm;
@@ -450,6 +483,16 @@ main:has([data-permissions-page='true']) > div:last-child {
   padding: 1mm 1.5mm;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.monthly-pm-print-signature {
+  display: inline-block;
+  width: 32mm;
+  height: 8mm;
+  margin-inline-start: 2mm;
+  object-fit: contain;
+  object-position: center bottom;
+  vertical-align: middle;
 }
 
 /* FORM-10-0975 is an Arabic, right-to-left form.  The header table keeps its
@@ -837,7 +880,7 @@ main:has([data-permissions-page='true']) > div:last-child {
 .official-print-mr-closing > div {
   display: flex;
   min-height: 23px;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 28px;
   padding: 3px 10px;
@@ -1464,28 +1507,44 @@ main:has([data-permissions-page='true']) > div:last-child {
 .official-print-receipt-top-row > span { display: flex; align-items: end; gap: 2px; }
 /* The left-side fields follow the offset of the original Arabic form. */
 .official-print-receipt-top-row > span:nth-child(2) { transform: translateX(-1.5mm); }
-.official-print-receipt-fill { display: inline-flex; align-items: flex-end; flex: 1; min-width: 0; min-height: 4mm; padding: 0 1px .35mm; border-bottom: .7px dotted #333; font-weight: 400; line-height: 1.1; vertical-align: bottom; }
+.official-print-receipt-fill { display: inline-flex; align-items: flex-end; flex: 1; min-width: 0; min-height: 4mm; padding: 0 1px .35mm; border-bottom: .7px dotted #333; font-weight: 400; line-height: 1.1; vertical-align: bottom; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
 .official-print-receipt-static-label { font-size: 11px; font-weight: 700; }
 .official-print-receipt-performer {
   display: flex;
-  align-items: end;
+  align-items: flex-start;
   gap: 2px;
-  min-height: 14mm;
-  /* Match the right-hand column above it exactly. */
   width: calc((100% - 20mm) / 2);
-  margin-right: 0;
-  margin-left: auto;
-  padding-left: 0;
-  white-space: nowrap;
-  margin-bottom: 10mm;
+  margin: 6mm 0 8mm auto;
+  white-space: normal;
 }
-.official-print-receipt-performer .official-print-receipt-fill { flex: 1; }
+.official-print-receipt-performer > .official-print-receipt-static-label {
+  flex: none;
+  line-height: 7mm;
+  text-align: right;
+}
+.official-print-receipt-performer-lines {
+  flex: 1;
+  min-width: 0;
+  min-height: 7mm;
+  padding-inline: 1mm;
+  line-height: 7mm;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(7mm - 1px),
+    #777 calc(7mm - 1px),
+    #777 7mm
+  );
+}
 
 .official-print-receipt-ruled-section { margin-top: 4mm; }
 .official-print-receipt-ruled-section > div:first-child { height: 4.5mm; text-align: right; }
 .official-print-receipt-ruled { padding-inline: 1mm; font-weight: 400; }
 .official-print-receipt-ruled-section:not(.official-print-receipt-rejection) .official-print-receipt-ruled { margin-top: -2.5mm; }
-.official-print-receipt-writing-line { height: 7mm; padding: 0 1mm .4mm; border-bottom: .7px dotted #333; line-height: 1.15; white-space: nowrap; overflow: hidden; display: flex; align-items: flex-end; }
+.official-print-receipt-writing-line { min-height: 7mm; height: auto; padding: 0 1mm .4mm; border-bottom: .7px dotted #333; line-height: 1.15; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; display: flex; align-items: flex-end; }
 .official-print-receipt-rejection { margin-top: 11mm; }
 .official-print-receipt-examiner {
   margin-top: 7mm;

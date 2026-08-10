@@ -290,12 +290,12 @@ export default function UserForm({ params }: { params?: { id: string } }) {
     review_engineering_requests: "الموافقة على طلب الصيانة من الهندسة والصيانة",
     fill_preliminary_findings: "تعبئة وتعديل نتائج الفحص الأولي ووقت العمل",
     fill_corrective_maintenance: "تعبئة وتعديل الإجراءات المتخذة والملاحظات والقائمين بالعمل",
-    delete_corrective_maintenance: "حذف صفوف سجل الصيانة العلاجية",
     view_external_maintenance: "عرض طلب الصيانة الخارجية ونموذج الاستلام",
     edit_external_maintenance: "تعديل طلب الصيانة الخارجية ونموذج الاستلام",
     sign_assigned_fields: "التوقيع الإلكتروني في الحقول الممنوحة للحساب",
     archive_maintenance_requests: "أرشفة طلبات الصيانة وإعادتها من الأرشيف",
     set_maintenance_request_number_start: "تحديد رقم بدء تسلسل طلبات الصيانة",
+    edit_approved_maintenance_request_number: "تعديل رقم طلب صيانة معتمد",
     edit_closed_corrective_maintenance_log: "تعديل سجل طلبات الصيانة العلاجية المغلقة",
   };
   const maintenancePermissions = (allPermissions ?? []).filter((permission) => permission.name in maintenancePermissionLabels);
@@ -330,6 +330,7 @@ export default function UserForm({ params }: { params?: { id: string } }) {
   };
   const generalPermissionLabels: Record<string, string> = {
     view_reports: "عرض التقارير",
+    edit_reports: "تعديل التقارير",
     manage_users: "إدارة المستخدمين",
     view_machines: "عرض الماكينات",
     create_machine: "إضافة ماكينة",
@@ -354,6 +355,8 @@ export default function UserForm({ params }: { params?: { id: string } }) {
     edit_header: "تعديل رؤوس النماذج",
     print_forms: "طباعة النماذج",
     manage_signatures: "إدارة التوقيعات",
+    edit_corrective_maintenance: "تعديل صفوف سجل الصيانة العلاجية",
+    delete_corrective_maintenance: "حذف صفوف سجل الصيانة العلاجية",
   };
   const pmPermissionLabels: Record<string, string> = {
     manage_pm_checklist: tr("Manage PM checklist points", "إدارة نقاط فحص الصيانة الوقائية"),

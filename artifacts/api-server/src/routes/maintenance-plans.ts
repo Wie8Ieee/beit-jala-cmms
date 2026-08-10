@@ -317,10 +317,15 @@ async function getOrCreateMonthlyPlan(year: number, month: number) {
       ))
       .orderBy(desc(pmInspectionsTable.inspectionDate), desc(pmInspectionsTable.id))
       .limit(1);
-    if (savedInspection) await db.update(monthlyPmPlanRowsTable).set({
+    await db.update(monthlyPmPlanRowsTable).set(savedInspection ? {
       actualDate: savedInspection.inspectionDate,
       actualDateIsOverride: false,
       status: "completed",
+      updatedAt: new Date(),
+    } : {
+      actualDate: null,
+      actualDateIsOverride: false,
+      status: "due",
       updatedAt: new Date(),
     }).where(eq(monthlyPmPlanRowsTable.id, row.id));
   }
@@ -533,6 +538,42 @@ router.put(
 // Reschedules a machine from one monthly plan to another. When the source is
 // part of the annual schedule, all following occurrences move by the same
 // number of months so the PM frequency remains unchanged.
+router.get(
+  "/monthly/:year/:month/machine-options",
+  requireAuth,
+  requirePermission("edit_monthly_maintenance_plan"),
+  async (req, res, next) => {
+    try {
+      const year = parseYear(req.params.year);
+      const month = parseMonth(req.params.month);
+      if (Number.isNaN(year) || Number.isNaN(month) || month < 1 || month > 12) {
+        res.status(400).json({ error: "Invalid year or month" });
+        return;
+      }
+      const plan = await getOrCreateMonthlyPlan(year, month);
+      const existingRows = await db
+        .select({ machineId: monthlyPmPlanRowsTable.machineId })
+        .from(monthlyPmPlanRowsTable)
+        .where(and(eq(monthlyPmPlanRowsTable.planId, plan.id), eq(monthlyPmPlanRowsTable.isManuallyRemoved, false)));
+      const existingIds = new Set(existingRows.map((row) => row.machineId));
+      const machines = await db
+        .select({
+          id: machinesTable.id,
+          machineName: machinesTable.machineName,
+          machineNumber: machinesTable.machineNumber,
+          departmentName: departmentsTable.name,
+        })
+        .from(machinesTable)
+        .leftJoin(departmentsTable, eq(machinesTable.departmentId, departmentsTable.id))
+        .where(isNull(machinesTable.deletedAt))
+        .orderBy(asc(machinesTable.machineName));
+      res.json(machines.filter((machine) => !existingIds.has(machine.id)));
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 router.post(
   "/monthly/:year/:month/rows",
   requireAuth,

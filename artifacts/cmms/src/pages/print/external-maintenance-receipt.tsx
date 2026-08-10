@@ -38,7 +38,10 @@ export default function ExternalMaintenanceReceiptPrintPage({ params }: { params
     <div className="official-print-external-receipt-content">
       <div className="official-print-receipt-top-row"><span><b className="official-print-receipt-static-label">طلب صيانة رقم:</b> <Fill><bdi dir="ltr">{request.requestReportNumber}</bdi></Fill></span><span><b className="official-print-receipt-static-label">نوع أعمال الصيانة:</b> <Fill>{receipt.maintenanceType}</Fill></span></div>
       <div className="official-print-receipt-top-row"><span><b className="official-print-receipt-static-label">القسم الطالب للصيانة:</b> <Fill>{receipt.requestingDepartment}</Fill></span><span><b className="official-print-receipt-static-label">التاريخ:</b> <Fill><bdi dir="ltr">{formatDate(receipt.receiptDate)}</bdi></Fill></span></div>
-      <div className="official-print-receipt-performer"><b className="official-print-receipt-static-label">الجهة المنفذة للعمل:</b> <Fill>{receipt.performingEntity}</Fill></div>
+      <div className="official-print-receipt-performer">
+        <b className="official-print-receipt-static-label">الجهة المنفذة للعمل:</b>
+        <div className="official-print-receipt-performer-lines">{receipt.performingEntity}</div>
+      </div>
       <section className="official-print-receipt-ruled-section"><div className="official-print-receipt-static-label">تقرير استلام أعمال الصيانة:</div><DottedWritingLines value={receipt.workAcceptanceReport} count={6} /></section>
       <section className="official-print-receipt-ruled-section official-print-receipt-rejection"><div className="official-print-receipt-static-label">سبب الرفض في حالة وجود خطأ في العمل:</div><DottedWritingLines value={receipt.workFailureCause} count={5} /></section>
       <div className="official-print-receipt-examiner"><div><b className="official-print-receipt-static-label">اسم الفاحص:</b> <Fill>{receipt.examinerName}</Fill></div><div><b className="official-print-receipt-static-label">توقيع الفاحص:</b> <Fill>{examinerElectronicSignature?.signatureData ? <img src={examinerElectronicSignature.signatureData} alt={`توقيع ${examinerElectronicSignature.userName}`} className="official-print-receipt-signature-image" /> : receipt.examinerSignature}</Fill></div></div>

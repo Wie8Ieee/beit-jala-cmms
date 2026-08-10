@@ -250,6 +250,7 @@ async function seed() {
     "view_dashboard_corrective_maintenance",
     "view_dashboard_spare_parts",
     "view_reports",
+    "edit_reports",
     "manage_users",
     "view_machines",
     "create_machine",
@@ -279,6 +280,7 @@ async function seed() {
     "assign_technician",
     "fill_preliminary_findings",
     "fill_corrective_maintenance",
+    "edit_corrective_maintenance",
     "delete_corrective_maintenance",
     "view_corrective_maintenance",
     "manage_maintenance_requests",
@@ -297,6 +299,7 @@ async function seed() {
     "archive_maintenance_requests",
     "edit_closed_corrective_maintenance_log",
     "set_maintenance_request_number_start",
+    "edit_approved_maintenance_request_number",
   ];
   const permissions: Record<string, number> = {};
   for (const name of permissionData) permissions[name] = (await upsertPermission(name, name.replaceAll("_", " "))).id;
@@ -333,7 +336,7 @@ async function seed() {
   ]));
   await setUserPermissions(users.technician.id, ids([
     "view_dashboard", ...dashboardSectionPermissions, "view_machines", "view_equipment_information", "fill_pm_record", "view_pm_records",
-    "fill_corrective_maintenance", "view_corrective_maintenance", "print_forms", "sign_assigned_fields",
+    "fill_corrective_maintenance", "view_corrective_maintenance", "edit_corrective_maintenance", "print_forms", "sign_assigned_fields",
   ]));
   await setUserPermissions(users.employee.id, ids(["view_dashboard", ...dashboardSectionPermissions, "submit_maintenance_request", "view_own_requests", "sign_assigned_fields"]));
   await setUserPermissions(users.qa.id, ids([

@@ -41,7 +41,7 @@ export default function MaintenanceRequestsListPage({ scope = "all" }: { scope?:
   });
   const { data: numberingSetting } = useQuery({
     queryKey: ["maintenance-request-numbering-start"],
-    queryFn: () => apiRequest<{ lastSequence: number | null }>("/maintenance-requests/numbering-start"),
+    queryFn: () => apiRequest<{ lastSequence: number | null; nextNumber: string | null }>("/maintenance-requests/numbering-start"),
     enabled: canSetNumberingStart,
   });
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function MaintenanceRequestsListPage({ scope = "all" }: { scope?:
     }
   }, [numberingSetting]);
   const saveNumberingStart = useMutation({
-    mutationFn: () => apiRequest<{ lastSequence: number }>("/maintenance-requests/numbering-start", {
+    mutationFn: () => apiRequest<{ lastSequence: number; nextNumber: string | null }>("/maintenance-requests/numbering-start", {
       method: "PUT",
       body: JSON.stringify({ lastSequence: numberingStart }),
     }),
@@ -110,6 +110,7 @@ export default function MaintenanceRequestsListPage({ scope = "all" }: { scope?:
             <Button type="button" onClick={() => saveNumberingStart.mutate()} disabled={!numberingStart.trim() || saveNumberingStart.isPending}>
               <Save className="ms-2 h-4 w-4" />حفظ
             </Button>
+            {numberingSetting?.nextNumber && <div className="rounded-md border bg-primary/5 px-4 py-2 text-sm"><span className="text-muted-foreground">الرقم التالي تلقائياً: </span><strong dir="ltr" className="font-mono text-base">{numberingSetting.nextNumber}</strong></div>}
             <p className="pb-2 text-sm text-muted-foreground">أدخل آخر رقم ورقي مستخدم؛ مثلاً 400 يجعل أول طلب معتمد في التطبيق 401/MM/YYYY.</p>
           </CardContent>
         </Card>

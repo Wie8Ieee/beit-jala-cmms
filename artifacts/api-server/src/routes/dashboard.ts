@@ -7,11 +7,14 @@ import {
   monthlyPmPlanRowsTable,
   monthlyPmPlansTable,
   maintenanceRequestsTable,
+  correctiveMaintenanceEventsTable,
+  eligibleSignerAssignmentsTable,
   pmInspectionsTable,
   signatureFieldPermissionsTable,
+  signaturesTable,
   sparePartsTable,
 } from "@workspace/db";
-import { and, eq, isNull, count, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, count, sql } from "drizzle-orm";
 import { requireActiveAuth, requirePermission } from "../lib/auth.js";
 
 const router = Router();
@@ -118,7 +121,12 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
   const completedCount = monthlyPmRows.filter((row) => !!row.actualDate).length;
   const notCompletedCount = Math.max(0, monthlyPmRows.length - completedCount);
 
-  const requestRows = await db.select().from(maintenanceRequestsTable);
+  // Archived requests are retained for audit/history, but are no longer part
+  // of any operational dashboard count, queue, notification, or recent list.
+  const requestRows = await db
+    .select()
+    .from(maintenanceRequestsTable)
+    .where(isNull(maintenanceRequestsTable.archivedAt));
   const currentUserId = req.session.userId;
   const requestSummary = {
     total: requestRows.length,
@@ -163,6 +171,63 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
   }
 
   if (currentUserId) {
+    // A document-specific eligible-signer assignment is an explicit request
+    // for this user to sign. Surface every unsigned assignment regardless of
+    // document type, and remove it as soon as it is signed or revoked.
+    const signatureAssignments = await db
+      .select({
+        documentType: eligibleSignerAssignmentsTable.documentType,
+        documentId: eligibleSignerAssignmentsTable.documentId,
+        fieldName: eligibleSignerAssignmentsTable.fieldName,
+      })
+      .from(eligibleSignerAssignmentsTable)
+      .where(and(
+        eq(eligibleSignerAssignmentsTable.eligibleUserId, currentUserId),
+        isNull(eligibleSignerAssignmentsTable.revokedAt),
+      ));
+    const assignedDocumentIds = [...new Set(signatureAssignments.map((assignment) => assignment.documentId))];
+    const assignedSignatures = assignedDocumentIds.length
+      ? await db.select({
+          documentType: signaturesTable.documentType,
+          documentId: signaturesTable.documentId,
+          fieldName: signaturesTable.fieldName,
+        }).from(signaturesTable).where(inArray(signaturesTable.documentId, assignedDocumentIds))
+      : [];
+    const signedAssignmentKeys = new Set(assignedSignatures.map((signature) => `${signature.documentType}:${signature.documentId}:${signature.fieldName}`));
+    const signatureFieldLabels: Record<string, string> = {
+      reporting_person: "مُبلّغ العطل",
+      department_supervisor: "مشرف القسم",
+      qa_supervisor_approval: "مسؤول الجودة",
+      maintenance_technician: "فني الصيانة",
+      concerned_section_supervisor: "مشرف القسم المعني",
+      performing_staff: "القائم بالعمل",
+      receiver: "مستلم الماكينة",
+      engineering_final: "الهندسة",
+      prepared_by: "المُعدّ",
+      approved_by: "المعتمد",
+      department_manager: "مدير الدائرة",
+      engineering_manager: "مدير دائرة الهندسة",
+      examiner: "الفاحص",
+      machine_receiver: "مستلم الماكينة",
+    };
+    const signatureDocumentHref = (documentType: string, documentId: number) => {
+      if (documentType === "MAINTENANCE_REQUEST") return `/maintenance-requests/${documentId}`;
+      if (documentType === "EXTERNAL_MAINTENANCE_REQUEST") return `/maintenance-requests/${documentId}/external-maintenance`;
+      if (documentType === "EXTERNAL_MAINTENANCE_RECEIPT") return `/maintenance-requests/${documentId}/external-maintenance/receipt`;
+      if (documentType === "EQUIPMENT_INFORMATION") return `/machines/${documentId}/equipment-information`;
+      if (documentType === "MONTHLY_PLAN") return "/maintenance-plans";
+      if (documentType === "ANNUAL_PLAN") return "/maintenance-plans";
+      if (documentType === "MONTHLY_MAINTENANCE_EVALUATION") return "/reports";
+      return "/dashboard";
+    };
+    requestNotifications.push(...signatureAssignments
+      .filter((assignment) => !signedAssignmentKeys.has(`${assignment.documentType}:${assignment.documentId}:${assignment.fieldName}`))
+      .map((assignment) => ({
+        type: "signature",
+        message: `توقيع مطلوب منك: ${signatureFieldLabels[assignment.fieldName] ?? assignment.fieldName.replaceAll("_", " ")}`,
+        href: signatureDocumentHref(assignment.documentType, assignment.documentId),
+      })));
+
     const [receiverPermission] = await db.select({ id: signatureFieldPermissionsTable.id })
       .from(signatureFieldPermissionsTable)
       .where(and(eq(signatureFieldPermissionsTable.documentType, "PM_RECORD"), eq(signatureFieldPermissionsTable.fieldName, "machine_receiver"), eq(signatureFieldPermissionsTable.eligibleUserId, currentUserId), isNull(signatureFieldPermissionsTable.revokedAt)));
@@ -173,6 +238,47 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
       requestNotifications.push(...pendingReceipts
         .filter((inspection) => inspection.completedByUserId !== currentUserId)
         .map((inspection) => ({ type: "signature", message: `صيانة وقائية بانتظار استلامك للماكينة: ${inspection.machineName} (${inspection.machineNumber})`, href: `/machines/${inspection.machineId}/pm` })));
+    }
+
+    const [permanentConcernedSupervisorPermission] = await db
+      .select({ id: signatureFieldPermissionsTable.id })
+      .from(signatureFieldPermissionsTable)
+      .where(and(
+        eq(signatureFieldPermissionsTable.documentType, "MAINTENANCE_REQUEST"),
+        eq(signatureFieldPermissionsTable.fieldName, "concerned_section_supervisor"),
+        eq(signatureFieldPermissionsTable.eligibleUserId, currentUserId),
+        isNull(signatureFieldPermissionsTable.revokedAt),
+      ))
+      .limit(1);
+    if (permanentConcernedSupervisorPermission) {
+      const concernedSupervisorCandidates = await db
+        .select({
+          requestId: maintenanceRequestsTable.id,
+          requestReportNumber: maintenanceRequestsTable.requestReportNumber,
+          machineName: maintenanceRequestsTable.machineName,
+          preliminaryCheckResults: correctiveMaintenanceEventsTable.preliminaryCheckResults,
+        })
+        .from(correctiveMaintenanceEventsTable)
+        .innerJoin(maintenanceRequestsTable, eq(correctiveMaintenanceEventsTable.requestId, maintenanceRequestsTable.id))
+        .where(isNull(maintenanceRequestsTable.archivedAt));
+      const candidateIds = concernedSupervisorCandidates
+        .filter((candidate) => candidate.preliminaryCheckResults)
+        .map((candidate) => candidate.requestId);
+      const signedRows = candidateIds.length
+        ? await db.select({ documentId: signaturesTable.documentId }).from(signaturesTable).where(and(
+            eq(signaturesTable.documentType, "MAINTENANCE_REQUEST"),
+            eq(signaturesTable.fieldName, "concerned_section_supervisor"),
+            inArray(signaturesTable.documentId, candidateIds),
+          ))
+        : [];
+      const signedRequestIds = new Set(signedRows.map((signature) => signature.documentId));
+      requestNotifications.push(...concernedSupervisorCandidates
+        .filter((candidate) => candidate.preliminaryCheckResults && !signedRequestIds.has(candidate.requestId))
+        .map((candidate) => ({
+          type: "signature",
+          message: `طلب صيانة بانتظار توقيعك كمشرف القسم المعني: ${candidate.requestReportNumber || candidate.machineName}`,
+          href: `/maintenance-requests/${candidate.requestId}`,
+        })));
     }
 
     const statusLabels: Record<string, string> = {
