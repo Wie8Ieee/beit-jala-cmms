@@ -291,6 +291,58 @@ router.patch("/:id/reactivate", requireActiveAuth, requirePermission("manage_use
   } catch (err) { next(err); }
 });
 
+// DELETE /api/users/:id — deliberately restricted to the Admin role.
+router.delete("/:id", requireActiveAuth, async (req, res, next) => {
+  if (req.session.roleName !== "Admin") {
+    res.status(403).json({ error: "Only an administrator can delete users" });
+    return;
+  }
+
+  try {
+    const id = parseIdParam(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid ID" });
+      return;
+    }
+    if (id === req.session.userId) {
+      res.status(400).json({ error: "You cannot delete your own account" });
+      return;
+    }
+
+    const deleted = await db.transaction(async (tx) => {
+      await tx.delete(userPermissionsTable).where(eq(userPermissionsTable.userId, id));
+      const [user] = await tx
+        .delete(usersTable)
+        .where(eq(usersTable.id, id))
+        .returning({ id: usersTable.id, username: usersTable.username });
+      return user;
+    });
+
+    if (!deleted) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    res.json(deleted);
+  } catch (err: unknown) {
+    const e = err as { code?: string; cause?: { code?: string } };
+    if ((e.code ?? e.cause?.code) === "23503") {
+      const id = parseIdParam(req.params.id);
+      const [deactivated] = await db
+        .update(usersTable)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(usersTable.id, id))
+        .returning({ id: usersTable.id, username: usersTable.username });
+      if (!deactivated) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+      res.json({ ...deactivated, deleted: false, deactivated: true });
+      return;
+    }
+    next(err);
+  }
+});
+
 // PUT /api/users/:id/permissions
 router.put("/:id/permissions", requireActiveAuth, requirePermission("manage_users"), async (req, res, next) => {
   try {

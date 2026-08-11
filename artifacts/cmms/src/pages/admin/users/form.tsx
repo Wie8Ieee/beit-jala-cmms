@@ -59,7 +59,6 @@ import { useLang } from "@/contexts/LanguageContext";
 const baseUserSchema = z.object({
   employeeNumber: z.string().min(1, "Employee number is required"),
   fullName: z.string().optional(),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
   roleId: z.coerce.number().min(1, "Role is required"),
   departmentId: z.coerce.number().optional().nullable(),
 });
@@ -120,7 +119,6 @@ export default function UserForm({ params }: { params?: { id: string } }) {
     defaultValues: isEditing ? {
       fullName: "",
       employeeNumber: "",
-      email: "",
       roleId: "",
       departmentId: null,
       password: "",
@@ -128,7 +126,6 @@ export default function UserForm({ params }: { params?: { id: string } }) {
       username: "",
       fullName: "",
       employeeNumber: "",
-      email: "",
       roleId: "",
       departmentId: null,
       password: "",
@@ -140,7 +137,6 @@ export default function UserForm({ params }: { params?: { id: string } }) {
       form.reset({
         fullName: userData.fullName || "",
         employeeNumber: userData.employeeNumber || "",
-        email: userData.email || "",
         roleId: userData.roleId,
         departmentId: userData.departmentId,
         password: "", // don't prefill password
@@ -155,7 +151,6 @@ export default function UserForm({ params }: { params?: { id: string } }) {
     const payload = {
       ...values,
       departmentId: values.departmentId || null,
-      email: values.email || undefined,
     };
     if (payload.password === "") delete payload.password;
 
@@ -476,20 +471,6 @@ export default function UserForm({ params }: { params?: { id: string } }) {
                   <FormField control={form.control} name="employeeNumber" render={({ field }) => (
                     <FormItem><FormLabel>{tr("Employee Number", "رقم الموظف")} <span className="text-destructive">*</span></FormLabel><FormControl><Input placeholder="EMP-0001" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
-
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>{tr("Email Address", "البريد الإلكتروني")}</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="john@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   {isEditing && <div className="space-y-3 rounded-md border p-3"><p className="text-sm font-medium leading-none">{tr("Saved drawn signature", "التوقيع المحفوظ")}</p><SignaturePad value={signatureData} onChange={setSignatureData} /><Button type="button" variant="outline" onClick={() => signatureMutation.mutate()} disabled={!signatureData || signatureMutation.isPending}>{tr("Save / Replace Signature", "حفظ / استبدال التوقيع")}</Button></div>}
 

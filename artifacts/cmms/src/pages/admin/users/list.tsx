@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useGetUsers } from "@workspace/api-client-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/error-message";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,16 +17,55 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, UserCircle, Edit, PenLine, Building2, BriefcaseBusiness } from "lucide-react";
+import { Search, Plus, UserCircle, Edit, PenLine, Building2, BriefcaseBusiness, Trash2, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function UsersList() {
+  const { user: currentUser } = useAuth();
   const { t, i18n } = useTranslation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const isArabic = i18n.language.startsWith("ar");
   const [searchTerm, setSearchTerm] = useState("");
   
   const { data: users, isLoading } = useGetUsers({
     query: { queryKey: ["users"] }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/users/${id}`, { method: "DELETE", credentials: "include" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to delete user");
+      return data;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast({
+        title: result.deactivated
+          ? (isArabic ? "تم تعطيل المستخدم" : "User deactivated")
+          : (isArabic ? "تم حذف المستخدم" : "User deleted"),
+        description: result.deactivated
+          ? (isArabic ? "للمستخدم سجلات أو تواقيع مرتبطة، لذلك تم الحفاظ عليها وتعطيل الحساب." : "The user has linked records or signatures, so the records were preserved and the account was deactivated.")
+          : undefined,
+      });
+    },
+    onError: (error) => toast({
+      variant: "destructive",
+      title: isArabic ? "تعذر حذف المستخدم" : "Failed to delete user",
+      description: getErrorMessage(error, isArabic ? "حدث خطأ غير متوقع" : "An unexpected error occurred"),
+    }),
   });
 
   const filteredUsers = users?.filter(user => 
@@ -127,12 +169,43 @@ export default function UsersList() {
                     )}
                   </TableCell>
                   <TableCell className={isArabic ? "text-left" : "text-right"}>
-                    <Button variant="ghost" size="icon" asChild>
-                      <Link href={`/admin/users/${user.id}/edit`}>
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit user</span>
-                      </Link>
-                    </Button>
+                    <div className="inline-flex items-center gap-1">
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/admin/users/${user.id}/edit`}>
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Edit user</span>
+                        </Link>
+                      </Button>
+                      {currentUser?.roleName === "Admin" && currentUser.id !== user.id && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Delete user</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent dir={isArabic ? "rtl" : "ltr"}>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{isArabic ? "حذف المستخدم نهائياً؟" : "Delete user permanently?"}</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {isArabic
+                                  ? `سيتم حذف ${user.fullName || user.username} نهائياً إذا لم يكن مرتبطاً بسجلات. إذا وُجدت سجلات أو تواقيع فسيتم تعطيل الحساب مع الحفاظ عليها.`
+                                  : `${user.fullName || user.username} will be deleted if no records are linked. If records or signatures exist, the account will be deactivated and its data preserved.`}
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>{isArabic ? "إلغاء" : "Cancel"}</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteMutation.mutate(user.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : (isArabic ? "حذف" : "Delete")}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
