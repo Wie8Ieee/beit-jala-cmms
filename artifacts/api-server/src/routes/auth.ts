@@ -40,7 +40,7 @@ router.post("/login", async (req, res) => {
     .where(eq(usersTable.username, username));
 
   if (!user) {
-    res.status(401).json({ error: "Invalid username or password" });
+    res.status(401).json({ error: "Invalid username" });
     return;
   }
 
@@ -51,7 +51,7 @@ router.post("/login", async (req, res) => {
 
   const valid = await comparePassword(password, user.passwordHash);
   if (!valid) {
-    res.status(401).json({ error: "Invalid username or password" });
+    res.status(401).json({ error: "Invalid password" });
     return;
   }
 
@@ -69,6 +69,12 @@ router.post("/login", async (req, res) => {
     ? (await db.select({ name: permissionsTable.name }).from(permissionsTable)).map((permission) => permission.name)
     : perms.map((p) => p.name);
 
+  // Always issue a fresh session ID after authentication. This prevents an
+  // outstanding /me request for an expired session from destroying the newly
+  // authenticated session in a different browser request.
+  await new Promise<void>((resolve, reject) => {
+    req.session.regenerate((err) => err ? reject(err) : resolve());
+  });
   req.session.userId = user.id;
   req.session.roleId = user.roleId;
   req.session.roleName = user.roleName;
@@ -88,14 +94,10 @@ router.post("/login", async (req, res) => {
 
   // Persist the PostgreSQL-backed session before the client follows the login
   // response with authenticated requests.
-  req.session.save((err) => {
-    if (err) {
-      req.log.error({ err }, "Error saving login session");
-      res.status(500).json({ error: "Unable to create login session" });
-      return;
-    }
-    res.json(responseUser);
+  await new Promise<void>((resolve, reject) => {
+    req.session.save((err) => err ? reject(err) : resolve());
   });
+  res.json(responseUser);
 });
 
 // POST /api/auth/logout

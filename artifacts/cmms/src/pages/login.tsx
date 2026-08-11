@@ -1,9 +1,7 @@
-import { useLocation } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { getGetMeQueryKey, useLogin } from "@workspace/api-client-react";
+import { useLogin } from "@workspace/api-client-react";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -27,8 +25,6 @@ const loginSchema = z.object({
 
 export default function LoginPage() {
   const { t } = useTranslation();
-  const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const loginMutation = useLogin();
 
@@ -41,19 +37,28 @@ export default function LoginPage() {
   });
 
   function onSubmit(values: z.infer<typeof loginSchema>) {
+    form.clearErrors("username");
+    form.clearErrors("password");
     loginMutation.mutate({ data: values }, {
-      onSuccess: (user) => {
-        // Replace the unauthenticated /me result before rendering a protected
-        // route. Otherwise the route guard can redirect back to login until a
-        // full browser refresh causes /me to run again.
-        queryClient.setQueryData(getGetMeQueryKey(), user);
-        setLocation("/dashboard");
+      onSuccess: () => {
+        // Start the authenticated application with a clean query cache. The
+        // server has already persisted the fresh session before this runs.
+        window.location.replace("/dashboard");
       },
       onError: (error) => {
+        const errorMessage = error instanceof Error ? error.message : "";
+        if (errorMessage.includes("Invalid username")) {
+          form.setError("username", { type: "server", message: t("login.incorrectUsername") });
+          return;
+        }
+        if (errorMessage.includes("Invalid password")) {
+          form.setError("password", { type: "server", message: t("login.incorrectPassword") });
+          return;
+        }
         toast({
           variant: "destructive",
-          title: "Authentication Failed",
-          description: getErrorMessage(error, "Invalid username or password."),
+          title: t("login.authenticationFailed"),
+          description: getErrorMessage(error, t("login.unableToSignIn")),
         });
       }
     });
