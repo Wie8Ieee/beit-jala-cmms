@@ -46,3 +46,6 @@ replit.nix
 
 # Drizzle
 drizzle/
+
+*.dump
+*.backup
