@@ -29,7 +29,7 @@ import {
   signaturesTable,
   usersTable,
 } from "@workspace/db";
-import { and, asc, count, desc, eq, isNull, like } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, like, sql } from "drizzle-orm";
 import { parseIdParam, requireAnyPermission, requireAuth, requirePermission } from "../lib/auth.js";
 
 const router = Router();
@@ -1386,6 +1386,32 @@ router.patch("/:id/restore", requireAuth, requirePermission("archive_maintenance
     if (!updated) { res.status(404).json({ error: "Maintenance request not found" }); return; }
     await db.insert(auditLogsTable).values({ userId: req.session.userId ?? null, action: "maintenance_request_restored", entityType: "maintenance_request", entityId: id });
     res.json(await getRequestDetail(updated));
+  } catch (err) { next(err); }
+});
+
+// Permanent deletion is intentionally limited to archived requests and the
+// Admin account. Related workflow records are removed in the same transaction.
+router.delete("/:id/permanent", requireAuth, async (req, res, next) => {
+  try {
+    if (req.session.roleName !== "Admin") { res.status(403).json({ error: "Admin access required" }); return; }
+    const id = parseIdParam(req.params.id);
+    const [request] = await db.select({ archivedAt: maintenanceRequestsTable.archivedAt }).from(maintenanceRequestsTable).where(eq(maintenanceRequestsTable.id, id));
+    if (!request) { res.status(404).json({ error: "Maintenance request not found" }); return; }
+    if (!request.archivedAt) { res.status(400).json({ error: "Only archived requests can be permanently deleted" }); return; }
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`DELETE FROM signatures WHERE (document_type = 'MAINTENANCE_REQUEST' AND document_id = ${id}) OR (document_type = 'EXTERNAL_MAINTENANCE_REQUEST' AND document_id IN (SELECT id FROM external_maintenance_requests WHERE maintenance_request_id = ${id})) OR (document_type = 'EXTERNAL_MAINTENANCE_RECEIPT' AND document_id IN (SELECT r.id FROM external_maintenance_receipts r JOIN external_maintenance_requests e ON e.id = r.external_maintenance_request_id WHERE e.maintenance_request_id = ${id}))`);
+      await tx.execute(sql`DELETE FROM eligible_signer_assignments WHERE (document_type = 'MAINTENANCE_REQUEST' AND document_id = ${id}) OR (document_type = 'EXTERNAL_MAINTENANCE_REQUEST' AND document_id IN (SELECT id FROM external_maintenance_requests WHERE maintenance_request_id = ${id})) OR (document_type = 'EXTERNAL_MAINTENANCE_RECEIPT' AND document_id IN (SELECT r.id FROM external_maintenance_receipts r JOIN external_maintenance_requests e ON e.id = r.external_maintenance_request_id WHERE e.maintenance_request_id = ${id}))`);
+      await tx.execute(sql`DELETE FROM corrective_maintenance_staff WHERE cm_event_id IN (SELECT id FROM corrective_maintenance_events WHERE request_id = ${id})`);
+      await tx.execute(sql`DELETE FROM corrective_maintenance_handover WHERE cm_event_id IN (SELECT id FROM corrective_maintenance_events WHERE request_id = ${id})`);
+      await tx.execute(sql`DELETE FROM external_maintenance_receipts WHERE external_maintenance_request_id IN (SELECT id FROM external_maintenance_requests WHERE maintenance_request_id = ${id})`);
+      await tx.execute(sql`DELETE FROM external_maintenance_requests WHERE maintenance_request_id = ${id}`);
+      await tx.execute(sql`DELETE FROM closed_corrective_maintenance_log_exclusions WHERE maintenance_request_id = ${id}`);
+      await tx.execute(sql`DELETE FROM maintenance_request_status_history WHERE request_id = ${id}`);
+      await tx.execute(sql`DELETE FROM corrective_maintenance_events WHERE request_id = ${id}`);
+      await tx.execute(sql`DELETE FROM audit_logs WHERE entity_type = 'maintenance_request' AND entity_id = ${id}`);
+      await tx.execute(sql`DELETE FROM maintenance_requests WHERE id = ${id}`);
+    });
+    res.status(204).send();
   } catch (err) { next(err); }
 });
 

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Archive, ArrowLeft, BookOpen, Plus, Save } from "lucide-react";
+import { Archive, ArrowLeft, BookOpen, Plus, Save, Trash2 } from "lucide-react";
 import type { MaintenanceRequestSummary } from "./types";
 
 function titleForScope(scope: string, t: (k: string) => string) {
@@ -29,7 +29,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function MaintenanceRequestsListPage({ scope = "all" }: { scope?: string }) {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
@@ -38,6 +38,10 @@ export default function MaintenanceRequestsListPage({ scope = "all" }: { scope?:
   const { data = [], isLoading } = useQuery({
     queryKey: ["maintenance-requests", scope],
     queryFn: () => apiRequest<MaintenanceRequestSummary[]>(`/maintenance-requests?scope=${scope}`),
+  });
+  const permanentDelete = useMutation({
+    mutationFn: (id: number) => apiRequest(`/maintenance-requests/${id}/permanent`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maintenance-requests", scope] }),
   });
   const { data: numberingSetting } = useQuery({
     queryKey: ["maintenance-request-numbering-start"],
@@ -162,9 +166,10 @@ export default function MaintenanceRequestsListPage({ scope = "all" }: { scope?:
                     <TableCell>{request.requestDate}</TableCell>
                     <TableCell><StatusBadge status={request.status} /></TableCell>
                     <TableCell className="text-end">
-                      <Button asChild variant="ghost" size="sm">
-                        <Link href={`/maintenance-requests/${request.id}`}>{t("maintenanceRequests.open")}</Link>
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button asChild variant="ghost" size="sm"><Link href={`/maintenance-requests/${request.id}`}>{t("maintenanceRequests.open")}</Link></Button>
+                        {scope === "archived" && user?.roleName === "Admin" && <Button type="button" variant="ghost" size="icon" className="text-destructive" disabled={permanentDelete.isPending} title="حذف نهائي" onClick={() => { if (window.confirm(`حذف الطلب ${request.requestReportNumber} نهائياً؟ لا يمكن التراجع.`)) permanentDelete.mutate(request.id); }}><Trash2 className="h-4 w-4" /></Button>}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -270,7 +270,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </SidebarFooter>
         </Sidebar>
 
-        <main className="flex-1 flex flex-col min-h-[100dvh] overflow-x-hidden">
+        <main className="app-main-scroll min-w-0 flex-1 flex flex-col min-h-[100dvh] overflow-x-auto overscroll-x-contain">
           <header className="sticky top-0 flex h-14 shrink-0 items-center gap-2 border-b bg-card/95 px-3 shadow-sm backdrop-blur z-20 sm:px-4">
             <SidebarTrigger className="-ml-1" />
             <div className="flex-1" />

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getGetMachinesQueryKey, useGetMachines } from "@workspace/api-client-react";
+import { apiRequest } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
@@ -14,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, Server, AlertCircle, Archive, List } from "lucide-react";
+import { Search, Plus, Server, AlertCircle, Archive, List, Trash2 } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -24,7 +26,8 @@ export default function MachinesList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const debouncedSearch = useDebounce(searchTerm, 300);
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const queryClient = useQueryClient();
   
   const machineParams = debouncedSearch || showArchived
     ? { ...(debouncedSearch ? { search: debouncedSearch } : {}), ...(showArchived ? { archived: true } : {}) }
@@ -34,6 +37,10 @@ export default function MachinesList() {
       queryKey: getGetMachinesQueryKey(machineParams),
       enabled: true
     },
+  });
+  const permanentDelete = useMutation({
+    mutationFn: (id: number) => apiRequest(`/machines/${id}/permanent`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetMachinesQueryKey(machineParams) }),
   });
 
   const getStatusBadge = (status: string) => {
@@ -146,9 +153,10 @@ export default function MachinesList() {
                   <TableCell className="break-words text-center text-muted-foreground">{machine.location || "—"}</TableCell>
                   <TableCell className="text-center">{machine.deletedAt ? <Badge variant="secondary">Archived</Badge> : getStatusBadge(machine.status)}</TableCell>
                   <TableCell className="text-center">
-                    <Button variant="ghost" size="sm" asChild className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Link href={`/machines/${machine.id}`}>{t('machines.viewProfile')}</Link>
-                    </Button>
+                    <div className="flex justify-center gap-1">
+                      <Button variant="ghost" size="sm" asChild><Link href={`/machines/${machine.id}`}>{t('machines.viewProfile')}</Link></Button>
+                      {showArchived && user?.roleName === "Admin" && <Button variant="ghost" size="icon" className="text-destructive" disabled={permanentDelete.isPending} title="حذف نهائي" onClick={() => { if (window.confirm(`حذف ${machine.machineName} وكل سجلاتها وطلباتها نهائياً؟ لا يمكن التراجع.`)) permanentDelete.mutate(machine.id); }}><Trash2 className="h-4 w-4" /></Button>}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

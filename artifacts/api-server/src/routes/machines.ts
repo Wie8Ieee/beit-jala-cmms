@@ -12,7 +12,7 @@ import {
   auditLogsTable,
   usersTable,
 } from "@workspace/db";
-import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { requireActiveAuth, requirePermission, parseIdParam } from "../lib/auth.js";
 import { syncAutomaticMaintenancePlans } from "./maintenance-plans.js";
 
@@ -320,11 +320,17 @@ router.patch("/:id/soft-delete", requireActiveAuth, requirePermission("soft_dele
     }
 
     const previous = await getMachineWithDept(id);
-    const [updated] = await db
-      .update(machinesTable)
-      .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(eq(machinesTable.id, id))
-      .returning({ id: machinesTable.id });
+    const [updated] = await db.transaction(async (tx) => {
+      // Archived machines keep their equipment, PM and CM history, but they
+      // must disappear from every active planning schedule immediately.
+      await tx.delete(monthlyPmPlanRowsTable).where(eq(monthlyPmPlanRowsTable.machineId, id));
+      await tx.delete(annualPmPlanRowsTable).where(eq(annualPmPlanRowsTable.machineId, id));
+      return tx
+        .update(machinesTable)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(eq(machinesTable.id, id))
+        .returning({ id: machinesTable.id });
+    });
 
     if (!updated) {
       res.status(404).json({ error: "Machine not found" });
@@ -354,6 +360,42 @@ router.get("/:id/equipment-information/header", requireActiveAuth, requirePermis
     }
     const [created] = await db.insert(formHeadersTable).values({ documentType: "EQUIPMENT_INFORMATION", documentId: 0, documentName: "Equipment Information Record", documentNumber: "FORM-10-0118", effectiveOrExecutionDate: null }).returning();
     res.json(created);
+  } catch (err) { next(err); }
+});
+
+router.delete("/:id/permanent", requireActiveAuth, async (req, res, next) => {
+  try {
+    if (req.session.roleName !== "Admin") { res.status(403).json({ error: "Admin access required" }); return; }
+    const id = parseIdParam(req.params.id);
+    const machine = await getMachineWithDept(id);
+    if (!machine) { res.status(404).json({ error: "Machine not found" }); return; }
+    if (!machine.deletedAt) { res.status(400).json({ error: "Only archived machines can be permanently deleted" }); return; }
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`DELETE FROM signatures WHERE (document_type = 'EQUIPMENT_INFORMATION' AND document_id = ${id}) OR (document_type = 'MAINTENANCE_REQUEST' AND document_id IN (SELECT id FROM maintenance_requests WHERE machine_id = ${id})) OR (document_type = 'PM_RECORD' AND document_id IN (SELECT id FROM pm_records WHERE machine_id = ${id})) OR (document_type = 'EXTERNAL_MAINTENANCE_REQUEST' AND document_id IN (SELECT e.id FROM external_maintenance_requests e JOIN maintenance_requests r ON r.id=e.maintenance_request_id WHERE r.machine_id=${id})) OR (document_type = 'EXTERNAL_MAINTENANCE_RECEIPT' AND document_id IN (SELECT x.id FROM external_maintenance_receipts x JOIN external_maintenance_requests e ON e.id=x.external_maintenance_request_id JOIN maintenance_requests r ON r.id=e.maintenance_request_id WHERE r.machine_id=${id}))`);
+      await tx.execute(sql`DELETE FROM eligible_signer_assignments WHERE (document_type = 'EQUIPMENT_INFORMATION' AND document_id = ${id}) OR (document_type = 'MAINTENANCE_REQUEST' AND document_id IN (SELECT id FROM maintenance_requests WHERE machine_id = ${id})) OR (document_type = 'PM_RECORD' AND document_id IN (SELECT id FROM pm_records WHERE machine_id = ${id})) OR (document_type = 'EXTERNAL_MAINTENANCE_REQUEST' AND document_id IN (SELECT e.id FROM external_maintenance_requests e JOIN maintenance_requests r ON r.id=e.maintenance_request_id WHERE r.machine_id=${id})) OR (document_type = 'EXTERNAL_MAINTENANCE_RECEIPT' AND document_id IN (SELECT x.id FROM external_maintenance_receipts x JOIN external_maintenance_requests e ON e.id=x.external_maintenance_request_id JOIN maintenance_requests r ON r.id=e.maintenance_request_id WHERE r.machine_id=${id}))`);
+      await tx.execute(sql`DELETE FROM corrective_maintenance_staff WHERE cm_event_id IN (SELECT id FROM corrective_maintenance_events WHERE machine_id = ${id})`);
+      await tx.execute(sql`DELETE FROM corrective_maintenance_handover WHERE cm_event_id IN (SELECT id FROM corrective_maintenance_events WHERE machine_id = ${id})`);
+      await tx.execute(sql`DELETE FROM external_maintenance_receipts WHERE external_maintenance_request_id IN (SELECT e.id FROM external_maintenance_requests e JOIN maintenance_requests r ON r.id=e.maintenance_request_id WHERE r.machine_id=${id})`);
+      await tx.execute(sql`DELETE FROM external_maintenance_requests WHERE maintenance_request_id IN (SELECT id FROM maintenance_requests WHERE machine_id=${id})`);
+      await tx.execute(sql`DELETE FROM closed_corrective_maintenance_log_exclusions WHERE maintenance_request_id IN (SELECT id FROM maintenance_requests WHERE machine_id=${id})`);
+      await tx.execute(sql`DELETE FROM maintenance_request_status_history WHERE request_id IN (SELECT id FROM maintenance_requests WHERE machine_id=${id})`);
+      await tx.execute(sql`DELETE FROM audit_logs WHERE (entity_type='machine' AND entity_id=${id}) OR (entity_type='maintenance_request' AND entity_id IN (SELECT id FROM maintenance_requests WHERE machine_id=${id}))`);
+      await tx.execute(sql`DELETE FROM corrective_maintenance_events WHERE machine_id=${id}`);
+      await tx.execute(sql`DELETE FROM maintenance_requests WHERE machine_id=${id}`);
+      await tx.execute(sql`DELETE FROM pm_inspection_results WHERE inspection_id IN (SELECT id FROM pm_inspections WHERE machine_id=${id})`);
+      await tx.execute(sql`DELETE FROM pm_inspections WHERE machine_id=${id}`);
+      await tx.execute(sql`DELETE FROM pm_record_checklist_points WHERE record_id IN (SELECT id FROM pm_records WHERE machine_id=${id})`);
+      await tx.execute(sql`DELETE FROM pm_records WHERE machine_id=${id}`);
+      await tx.execute(sql`DELETE FROM pm_checklist_points WHERE machine_id=${id}`);
+      await tx.execute(sql`DELETE FROM pm_headers WHERE machine_id=${id}`);
+      await tx.execute(sql`DELETE FROM monthly_pm_plan_rows WHERE machine_id=${id}`);
+      await tx.execute(sql`DELETE FROM annual_pm_plan_rows WHERE machine_id=${id}`);
+      await tx.execute(sql`DELETE FROM equipment_information_records WHERE machine_id=${id}`);
+      await tx.execute(sql`DELETE FROM corrective_maintenance_records WHERE machine_id=${id}`);
+      await tx.execute(sql`DELETE FROM form_headers WHERE document_id=${id} AND document_type IN ('EQUIPMENT_INFORMATION','PM_RECORD')`);
+      await tx.execute(sql`DELETE FROM machines WHERE id=${id}`);
+    });
+    res.status(204).send();
   } catch (err) { next(err); }
 });
 

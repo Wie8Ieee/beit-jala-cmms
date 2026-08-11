@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type PrintLayoutProps = {
   children: React.ReactNode;
@@ -57,7 +57,7 @@ export function PrintLayout({
     <div
       className={`official-print-layout min-h-screen bg-slate-100 py-6 text-black print:bg-white print:py-0${printLandscape ? " official-print-layout-landscape" : ""}`}
     >
-      <div className="mx-auto mb-4 flex max-w-[210mm] items-center justify-between print:hidden">
+      <div className="official-print-toolbar mx-auto mb-4 flex max-w-[210mm] items-center justify-between print:hidden">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
@@ -111,9 +111,26 @@ export function PrintPage({
   className = "",
   ...props
 }: PrintPageProps) {
+  const [mobileScale, setMobileScale] = useState(1);
+
+  useEffect(() => {
+    const fitPageToViewport = () => {
+      if (window.innerWidth >= 640) {
+        setMobileScale(1);
+        return;
+      }
+      const pageWidthPx = (landscape ? 297 : 210) * (96 / 25.4);
+      setMobileScale(Math.min(1, (window.innerWidth - 16) / pageWidthPx));
+    };
+    fitPageToViewport();
+    window.addEventListener("resize", fitPageToViewport);
+    return () => window.removeEventListener("resize", fitPageToViewport);
+  }, [landscape]);
+
   return (
     <div
       {...props}
+      style={{ ...props.style, "--mobile-print-scale": mobileScale } as React.CSSProperties}
       className={`${landscape ? "official-print-page official-print-landscape" : "official-print-page"} ${className}`}
     >
       {children}
