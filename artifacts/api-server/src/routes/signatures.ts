@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import {
   auditLogsTable,
   db,
@@ -375,6 +375,17 @@ router.post("/sign", requireAuth, async (req, res, next) => {
       return;
     }
 
+    // Repeating form rows have a concrete signature field (for example,
+    // performing_staff_1) but share one configured permission
+    // (performing_staff). Keep this fallback on the server so signing remains
+    // reliable when an older/cached client does not send authorizationFieldName.
+    const repeatingFieldName = fieldName.replace(/_\d+$/, "");
+    const authorizationFieldNames = Array.from(new Set([
+      fieldName,
+      authorizationFieldName,
+      repeatingFieldName,
+    ]));
+
     const [existingSignature] = await db
       .select()
       .from(signaturesTable)
@@ -397,17 +408,14 @@ router.post("/sign", requireAuth, async (req, res, next) => {
         and(
           eq(eligibleSignerAssignmentsTable.documentType, documentType),
           eq(eligibleSignerAssignmentsTable.documentId, documentId),
-          or(
-            eq(eligibleSignerAssignmentsTable.fieldName, fieldName),
-            eq(eligibleSignerAssignmentsTable.fieldName, authorizationFieldName),
-          ),
+          inArray(eligibleSignerAssignmentsTable.fieldName, authorizationFieldNames),
           eq(eligibleSignerAssignmentsTable.eligibleUserId, req.session.userId!),
           isNull(eligibleSignerAssignmentsTable.revokedAt),
         ),
       );
     const [permanentPermission] = await db.select().from(signatureFieldPermissionsTable).where(and(
       eq(signatureFieldPermissionsTable.documentType, documentType),
-      eq(signatureFieldPermissionsTable.fieldName, authorizationFieldName),
+      inArray(signatureFieldPermissionsTable.fieldName, authorizationFieldNames),
       eq(signatureFieldPermissionsTable.eligibleUserId, req.session.userId!),
       isNull(signatureFieldPermissionsTable.revokedAt),
     ));

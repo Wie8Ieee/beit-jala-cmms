@@ -44,14 +44,12 @@ export default function DashboardPage() {
   const { data: stats, isLoading } = useGetDashboardStats({
     query: {
       queryKey: getGetDashboardStatsQueryKey(),
-      enabled: !!user && (user.permissions.includes("view_dashboard") || user.roleName === "Admin" || user.roleName === "Maintenance Supervisor" || user.roleName === "Maintenance Technician" || user.roleName === "QA Supervisor"),
+      enabled: !!user && hasPermission("view_dashboard"),
     }
   });
 
-  const isAdminOrSupervisor = user?.roleName === "Admin" || user?.roleName === "Maintenance Supervisor";
-  const isTechnician = user?.roleName === "Maintenance Technician";
-  const isEmployee = user?.roleName === "Department Employee";
-  const isQA = user?.roleName === "QA Supervisor";
+  const canViewTechnicianWork = hasPermission("fill_corrective_maintenance");
+  const canSubmitAndViewOwnRequests = hasPermission("submit_maintenance_request") && hasPermission("view_own_requests");
 
   if (isLoading) {
     return (
@@ -147,7 +145,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {stats && canViewNotifications && !isAdminOrSupervisor && !isQA && notifications.length > 0 && (
+      {stats && canViewNotifications && notifications.length > 0 && (
         <Card className="overflow-hidden border-primary/20 border-l-4 border-l-primary bg-card shadow-sm">
           <CardHeader className="pb-2 pt-4"><CardTitle className="flex items-center gap-2 text-base"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary"><Bell className="h-4 w-4" /></span>{t('dashboard.notifications')}<span className="ml-auto rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">{notifications.length}</span></CardTitle></CardHeader>
           <CardContent className="pb-4"><div className="grid gap-2 md:grid-cols-2">{notifications.map((n, i) => <Link key={i} href={n.href}><div className="flex h-full items-start gap-3 rounded-lg border bg-muted/30 p-3 transition-colors hover:border-primary/30 hover:bg-primary/5 cursor-pointer">{notificationIcon(n.type)}<span className="text-sm font-medium leading-5">{n.message}</span></div></Link>)}</div></CardContent>
@@ -155,35 +153,8 @@ export default function DashboardPage() {
       )}
 
       {/* ADMIN & SUPERVISOR VIEW */}
-      {stats && (!isTechnician && !isEmployee || hasExpandedDashboard) && (
+      {stats && hasExpandedDashboard && (
         <>
-          {/* NOTIFICATIONS PANEL — FR-2.8, FR-2.9, FR-2.10 */}
-          {canViewNotifications && (isAdminOrSupervisor || isQA) && notifications.length > 0 && (
-            <Card className="overflow-hidden border-primary/20 border-l-4 border-l-primary bg-card shadow-sm">
-              <CardHeader className="pb-2 pt-4">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Bell className="h-4 w-4" />
-                  </span>
-                  {t('dashboard.notifications')}
-                  <span className="ml-auto rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground">{notifications.length}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pb-4">
-                <div className="grid gap-2 md:grid-cols-2">
-                  {notifications.map((n, i) => (
-                    <Link key={i} href={n.href}>
-                      <div className="flex h-full items-start gap-3 rounded-lg border bg-muted/30 p-3 transition-colors hover:border-primary/30 hover:bg-primary/5 cursor-pointer">
-                        {notificationIcon(n.type)}
-                        <span className="text-sm font-medium leading-5">{n.message}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             <Card className={`${canViewMachines ? "" : "hidden"} h-full border-l-4 border-l-primary shadow-sm transition-shadow hover:shadow-md`}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -462,7 +433,7 @@ export default function DashboardPage() {
       )}
 
       {/* TECHNICIAN VIEW */}
-      {isTechnician && !hasExpandedDashboard && (canViewRequests || canViewPm) && (
+      {canViewTechnicianWork && !hasExpandedDashboard && (canViewRequests || canViewPm) && (
         <div className="grid gap-4 md:grid-cols-2">
            <Card className={canViewRequests ? "" : "hidden"}>
               <CardHeader>
@@ -513,7 +484,7 @@ export default function DashboardPage() {
       )}
 
       {/* DEPARTMENT EMPLOYEE VIEW */}
-      {isEmployee && !hasExpandedDashboard && canViewRequests && (
+      {canSubmitAndViewOwnRequests && !hasExpandedDashboard && canViewRequests && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card className="bg-primary/5 border-primary/20 shadow-sm col-span-full md:col-span-1">
             <CardHeader>

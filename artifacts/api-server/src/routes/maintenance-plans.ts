@@ -10,6 +10,7 @@ import {
   pmInspectionsTable,
   formHeadersTable,
   auditLogsTable,
+  signatureFieldPermissionsTable,
 } from "@workspace/db";
 import { and, asc, desc, eq, gte, isNull, lte } from "drizzle-orm";
 import { requireAnyPermission, requireAuth, requirePermission } from "../lib/auth.js";
@@ -439,7 +440,6 @@ router.get(
         return;
       }
       const plan = await getOrCreateAnnualPlan(year);
-      await syncMonthlyPlansFromAnnual(year);
       res.json(formatAnnual(plan, await getAnnualRows(plan.id)));
     } catch (err) {
       next(err);
@@ -450,11 +450,25 @@ router.get(
 router.put(
   "/annual/:year",
   requireAuth,
-  requirePermission("edit_annual_maintenance_plan"),
   async (req, res, next) => {
     try {
       const year = parseYear(req.params.year);
       const plan = await getOrCreateAnnualPlan(year);
+      const isAdmin = req.session.roleName === "Admin";
+      const canEditSchedule = isAdmin || (req.session.permissions ?? []).includes("edit_annual_maintenance_plan");
+      const signerPermissions = isAdmin ? [] : await db
+        .select({ fieldName: signatureFieldPermissionsTable.fieldName })
+        .from(signatureFieldPermissionsTable)
+        .where(and(
+          eq(signatureFieldPermissionsTable.documentType, "ANNUAL_PLAN"),
+          eq(signatureFieldPermissionsTable.eligibleUserId, req.session.userId!),
+          isNull(signatureFieldPermissionsTable.revokedAt),
+        ));
+      const allowedApprovalFields = new Set(signerPermissions.map((permission) => permission.fieldName));
+      if (!isAdmin && !canEditSchedule && allowedApprovalFields.size === 0) {
+        res.status(403).json({ error: "You are not allowed to edit this annual plan" });
+        return;
+      }
       const body = req.body as Record<string, unknown> & {
         rows?: Array<{
           id: number;
@@ -462,31 +476,29 @@ router.put(
           frequencyMonths?: number | null;
         }>;
       };
+      const approvalFieldMap = {
+        prepared_by: ["preparedByName", "preparedByDate"],
+        engineering_manager: ["approvedEngineeringName", "approvedEngineeringDate"],
+        production_manager: ["approvedProductionName", "approvedProductionDate"],
+        qc_manager: ["approvedQcName", "approvedQcDate"],
+        rd_manager: ["approvedRdName", "approvedRdDate"],
+        qa_manager: ["approvedQaName", "approvedQaDate"],
+      } as const;
+      const approvalUpdates: Record<string, string | null | Date> = { updatedAt: new Date() };
+      for (const [signatureField, planFields] of Object.entries(approvalFieldMap)) {
+        if (!isAdmin && !allowedApprovalFields.has(signatureField)) continue;
+        for (const planField of planFields) {
+          approvalUpdates[planField] = (body[planField] as string | undefined) ?? null;
+        }
+      }
       const [updated] = await db
         .update(annualPmPlansTable)
-        .set({
-          preparedByName: (body.preparedByName as string | undefined) ?? null,
-          preparedByDate: (body.preparedByDate as string | undefined) ?? null,
-          approvedEngineeringName:
-            (body.approvedEngineeringName as string | undefined) ?? null,
-          approvedEngineeringDate:
-            (body.approvedEngineeringDate as string | undefined) ?? null,
-          approvedProductionName:
-            (body.approvedProductionName as string | undefined) ?? null,
-          approvedProductionDate:
-            (body.approvedProductionDate as string | undefined) ?? null,
-          approvedQcName: (body.approvedQcName as string | undefined) ?? null,
-          approvedQcDate: (body.approvedQcDate as string | undefined) ?? null,
-          approvedRdName: (body.approvedRdName as string | undefined) ?? null,
-          approvedRdDate: (body.approvedRdDate as string | undefined) ?? null,
-          approvedQaName: (body.approvedQaName as string | undefined) ?? null,
-          approvedQaDate: (body.approvedQaDate as string | undefined) ?? null,
-          updatedAt: new Date(),
-        })
+        .set(approvalUpdates)
         .where(eq(annualPmPlansTable.id, plan.id))
         .returning();
 
       for (const row of body.rows ?? []) {
+        if (!canEditSchedule) break;
         const frequencyMonths = Number(row.frequencyMonths);
         const validFrequency = Number.isInteger(frequencyMonths) && frequencyMonths > 0
           ? frequencyMonths

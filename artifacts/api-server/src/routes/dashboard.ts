@@ -162,7 +162,7 @@ router.get("/stats", requireActiveAuth, requirePermission("view_dashboard"), asy
       href: "/maintenance-requests/engineering",
     });
   }
-  if ((isAdmin || ["Maintenance Supervisor", "Maintenance Technician"].includes(req.session.roleName ?? "")) && overdueCount > 0) {
+  if ((isAdmin || permissions.includes("view_dashboard_preventive_maintenance")) && overdueCount > 0) {
     requestNotifications.push({
       type: "overdue_pm",
       message: `${overdueCount} نشاط صيانة وقائية متأخر هذا الشهر`,

@@ -61,14 +61,21 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
   const year = Number(params.year);
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const canEdit = hasPermission("edit_annual_maintenance_plan");
   const canEditHeader = hasPermission("edit_header");
+  const { data: signaturePermissions = [] } = useQuery({
+    queryKey: ["annual-plan-signature-permissions"],
+    queryFn: () => apiRequest<Array<{ fieldName: string; eligibleUserId: number }>>("/signatures/field-permissions?documentType=ANNUAL_PLAN"),
+  });
+  const canEditApproval = (signatureField: string) =>
+    user?.roleName === "Admin" || signaturePermissions.some((permission) => permission.fieldName === signatureField && permission.eligibleUserId === user?.id);
+  const canEditAnyApproval = ["prepared_by", "engineering_manager", "production_manager", "qc_manager", "rd_manager", "qa_manager"].some(canEditApproval);
   const [form, setForm] = useState<AnnualPlan | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [header, setHeader] = useState<AnnualPlanHeader>({ documentNumber: "", effectiveOrExecutionDate: "" });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["annual-plan", year],
     queryFn: () => apiRequest<AnnualPlan>(`/maintenance-plans/annual/${year}`),
   });
@@ -129,6 +136,7 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
     save.mutate();
   }
 
+  if (isError) return <div className="space-y-3 p-8"><p className="text-destructive">تعذر تحميل الخطة السنوية: {error instanceof Error ? error.message : "خطأ غير معروف"}</p><Button type="button" onClick={() => refetch()}>إعادة المحاولة</Button></div>;
   if (isLoading || !form) return <div className="p-8 text-muted-foreground">Loading annual plan...</div>;
 
   return (
@@ -147,7 +155,7 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
           <Button asChild variant="outline">
             <Link href={`/print/annual-plan/${year}`}>Official Print</Link>
           </Button>
-          {canEdit && (
+          {(canEdit || canEditAnyApproval) && (
             <Button type="submit" disabled={save.isPending}>
               <Save className="mr-2 h-4 w-4" />
               {hasUnsavedChanges ? "Save changes" : "Save"}
@@ -191,30 +199,30 @@ export default function AnnualPlanPage({ params }: { params: { year: string } })
           <CardTitle>Approval Page</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[ 
-            ["preparedByName", "Prepared by"],
-            ["approvedEngineeringName", "Engineering Department Manager"],
-            ["approvedProductionName", "Production Department Manager"],
-            ["approvedQcName", "QC Department Manager"],
-            ["approvedRdName", "R&D Department Manager"],
-            ["approvedQaName", "QA Department Manager"],
-          ].map(([field, label]) => (
+          {[
+            ["preparedByName", "Prepared by", "prepared_by"],
+            ["approvedEngineeringName", "Engineering Department Manager", "engineering_manager"],
+            ["approvedProductionName", "Production Department Manager", "production_manager"],
+            ["approvedQcName", "QC Department Manager", "qc_manager"],
+            ["approvedRdName", "R&D Department Manager", "rd_manager"],
+            ["approvedQaName", "QA Department Manager", "qa_manager"],
+          ].map(([field, label, signatureField]) => (
             <div key={field}>
               <Label>{label}</Label>
-              <Input value={(form[field as keyof AnnualPlan] as string | null) ?? ""} readOnly={!canEdit} onChange={(event) => updateField(field as keyof AnnualPlan, event.target.value)} />
+              <Input value={(form[field as keyof AnnualPlan] as string | null) ?? ""} readOnly={!canEditApproval(signatureField)} onChange={(event) => updateField(field as keyof AnnualPlan, event.target.value)} />
             </div>
           ))}
           {[
-            ["preparedByDate", "Prepared date"],
-            ["approvedEngineeringDate", "Engineering date"],
-            ["approvedProductionDate", "Production date"],
-            ["approvedQcDate", "QC date"],
-            ["approvedRdDate", "R&D date"],
-            ["approvedQaDate", "QA date"],
-          ].map(([field, label]) => (
+            ["preparedByDate", "Prepared date", "prepared_by"],
+            ["approvedEngineeringDate", "Engineering date", "engineering_manager"],
+            ["approvedProductionDate", "Production date", "production_manager"],
+            ["approvedQcDate", "QC date", "qc_manager"],
+            ["approvedRdDate", "R&D date", "rd_manager"],
+            ["approvedQaDate", "QA date", "qa_manager"],
+          ].map(([field, label, signatureField]) => (
             <div key={field}>
               <Label>{label}</Label>
-              <Input type="date" value={(form[field as keyof AnnualPlan] as string | null) ?? ""} readOnly={!canEdit} onChange={(event) => updateField(field as keyof AnnualPlan, event.target.value)} />
+              <Input type="date" value={(form[field as keyof AnnualPlan] as string | null) ?? ""} readOnly={!canEditApproval(signatureField)} onChange={(event) => updateField(field as keyof AnnualPlan, event.target.value)} />
             </div>
           ))}
           {[

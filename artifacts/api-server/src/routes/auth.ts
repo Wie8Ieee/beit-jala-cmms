@@ -74,7 +74,7 @@ router.post("/login", async (req, res) => {
   req.session.roleName = user.roleName;
   req.session.permissions = permissionNames;
 
-  res.json({
+  const responseUser = {
     id: user.id,
     username: user.username,
     employeeNumber: user.employeeNumber ?? null,
@@ -84,6 +84,17 @@ router.post("/login", async (req, res) => {
     roleName: user.roleName,
     permissions: permissionNames,
     isActive: user.isActive,
+  };
+
+  // Persist the PostgreSQL-backed session before the client follows the login
+  // response with authenticated requests.
+  req.session.save((err) => {
+    if (err) {
+      req.log.error({ err }, "Error saving login session");
+      res.status(500).json({ error: "Unable to create login session" });
+      return;
+    }
+    res.json(responseUser);
   });
 });
 

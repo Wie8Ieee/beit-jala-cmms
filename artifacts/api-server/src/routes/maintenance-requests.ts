@@ -469,21 +469,14 @@ async function nextApprovedRequestNumber(requestDate: string) {
   const date = requestNumberDate(requestDate);
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
-  const rows = await db
-    .select({ requestReportNumber: maintenanceRequestsTable.requestReportNumber })
-    .from(maintenanceRequestsTable)
-    .where(like(maintenanceRequestsTable.requestReportNumber, `%/${year}`));
-  const lastSequence = rows.reduce((highest, row) => {
-    const match = /^(\d+)\/\d{1,2}\/\d{4}$/.exec(row.requestReportNumber);
-    return match ? Math.max(highest, Number(match[1])) : highest;
-  }, 0);
-  // For a newly deployed system, use the last paper number entered by the
-  // maintenance supervisor. Once an app number exists, that number drives
-  // the sequence for the rest of the year.
+  // An empty numbering setting explicitly disables automatic numbering.
+  // Existing approved request numbers are historical data and must not turn
+  // the automatic sequence back on after an administrator disables it.
   const configuredStart = await getMaintenanceRequestNumberingStart();
-  const baseSequence = Math.max(lastSequence, configuredStart ?? 0);
-  if (baseSequence === 0 && configuredStart === null) return null;
-  return `${baseSequence + 1}/${String(month).padStart(2, "0")}/${year}`;
+  if (configuredStart === null) return null;
+  // The configured value is the current sequence counter. Historical request
+  // numbers must not override a newly selected starting point.
+  return `${configuredStart + 1}/${String(month).padStart(2, "0")}/${year}`;
 }
 
 async function getMachine(machineId: number) {
@@ -1183,7 +1176,7 @@ router.put(
   async (req, res, next) => {
     try {
       const value = String(req.body?.lastSequence ?? "").trim();
-      if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value))) {
+      if (value && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)))) {
         res.status(400).json({ error: "Enter a valid last maintenance-request sequence number" });
         return;
       }
@@ -1210,7 +1203,7 @@ router.put(
         });
       }
       res.json({
-        lastSequence: Number(value),
+        lastSequence: value ? Number(value) : null,
         nextNumber: await nextApprovedRequestNumber(todayString()),
       });
     } catch (err) {
@@ -2382,6 +2375,7 @@ async function engineeringReviewHandler(
     const toStatus =
       body.decision === "reject" ? STATUS.REJECTED : STATUS.ACCEPTED;
     let approvedRequestNumber = request.requestReportNumber;
+    let usedAutomaticNumber = false;
     if (toStatus === STATUS.ACCEPTED) {
       const manualNumber = body.requestReportNumber?.trim() ?? "";
       if (manualNumber) {
@@ -2397,6 +2391,7 @@ async function engineeringReviewHandler(
           return;
         }
         approvedRequestNumber = automaticNumber;
+        usedAutomaticNumber = true;
       }
       const [duplicate] = await db
         .select({ id: maintenanceRequestsTable.id })
@@ -2433,6 +2428,18 @@ async function engineeringReviewHandler(
       })
       .where(eq(maintenanceRequestsTable.id, request.id))
       .returning();
+    if (usedAutomaticNumber) {
+      const approvedSequence = approvedRequestNumber.split("/", 1)[0]!;
+      await db
+        .update(formHeadersTable)
+        .set({ documentNumber: approvedSequence, updatedAt: new Date() })
+        .where(
+          and(
+            eq(formHeadersTable.documentType, "MAINTENANCE_REQUEST_NUMBERING"),
+            eq(formHeadersTable.documentId, MAINTENANCE_REQUEST_NUMBERING_HEADER_ID),
+          ),
+        );
+    }
     if (toStatus === STATUS.ACCEPTED) await ensureEventForRequest(updated!);
     await addStatusHistory(
       request.id,

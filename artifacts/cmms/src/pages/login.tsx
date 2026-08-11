@@ -1,9 +1,9 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useLogin } from "@workspace/api-client-react";
+import { getGetMeQueryKey, useLogin } from "@workspace/api-client-react";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -28,6 +28,7 @@ const loginSchema = z.object({
 export default function LoginPage() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const loginMutation = useLogin();
 
@@ -41,7 +42,11 @@ export default function LoginPage() {
 
   function onSubmit(values: z.infer<typeof loginSchema>) {
     loginMutation.mutate({ data: values }, {
-      onSuccess: () => {
+      onSuccess: (user) => {
+        // Replace the unauthenticated /me result before rendering a protected
+        // route. Otherwise the route guard can redirect back to login until a
+        // full browser refresh causes /me to run again.
+        queryClient.setQueryData(getGetMeQueryKey(), user);
         setLocation("/dashboard");
       },
       onError: (error) => {

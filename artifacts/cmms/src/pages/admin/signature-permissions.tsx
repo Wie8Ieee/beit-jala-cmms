@@ -40,7 +40,6 @@ const formFields = {
     ["prepared_by", "Prepared by"],
     ["maintenance_supervisor", "Maintenance supervisor"],
     ["department_manager", "Department manager"],
-    ["approved_by", "Approved by"],
   ],
   MONTHLY_MAINTENANCE_EVALUATION: [
     ["prepared_by", "التوقيع الإلكتروني للمُعدّ"],
